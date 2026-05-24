@@ -1,10 +1,8 @@
 {
     "id": "75702f8c-386c-4ff0-972d-480f0f686a09",
-    "authors": [
-        "Jordam1942"
-    ],
-    "origin": "",
-    "url": "",
+    "authors": [ "Jordam1942" ],
+    "origin": "Jordam1942",
+    "url": "https://github.com/Jordam1942/AMPTemplates",
     "imagefile": "",
-    "prefix": ""
+    "prefix": "battlefield-2"
 }
