@@ -1,0 +1,8 @@
+ApplicationName=Battlefield 2
+ApplicationDescription=Battlefield 2 Dedicated Server
+Author=Jordam1942
+Platform=Linux
+Executable=bf2_l
+ApplicationArgs=+config mods/bf2/settings/serversettings.con +mapList mods/bf2/settings/maplist.con
+StartupMode=1
+ReadyRegex=^Server is ready.$
