@@ -194,6 +194,34 @@
   .fp-bar .in { max-width: 560px; margin: 0 auto; display: flex; align-items: center; gap: 12px; padding: 10px 16px; }
   .fp-bar h2 { font-size: 1.15rem; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .fp-body { max-width: 560px; margin: 0 auto; padding: 14px 16px 40px; display: grid; gap: 14px; grid-template-columns: minmax(0, 1fr); }
+  .fullpage { display: flex; flex-direction: column; }
+  .fp-body { flex: 1 0 auto; width: 100%; display: flex; flex-direction: column; }
+  .fp-body > .page-nav, .wrap > .stack > .page-nav { margin-top: auto; }
+  .navlist { display: grid; gap: 8px; }
+  .navrow { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 52px; padding: 8px 14px; border-radius: 14px; background: var(--surface); border: 1px solid var(--line); text-align: left; }
+  .navrow b { flex: 1; min-width: 0; }
+  .navrow::after { content: "›"; color: var(--muted); font-size: 1.4rem; flex: none; }
+  .page-nav { display: flex; gap: 8px; align-items: center; }
+  .page-nav .btn { flex: 1; }
+  .page-nav .count { flex: none; font-size: 0.85rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .topic ul { margin: 0; padding-left: 20px; display: grid; gap: 6px; color: var(--muted); }
+  .topic p { color: var(--muted); }
+  .topic b { color: var(--fg); }
+  .fbstep { display: grid; gap: 12px; }
+  .fbstep ol { margin: 0; padding-left: 20px; display: grid; gap: 8px; }
+  .wrap.fbwrap { min-height: 100%; display: flex; flex-direction: column; }
+  .wrap.fbwrap > .stack { flex: 1; display: flex; flex-direction: column; }
+  .fit1 .qr { width: min(210px, 100%); padding: 10px; }
+  .fit1 .bigcode { font-size: 2rem; }
+  .fit1 .lobby-hint { display: none; }
+  .fit2 .qr { width: 160px; }
+  .fit2 .plist { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 6px; }
+  .fit2 .plist .chip { display: none; }
+  .fit2 .prow { min-width: 0; }
+  .fit2 .prow { min-height: 38px; gap: 6px; }
+  .fit2 .prow .avatar { width: 28px; height: 28px; font-size: 0.8rem; }
+  .fit3 .qr { width: 130px; padding: 8px; }
+  .fit3 .bigcode { font-size: 1.6rem; }
   .toast { position: fixed; left: 50%; bottom: calc(220px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); z-index: 30; background: var(--ink); color: var(--ink-fg); padding: 10px 16px; border-radius: 12px; font-weight: 600; font-size: 0.92rem; max-width: calc(100% - 32px); text-align: center; pointer-events: none; }
   .conn { position: fixed; top: env(safe-area-inset-top, 0px); left: 0; right: 0; z-index: 40; background: var(--danger); color: #fff; text-align: center; font-weight: 700; font-size: 0.85rem; padding: 4px; }
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
@@ -661,53 +689,72 @@
     });
   }
 
+  var FB_STEPS = 8;
   function renderFb() {
-    var F = S.fb, host = location.hostname, pid = F.cfg ? F.cfg.projectId : '', html = '';
-    html += topbar('Firebase koppelen', 'Eenmalig instellen voor online spelen', '<button class="btn ghost sm" data-act="home">Terug</button>');
-    if (CFG && CFG_SRC !== 'app' && !F.text) {
-      html += '<div class="panel"><b>Deze telefoon is gekoppeld aan project “' + esc(CFG.projectId) + '”.</b>' +
-        '<div class="row"><button class="btn" data-act="fb-retest">Opnieuw testen</button><button class="btn ghost" data-act="fb-forget">Ontkoppelen</button></div></div>';
+    var F = S.fb, host = location.hostname, pid = F.cfg ? F.cfg.projectId : '', st = F.step || 0, body = '', title = '', next = true;
+    var link = function (url, text) { return '<a class="btn" href="' + url + '" target="_blank" rel="noopener">' + text + ' ↗</a>'; };
+    switch (st) {
+      case 0:
+        title = 'Zo werkt het';
+        body = '<p>In 8 korte stappen koppel je Firebase. Daarna kun je een tafel maken en krijgen je vrienden alles automatisch via jouw QR-code.</p>' +
+          '<p class="muted">Je hebt alleen een Google-account nodig. Het duurt ongeveer 10 minuten.</p>' +
+          '<div class="notice"><b>Tip:</b> zet op de Firebase-pagina’s in Chrome ⋮ → <b>Desktopsite</b> aan, dan vind je alle menu’s.</div>' +
+          (CFG && CFG_SRC !== 'app' ? '<div class="panel"><b>Deze telefoon is al gekoppeld aan “' + esc(CFG.projectId) + '”.</b><div class="row"><button class="btn" data-act="fb-retest">Opnieuw testen</button><button class="btn ghost" data-act="fb-forget">Ontkoppelen</button></div></div>' : '');
+        break;
+      case 1:
+        title = 'Project maken';
+        body = '<ol><li>Open Firebase.</li><li>Tik op <b>Project toevoegen</b>.</li><li>Noem het <code>toepen</code>.</li><li>Zet <b>Google Analytics</b> uit en tik op <b>Project maken</b>.</li></ol>' + link(consoleUrl(), 'Open Firebase');
+        break;
+      case 2:
+        title = 'Database maken';
+        body = '<ol><li>Ga in je project naar <b>Build → Realtime Database</b>.</li><li>Tik op <b>Database maken</b>.</li><li>Kies de locatie <b>België (europe-west1)</b>.</li><li>Kies <b>Starten in vergrendelde modus</b> en tik op <b>Inschakelen</b>.</li></ol>' + link(pid ? consoleUrl(pid, 'database') : consoleUrl(), 'Open Firebase');
+        break;
+      case 3:
+        title = 'Aanmelden zonder account';
+        body = '<ol><li>Ga naar <b>Build → Authentication</b> en tik op <b>Aan de slag</b>.</li><li>Kies bij aanmeldmethoden <b>Anoniem</b>.</li><li>Zet het <b>aan</b> en tik op <b>Opslaan</b>.</li></ol><p class="muted">Zo krijgt elke telefoon een eigen sleutel, zonder dat je vrienden een account nodig hebben.</p>' + link(pid ? consoleUrl(pid, 'authentication/providers') : consoleUrl(), 'Open Firebase');
+        break;
+      case 4:
+        title = 'Dit adres toestaan';
+        body = '<ol><li>Ga in Authentication naar <b>Instellingen → Geautoriseerde domeinen</b>.</li><li>Tik op <b>Domein toevoegen</b> en plak dit adres:</li></ol>' +
+          '<div class="row"><code style="font-size:1rem">' + esc(host) + '</code><button class="btn ghost sm" data-act="copy" data-v="' + esc(host) + '">Kopieer</button></div>' + link(pid ? consoleUrl(pid, 'authentication/settings') : consoleUrl(), 'Open Firebase');
+        break;
+      case 5:
+        title = 'Web-app en het blok';
+        body = '<ol><li>Tandwiel → <b>Projectinstellingen</b> → onderaan <b>Je apps</b> → <b>&lt;/&gt;</b>.</li><li>Naam <code>toepen</code> → <b>App registreren</b>.</li><li>Kopieer het blok <code>firebaseConfig = { … }</code> en plak het hier:</li></ol>' +
+          '<textarea id="fbtext" class="text" style="height:110px;padding:10px;font-family:monospace;font-size:0.8rem" placeholder="const firebaseConfig = {\n  apiKey: &quot;…&quot;,\n  …\n};">' + esc(F.text) + '</textarea>' +
+          '<button class="btn primary" data-act="fb-parse">Controleren</button>';
+        if (F.parsed) {
+          if (!F.cfg) body += '<div class="notice">Niet gevonden: <b>' + F.parsed.missing.join(', ') + '</b>. Kopieer het hele blok opnieuw.</div>';
+          else body += '<p class="small">✓ Project <b>' + esc(F.cfg.projectId) + '</b> herkend.</p>' +
+            '<label class="label" for="fbdb">Database-adres' + (F.parsed.guessed ? ' (standaard voor België ingevuld)' : '') + '</label><input class="text" id="fbdb" style="font-size:0.8rem" value="' + esc(F.cfg.databaseURL) + '">';
+        }
+        next = !!F.cfg;
+        break;
+      case 6:
+        title = 'Beveiligingsregels';
+        body = '<p>Deze regels zorgen dat niemand andermans kaarten kan zien.</p><ol><li>Tik op <b>Kopieer regels</b>.</li><li>Open de regels-pagina, vervang alles door de gekopieerde regels.</li><li>Tik op <b>Publiceren</b>.</li></ol>' +
+          '<button class="btn" data-act="fb-copyrules">Kopieer regels</button>' + link(consoleUrl(pid, 'database/' + pid + '-default-rtdb/rules'), 'Open de regels');
+        break;
+      case 7:
+        title = 'Testen';
+        next = false;
+        body = '<button class="btn primary big" data-act="fb-test"' + (F.running ? ' disabled' : '') + '>' + (F.running ? 'Bezig met testen…' : 'Test de verbinding') + '</button>';
+        if (F.checks.length) {
+          body += '<div class="stack" style="gap:8px">' + F.checks.map(function (c) {
+            var icon = { ok: '✓', fail: '✗', run: '…', wait: '○', skip: '–' }[c.st];
+            var col = c.st === 'ok' ? 'var(--accent)' : c.st === 'fail' ? 'var(--danger)' : 'var(--muted)';
+            return '<div><div style="display:flex;gap:10px;align-items:center"><b style="color:' + col + ';width:1.2em;text-align:center">' + icon + '</b><span>' + c.label + '</span></div>' +
+              (c.msg ? '<div class="notice" style="margin-top:6px">' + esc(c.msg) + (c.link ? '<div style="margin-top:8px"><a class="btn ghost sm" href="' + c.link + '" target="_blank" rel="noopener">' + c.linkText + ' ↗</a></div>' : '') + '</div>' : '') + '</div>';
+          }).join('') + '</div>';
+        }
+        if (F.done) body += '<div class="winner" style="text-align:left;padding:14px"><h2 style="font-size:1.4rem">Gelukt!</h2><p>Je vrienden krijgen de instellingen automatisch via jouw QR-code.</p><button class="btn big" data-act="fb-finish">Naar Tafel maken</button></div>';
+        break;
     }
-    var link = function (url, text) { return '<a class="btn ghost sm" href="' + url + '" target="_blank" rel="noopener">' + text + ' ↗</a>'; };
-    html += '<div class="panel"><div class="label">Stap 1 · Firebase-project</div>' +
-      '<p class="small muted">Je hebt alleen een Google-account nodig. Tip: zet op de Firebase-pagina’s in Chrome ⋮ → <b>Desktopsite</b> aan.</p>' +
-      '<ol style="margin:0;padding-left:20px;display:grid;gap:10px">' +
-      '<li><b>Project maken</b>: tik op <i>Project toevoegen</i>, noem het <code>toepen</code>, zet Google Analytics uit.<div style="margin-top:6px">' + link(consoleUrl(), 'Open Firebase') + '</div></li>' +
-      '<li><b>Database</b>: Build → <i>Realtime Database</i> → <i>Database maken</i> → locatie <b>België</b> → <i>Vergrendelde modus</i>.' + (pid ? '<div style="margin-top:6px">' + link(consoleUrl(pid, 'database'), 'Open database') + '</div>' : '') + '</li>' +
-      '<li><b>Aanmelden</b>: Build → <i>Authentication</i> → <i>Aan de slag</i> → <i>Anoniem</i> → aanzetten → Opslaan.' + (pid ? '<div style="margin-top:6px">' + link(consoleUrl(pid, 'authentication/providers'), 'Open aanmeldmethoden') + '</div>' : '') + '</li>' +
-      '<li><b>Dit adres toestaan</b>: Authentication → <i>Instellingen</i> → <i>Geautoriseerde domeinen</i> → <i>Domein toevoegen</i>: <code>' + esc(host) + '</code> <button class="btn ghost sm" data-act="copy" data-v="' + esc(host) + '">Kopieer</button>' + (pid ? '<div style="margin-top:6px">' + link(consoleUrl(pid, 'authentication/settings'), 'Open instellingen') + '</div>' : '') + '</li>' +
-      '<li><b>Web-app</b>: tandwiel → <i>Projectinstellingen</i> → onderaan <i>Je apps</i> → <b>&lt;/&gt;</b> → naam <code>toepen</code> → <i>App registreren</i>. Kopieer het blok <code>firebaseConfig = { … }</code>.</li>' +
-      '</ol></div>';
-    html += '<div class="panel"><div class="label">Stap 2 · Plak het blok</div>' +
-      '<textarea id="fbtext" class="text" style="height:130px;padding:10px;font-family:monospace;font-size:0.8rem" placeholder="const firebaseConfig = {\n  apiKey: &quot;…&quot;,\n  …\n};">' + esc(F.text) + '</textarea>' +
-      '<button class="btn primary" data-act="fb-parse">Controleren</button>';
-    if (F.parsed) {
-      if (!F.cfg) html += '<div class="notice">Niet gevonden: <b>' + F.parsed.missing.join(', ') + '</b>. Kopieer het hele blok uit Projectinstellingen opnieuw.</div>';
-      else html += '<p class="small">✓ Project <b>' + esc(F.cfg.projectId) + '</b> herkend.</p>' +
-        (F.parsed.guessed ? '<p class="small muted">Het database-adres stond niet in het blok. Ik gebruik het standaardadres voor België; klopt het niet, pas het dan aan (je vindt het bovenaan de Realtime Database-pagina).</p>' : '') +
-        '<label class="label" for="fbdb">Database-adres</label><input class="text" id="fbdb" style="font-size:0.85rem" value="' + esc(F.cfg.databaseURL) + '">';
-    }
-    html += '</div>';
-    if (F.cfg) {
-      html += '<div class="panel"><div class="label">Stap 3 · Beveiligingsregels</div>' +
-        '<p class="small muted">Deze regels zorgen dat niemand andermans kaarten kan zien. Open de regels-pagina, vervang alles door de gekopieerde regels en tik op <b>Publiceren</b>.</p>' +
-        '<div class="row"><button class="btn" data-act="fb-copyrules">Kopieer regels</button>' + link(consoleUrl(pid, 'database/' + pid + '-default-rtdb/rules'), 'Open de regels') + '</div></div>';
-      html += '<div class="panel"><div class="label">Stap 4 · Testen</div>' +
-        '<button class="btn primary big" data-act="fb-test"' + (F.running ? ' disabled' : '') + '>' + (F.running ? 'Bezig met testen…' : 'Test de verbinding') + '</button>';
-      if (F.checks.length) {
-        html += '<div class="stack" style="gap:8px">' + F.checks.map(function (c) {
-          var icon = { ok: '✓', fail: '✗', run: '…', wait: '○', skip: '–' }[c.st];
-          var col = c.st === 'ok' ? 'var(--accent)' : c.st === 'fail' ? 'var(--danger)' : 'var(--muted)';
-          return '<div><div style="display:flex;gap:10px;align-items:center"><b style="color:' + col + ';width:1.2em;text-align:center">' + icon + '</b><span>' + c.label + '</span></div>' +
-            (c.msg ? '<div class="notice" style="margin-top:6px">' + esc(c.msg) + (c.link ? '<div style="margin-top:8px">' + link(c.link, c.linkText) + '</div>' : '') + '</div>' : '') + '</div>';
-        }).join('') + '</div>';
-      }
-      html += '</div>';
-    }
-    if (F.done) {
-      html += '<div class="winner" style="text-align:left"><h2>Gelukt!</h2><p>Firebase is gekoppeld aan deze telefoon. Je vrienden krijgen de instellingen automatisch zodra ze jouw QR-code scannen.</p>' +
-        '<button class="btn big" data-act="fb-finish">Naar Tafel maken</button></div>';
-    }
+    var html = topbar('Firebase koppelen', 'Stap ' + (st + 1) + ' van ' + FB_STEPS + ' · ' + title, '<button class="btn ghost sm" data-act="home">Sluiten</button>');
+    html += '<div class="fbstep">' + body + '</div>';
+    html += '<div class="page-nav"><button class="btn ghost" data-act="fb-step" data-v="-1"' + (st === 0 ? ' disabled' : '') + '>‹ Vorige</button>' +
+      '<span class="count">' + (st + 1) + ' / ' + FB_STEPS + '</span>' +
+      '<button class="btn primary" data-act="fb-step" data-v="1"' + (st >= FB_STEPS - 1 || !next ? ' disabled' : '') + '>Volgende ›</button></div>';
     return '<div class="stack">' + html + '</div>';
   }
 
@@ -760,9 +807,9 @@
     if (host) {
       var qr = '';
       try { var q = qrcode(0, 'M'); q.addData(joinUrl()); q.make(); qr = q.createSvgTag({ cellSize: 6, margin: 2, scalable: true }); } catch (e) { qr = ''; }
-      html += '<div class="panel" style="text-align:center"><b>Laat je vrienden deze code scannen</b><p class="small muted">Met de gewone camera van hun telefoon. Ze zitten dan meteen aan tafel.</p>' +
+      html += '<div class="panel" style="text-align:center"><b>Laat je vrienden deze code scannen</b><p class="small muted lobby-hint">Met de gewone camera van hun telefoon. Ze zitten dan meteen aan tafel.</p>' +
         '<div class="qr" id="qr">' + qr + '</div><div class="bigcode" aria-label="Tafelcode ' + esc(S.code) + '">' + esc(S.code) + '</div>' +
-        '<p class="small muted">Of laat ze de code invullen bij <b>Meedoen</b>.</p>' +
+        '<p class="small muted lobby-hint">Of laat ze de code invullen bij <b>Meedoen</b>.</p>' +
         '<button class="btn ghost" data-act="share-link">Link delen</button></div>';
     } else {
       html += '<div class="panel" style="text-align:center"><h2>Je zit aan tafel!</h2><p class="muted">Wachten tot ' + esc(m.hostName || 'de host') + ' het spel start…</p>' +
@@ -771,7 +818,7 @@
     html += '<div class="panel"><div class="label">Aan tafel · ' + n + '</div>' + playerRows(host) +
       (host ? '<button class="btn ghost" data-act="addbot"' + (n >= 8 ? ' disabled' : '') + '>+ Computerspeler</button>' : '') + '</div>';
     if (host) html += '<button class="btn primary big" data-act="start"' + (n < 2 || n > 8 ? ' disabled' : '') + '>' + (n < 2 ? 'Wachten op spelers…' : 'Start met ' + n + ' spelers') + '</button>';
-    html += '<p class="small muted" style="text-align:center">Iedereen kan de spelregels lezen via <b>?</b> rechtsboven.</p>';
+    html += '<p class="small muted lobby-hint" style="text-align:center">Iedereen kan de spelregels lezen via <b>?</b> rechtsboven.</p>';
     return '<div class="stack">' + html + '</div>';
   }
 
@@ -880,11 +927,12 @@
   }
 
   /* ---------- Help ---------- */
-  function rulesHtml() {
+  function rulesTopics() {
     var m = S.meta || {}, R = m.rules || S.create.rules, limit = m.limit || S.create.limit;
-    var sec = function (t, b, open) { return '<details class="rule"' + (open ? ' open' : '') + '><summary>' + t + '</summary><div class="rulebook">' + b + '</div></details>'; };
+    var T = [];
+    var sec = function (t, b) { T.push({ t: t, b: b }); return ''; };
     var cards = ['B', 'V', 'H', 'A', '7', '8', '9', '10'].map(function (r) { return card(r + 's', 'sm'); }).join('');
-    return '<div>' +
+    var ignored = '<div>' +
       sec('Doel', '<p>Zo min mogelijk strafpunten. Bij <b>' + limit + '</b> lig je eruit. Wie overblijft, wint.</p>', true) +
       sec('Kaarten', '<p>32 kaarten. Van laag naar hoog:</p><div class="minis" style="margin-top:8px">' + cards + '</div><p style="margin-top:8px">De <b>10</b> is het hoogst, de <b>boer</b> het laagst. Er is geen troef.</p>', true) +
       sec('Een ronde', '<ul><li>Iedereen krijgt <b>4 kaarten</b>. Links van de deler komt uit.</li><li>' + (R.hoogsteDeelt ? 'Wie de <b>meeste strafpunten</b> heeft, deelt de volgende ronde.' : 'De deler schuift elke ronde één plek door.') + '</li><li>Je moet <b>kleur bekennen</b>. De app laat alleen kaarten oplichten die mogen.</li><li>Hoogste kaart van de gevraagde kleur wint de slag en komt daarna uit.</li><li>Alleen de <b>laatste (4e) slag</b> telt: die wint de ronde.</li></ul>') +
@@ -894,15 +942,18 @@
       sec('Strafpunten', '<p>Wie aan het eind nog meedoet en de laatste slag niet haalt, krijgt de inzet.</p>') +
       (R.wittewas ? sec('Vuile was', '<p>Heb je alleen boeren, vrouwen, heren en azen, dan verschijnt de knop <b>Vuile was</b> voordat er een kaart is gespeeld. Je krijgt 4 nieuwe kaarten van de stapel. Bluffen kan niet: de app controleert het. Bij 8 spelers is er geen stapel, dan kan het niet.</p>') : '') +
       '</div>';
+    return T;
   }
-  function guideHtml() {
-    var step = function (t, items) { return '<div class="stack" style="gap:4px;padding:10px 0;border-bottom:1px solid var(--line)"><h3>' + t + '</h3><ul style="margin:0;padding-left:18px;color:var(--muted);display:grid;gap:4px">' + items.map(function (i) { return '<li>' + i + '</li>'; }).join('') + '</ul></div>'; };
-    return '<div>' +
+  function guideSteps() {
+    var G2 = [];
+    var step = function (t, items) { G2.push({ t: t, b: '<ul>' + items.map(function (i) { return '<li>' + i + '</li>'; }).join('') + '</ul>' }); return ''; };
+    var ignored = '<div>' +
       step('Aan tafel', ['De host tikt op <b>Tafel maken</b> en laat de QR-code zien.', 'Scan die met de camera van je telefoon, of vul de 4 letters in bij <b>Meedoen</b>.', 'Vul je naam in. De volgende keer onthoudt je telefoon die.']) +
       step('Spelen', ['Jouw kaarten staan onderin. Ben je aan de beurt, dan lichten de kaarten op die je mag spelen. Tik erop.', 'Wil je toepen? Tik op <b>Toep!</b> als je aan de beurt bent, vóór je een kaart speelt.', 'Toept een ander, dan vraagt je telefoon <b>Meegaan</b> of <b>Passen</b>. Je telefoon trilt.', 'Midden op tafel zie je de slag en wie er aan de beurt is.']) +
       step('Punten', ['De punten worden automatisch bijgehouden. Na elke ronde zie je wie er wat kreeg.', 'Aan het eind komt de uitslag op de ranglijst van de host.']) +
       step('Goed om te weten', ['Iedereen heeft internet nodig. Valt je verbinding weg, open dan de app opnieuw: je zit weer aan tafel.', 'Is er een <b>tafelleider</b>, dan speelt die niet mee en kan die alle kaarten zien.', 'Laat je scherm aan staan; de app probeert dat zelf te regelen.']) +
       '</div>';
+    return G2;
   }
 
   function renderLayer() {
@@ -921,11 +972,20 @@
       html += '<div class="scrim"><div class="sheet" role="dialog" aria-modal="true" aria-label="Toep"><div class="grip"></div>' + inner + '</div></div>';
     } else if (sh) {
       if (sh.type === 'help') {
-        var v = sh.view || 'regels';
-        full = v === 'regels' ? 'Spelregels' : 'Zo speel je';
-        inner = '<div class="seg">' +
-          [['regels', 'Spelregels'], ['uitleg', 'Zo speel je']].map(function (o) { return '<button data-act="helpview" data-v="' + o[0] + '" aria-pressed="' + (v === o[0]) + '">' + o[1] + '</button>'; }).join('') +
-          '</div>' + (v === 'regels' ? rulesHtml() : guideHtml());
+        var hp = sh.stack[sh.stack.length - 1], RT = rulesTopics(), GS = guideSteps();
+        if (hp.v === 'menu') {
+          full = 'Spelregels en uitleg';
+          inner = '<div class="label">Spelregels</div><div class="navlist">' + RT.map(function (t, i) {
+            return '<button class="navrow" data-act="hp-open" data-v="topic" data-i="' + i + '"><b>' + t.t + '</b></button>'; }).join('') + '</div>' +
+            '<div class="label">Zo speel je in de app</div><div class="navlist">' + GS.map(function (t, i) {
+            return '<button class="navrow" data-act="hp-open" data-v="step" data-i="' + i + '"><b>' + t.t + '</b></button>'; }).join('') + '</div>';
+        } else {
+          var list = hp.v === 'topic' ? RT : GS, it = list[hp.i];
+          full = it.t;
+          inner = '<div class="topic">' + it.b + '</div><p class="small muted" style="text-align:center">' + (hp.v === 'topic' ? 'Spelregel ' : 'Uitleg ') + (hp.i + 1) + ' van ' + list.length + '</p>' +
+            '<div class="page-nav"><button class="btn ghost" data-act="hp-step" data-v="-1"' + (hp.i <= 0 ? ' disabled' : '') + '>‹ Vorige</button>' +
+            '<button class="btn" data-act="hp-step" data-v="1"' + (hp.i >= list.length - 1 ? ' disabled' : '') + '>Volgende ›</button></div>';
+        }
       } else if (sh.type === 'menu') {
         var host = S.role === 'host';
         inner = '<h2>Menu</h2>';
@@ -957,20 +1017,22 @@
     layer.innerHTML = html;
     var fp = layer.querySelector('.fullpage');
     if (fp && fpPrev) fp.scrollTop = fpTop;
+    if (fp && fp.scrollHeight > fp.clientHeight + 1) fp.classList.add('fit1');
+    if (fp && fp.scrollHeight > fp.clientHeight + 1) fp.querySelectorAll('.navrow').forEach(function (r) { r.style.minHeight = '42px'; r.style.paddingBlock = '4px'; });
     document.body.style.overflow = fp ? 'hidden' : '';
   }
 
   // Tighten the layout step by step until the screen fits without scrolling.
   function render() {
-    for (var lvl = 0; lvl <= 2; lvl++) {
-      app.className = 'wrap' + (lvl ? ' fit1' : '') + (lvl > 1 ? ' fit2' : '') + (S.view === 'home' ? ' home' : '');
+    for (var lvl = 0; lvl <= 3; lvl++) {
+      app.className = 'wrap' + (lvl ? ' fit1' : '') + (lvl > 1 ? ' fit2' : '') + (lvl > 2 ? ' fit3' : '') + (S.view === 'home' ? ' home' : '') + (S.view === 'fb' ? ' fbwrap' : '');
       var html;
       if (S.view === 'table') html = renderTable();
       else if (S.view === 'create' || S.view === 'practice') html = renderCreate();
       else if (S.view === 'fb') html = renderFb();
       else html = renderHome();
       app.innerHTML = html;
-      if (S.view === 'fb' || document.documentElement.scrollHeight <= window.innerHeight + 1) break;
+      if (document.documentElement.scrollHeight <= window.innerHeight + 1) break;
     }
     renderLayer();
     wake();
@@ -1002,7 +1064,11 @@
 
   // The phone's back button (or back swipe) closes the rules page.
   window.addEventListener('popstate', function () {
-    if (S.sheet && S.sheet.type === 'help') { S.sheet = null; renderLayer(); }
+    if (S.sheet && S.sheet.type === 'help') {
+      S.sheet.stack.pop();
+      if (!S.sheet.stack.length) S.sheet = null;
+      renderLayer();
+    }
   });
 
   document.addEventListener('keydown', function (e) {
@@ -1015,9 +1081,16 @@
     var a = el.dataset.act, v = el.dataset.v, id = el.dataset.id, c = S.create;
     switch (a) {
       case 'help':
-        S.sheet = { type: 'help', view: 'regels' };
+        S.sheet = { type: 'help', stack: [{ v: 'menu' }] };
         try { history.pushState({ toepenPage: 1 }, '', location.href); } catch (e6) {}
         renderLayer(); break;
+      case 'hp-open':
+        S.sheet.stack.push({ v: v, i: +el.dataset.i });
+        try { history.pushState({ toepenPage: S.sheet.stack.length }, '', location.href); } catch (e8) {}
+        renderLayer(); var fpo = layer.querySelector('.fullpage'); if (fpo) fpo.scrollTop = 0; break;
+      case 'hp-step':
+        var top = S.sheet.stack[S.sheet.stack.length - 1], lst = top.v === 'topic' ? rulesTopics() : guideSteps();
+        top.i = Math.max(0, Math.min(lst.length - 1, top.i + +v)); renderLayer(); break;
       case 'back':
         if (history.state && history.state.toepenPage) history.back();
         else { S.sheet = null; renderLayer(); }
@@ -1033,7 +1106,10 @@
         var dbIn = document.getElementById('fbdb');
         if (dbIn && dbIn.value.trim()) S.fb.cfg.databaseURL = dbIn.value.trim().replace(/\/+$/, '');
         runChecks(); break;
-      case 'fb-retest': runChecks(); break;
+      case 'fb-retest': S.fb.step = 7; runChecks(); break;
+      case 'fb-step':
+        if (S.fb.step === 5) { var t5 = document.getElementById('fbtext'), d5 = document.getElementById('fbdb'); if (t5) S.fb.text = t5.value; if (d5 && d5.value.trim() && S.fb.cfg) S.fb.cfg.databaseURL = d5.value.trim().replace(/\/+$/, ''); }
+        S.fb.step = Math.max(0, Math.min(FB_STEPS - 1, (S.fb.step || 0) + +v)); render(); window.scrollTo(0, 0); break;
       case 'fb-forget': try { localStorage.removeItem(CFG_KEY); } catch (e4) {} location.href = location.pathname; break;
       case 'fb-finish': location.href = location.pathname; break;
       case 'fb-copyrules':
@@ -1042,7 +1118,6 @@
         }).catch(function () { toast('Kopiëren lukte niet. Open database.rules.json en kopieer het handmatig.'); });
         break;
       case 'copy': try { navigator.clipboard.writeText(v).then(function () { toast('Gekopieerd'); }); } catch (e5) { toast(v); } break;
-      case 'helpview': S.sheet.view = v; renderLayer(); var fpg = layer.querySelector('.fullpage'); if (fpg) fpg.scrollTop = 0; break;
       case 'menu': S.sheet = { type: 'menu' }; renderLayer(); break;
       case 'sheet-close': S.sheet = null; renderLayer(); break;
       case 'home': S.view = 'home'; render(); break;
