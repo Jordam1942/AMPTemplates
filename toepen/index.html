@@ -211,6 +211,19 @@
   .hbar .track span { display: block; height: 100%; border-radius: 6px; }
   .hbar .val { text-align: right; font-variant-numeric: tabular-nums; font-weight: 700; }
 
+  .rank { display: inline-grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: var(--sunken); font-weight: 800; font-size: 0.8rem; font-variant-numeric: tabular-nums; }
+  .rank.r1 { background: var(--accent); color: var(--accent-fg); }
+  .rank.r2, .rank.r3 { background: var(--accent-soft); color: var(--accent); }
+  .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: middle; flex: none; }
+  table.stats td.who, table.stats th.who { text-align: left; }
+  table.stats td.who span { overflow-wrap: anywhere; }
+  table.stats tr.top td { font-weight: 700; }
+  .top3 { display: grid; gap: 8px; }
+  .top3 .line { display: flex; align-items: center; gap: 10px; }
+  .top3 .line b { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .record { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 0.92rem; }
+  .record:last-child { border-bottom: 0; }
+  .record span:last-child { text-align: right; font-weight: 700; }
   details.rule { border-bottom: 1px solid var(--line); padding: 10px 0; }
   details.rule:last-child { border-bottom: 0; }
   details.rule summary { font-weight: 700; cursor: pointer; min-height: 32px; display: flex; align-items: center; }
@@ -246,7 +259,7 @@
   .toast {
     position: fixed; left: 50%; bottom: calc(84px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%);
     z-index: 30; background: var(--ink); color: var(--ink-fg); padding: 10px 16px; border-radius: 12px;
-    font-weight: 600; font-size: 0.92rem; max-width: calc(100% - 32px); text-align: center;
+    font-weight: 600; font-size: 0.92rem; max-width: calc(100% - 32px); text-align: center; pointer-events: none;
     box-shadow: 0 8px 24px -10px rgba(0,0,0,0.5); animation: up 0.2s ease;
   }
   .confirm { display: grid; gap: 10px; background: var(--danger-soft); padding: 14px; border-radius: 12px; }
@@ -283,6 +296,7 @@
     return r;
   }
   var state = load() || fresh();
+  state.archive = state.archive || [];
   rulesOf(state.setup);
   if (!state.setup.roster) {
     state.setup.roster = (state.setup.names || []).map(function (n, i) { return { name: n, on: true, color: COLORS[i % COLORS.length] }; });
@@ -305,7 +319,8 @@
       settings: { theme: 'system', sound: true, vibrate: true, wake: true },
       game: null,
       undo: [],
-      wins: {}
+      wins: {},
+      archive: []
     };
   }
   function load() {
@@ -363,7 +378,7 @@
     var wasDone = G().done, w = winner();
     state.game = JSON.parse(prev);
     confetti.run = (confetti.run || 0) + 1;
-    if (wasDone && !G().done && w && state.wins[w.name]) state.wins[w.name]--;
+    if (wasDone && !G().done && w && state.wins[w.name]) { state.wins[w.name]--; state.archive.pop(); }
     toast('Laatste actie ongedaan gemaakt');
     commit();
   }
@@ -387,6 +402,14 @@
     if (w && !G().done) {
       G().done = true;
       state.wins[w.name] = (state.wins[w.name] || 0) + 1;
+      var g = G(), st = computeStats();
+      state.archive.push({
+        at: Date.now(), limit: g.limit, rounds: st.rounds, maxStake: st.maxStake, winner: w.name,
+        players: g.players.map(function (p) {
+          return { name: p.name, color: p.color, score: p.score, won: st.per[p.id].won, toeps: st.per[p.id].toeps };
+        })
+      });
+      if (state.archive.length > 500) state.archive.shift();
       sound('win'); buzz([60, 40, 60, 40, 160]);
       setTimeout(confetti, 50);
     }
@@ -648,11 +671,12 @@
     var dealers = dealersHtml();
 
     var winsHtml = '';
-    var wk = Object.keys(state.wins).filter(function (k) { return state.wins[k] > 0; });
-    if (wk.length) {
-      wk.sort(function (a, b) { return state.wins[b] - state.wins[a]; });
-      winsHtml = '<div class="panel"><div class="label">Potjes gewonnen</div><div class="row">' +
-        wk.map(function (k) { return '<span class="pill win">' + esc(k) + ' · ' + state.wins[k] + '</span>'; }).join('') + '</div></div>';
+    var br = boardRows();
+    if (br.length) {
+      winsHtml = '<div class="panel"><div class="label">Ranglijst</div><div class="top3">' +
+        br.slice(0, 3).map(function (x, i) {
+          return '<div class="line">' + rankBadge(i) + dot(x.color) + '<b>' + esc(x.name) + '</b><span class="muted small num">' + plural(x.won, 'potje', 'potjes') + ' gewonnen</span></div>';
+        }).join('') + '</div><button class="btn ghost" data-act="sheet-board">Hele ranglijst en eerdere potjes</button></div>';
     }
 
     app.innerHTML =
@@ -785,7 +809,86 @@
     return { per: s, rounds: rounds, maxStake: maxStake, maxRound: maxRound, totalToeps: totalToeps };
   }
 
+  function boardRows() {
+    var map = {};
+    function get(n) { return map[n] || (map[n] = { name: n, won: 0, aw: 0, played: 0, ap: 0, pts: 0, toeps: 0, rounds: 0, color: null }); }
+    state.archive.forEach(function (g) {
+      get(g.winner).aw++;
+      g.players.forEach(function (p) {
+        var x = get(p.name);
+        x.ap++; x.pts += p.score; x.toeps += p.toeps; x.rounds += p.won; x.color = p.color;
+      });
+    });
+    Object.keys(state.wins).forEach(function (n) { if (state.wins[n] > 0) get(n).won = state.wins[n]; });
+    state.setup.roster.forEach(function (r) { if (map[r.name] && !map[r.name].color) map[r.name].color = r.color; });
+    var rows = Object.keys(map).map(function (k) { var x = map[k]; x.played = x.ap + Math.max(0, x.won - x.aw); return x; })
+      .filter(function (x) { return x.played > 0; });
+    rows.sort(function (a, b) {
+      return b.won - a.won || (b.won / b.played) - (a.won / a.played) || b.played - a.played || a.name.localeCompare(b.name);
+    });
+    return rows;
+  }
+
+  function rankBadge(i) { return '<span class="rank' + (i < 3 ? ' r' + (i + 1) : '') + '">' + (i + 1) + '</span>'; }
+  function dot(c) { return '<span class="dot" style="background:' + (c || 'var(--muted)') + '"></span>'; }
+  function fmtDate(t) {
+    try { return new Date(t).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', year: 'numeric' }); } catch (e) { return ''; }
+  }
+
+  function allTimeHtml() {
+    var A = state.archive, rows = boardRows();
+    if (!rows.length) return '<div class="panel muted">Nog geen potjes uitgespeeld. Zodra een potje een winnaar heeft, komt die hier op de ranglijst.</div>';
+    var totalGames = Math.max(A.length, Object.keys(state.wins).reduce(function (n, k) { return n + state.wins[k]; }, 0));
+    var totalRounds = A.reduce(function (n, g) { return n + g.rounds; }, 0);
+    var maxStake = A.reduce(function (m, g) { return Math.max(m, g.maxStake || 1); }, 0);
+    var html = '<div class="stack">';
+    html += '<div class="tiles"><div class="tile"><b>' + totalGames + '</b><span>Potjes</span></div>' +
+      '<div class="tile"><b>' + totalRounds + '</b><span>Rondes</span></div>' +
+      '<div class="tile"><b>' + (maxStake || '–') + '</b><span>Hoogste inzet</span></div></div>';
+    html += '<div class="panel"><div class="label">Ranglijst · meeste potjes gewonnen</div><div class="table-wrap"><table class="stats"><thead><tr><th></th><th class="who">Speler</th><th>Gew.</th><th>Gesp.</th><th>Winst</th></tr></thead><tbody>';
+    rows.forEach(function (x, i) {
+      html += '<tr' + (i === 0 ? ' class="top"' : '') + '><td>' + rankBadge(i) + '</td><td class="who">' + dot(x.color) + '<span>' + esc(x.name) + '</span></td>' +
+        '<td>' + x.won + '</td><td>' + x.played + '</td><td>' + Math.round(x.won / x.played * 100) + '%</td></tr>';
+    });
+    html += '</tbody></table></div><p class="small muted">Bij gelijk aantal gewonnen telt het winstpercentage.</p></div>';
+
+    if (A.length) {
+      var fastest = null, cleanest = null, toepKing = null, bigStake = null;
+      A.forEach(function (g) {
+        var w = g.players.filter(function (p) { return p.name === g.winner; })[0];
+        if (!fastest || g.rounds < fastest.g.rounds) fastest = { g: g };
+        if (w && (!cleanest || w.score < cleanest.score)) cleanest = { g: g, score: w.score };
+        g.players.forEach(function (p) { if (!toepKing || p.toeps > toepKing.n) toepKing = { name: p.name, n: p.toeps, g: g }; });
+        if (!bigStake || (g.maxStake || 1) > bigStake.n) bigStake = { n: g.maxStake || 1, g: g };
+      });
+      html += '<div class="panel" style="gap:0"><div class="label" style="margin-bottom:6px">Records</div>' +
+        '<div class="record"><span>Snelste overwinning</span><span>' + esc(fastest.g.winner) + ' · ' + plural(fastest.g.rounds, 'ronde', 'rondes') + '</span></div>' +
+        (cleanest ? '<div class="record"><span>Schoonste overwinning</span><span>' + esc(cleanest.g.winner) + ' · ' + plural(cleanest.score, 'strafpunt', 'strafpunten') + '</span></div>' : '') +
+        (toepKing && toepKing.n ? '<div class="record"><span>Meeste toeps in één potje</span><span>' + esc(toepKing.name) + ' · ' + toepKing.n + '×</span></div>' : '') +
+        '<div class="record"><span>Hoogste inzet</span><span>' + bigStake.n + ' · ' + fmtDate(bigStake.g.at) + '</span></div>' +
+        '</div>';
+      html += '<div class="panel" style="padding-block:4px"><div class="label" style="padding-top:12px">Laatste potjes</div>';
+      A.slice(-15).reverse().forEach(function (g) {
+        var stand = g.players.slice().sort(function (a, b) { return a.score - b.score; });
+        html += '<div class="log-item"><div class="log-head"><span>' + esc(g.winner) + ' wint</span><span class="muted small">' + fmtDate(g.at) + '</span></div>' +
+          '<div class="small muted">' + plural(g.rounds, 'ronde', 'rondes') + ' · af bij ' + g.limit + '</div><div>' +
+          stand.map(function (p) { return '<span class="pill' + (p.name === g.winner ? ' win' : '') + '">' + esc(p.name) + ' ' + p.score + '</span>'; }).join('') +
+          '</div></div>';
+      });
+      html += '</div>';
+    }
+    return html + '</div>';
+  }
+
   function renderStats() {
+    var seg = '<div class="seg" style="margin-bottom:14px">' + [['potje', 'Dit potje'], ['altijd', 'Ranglijst']].map(function (o) {
+      return '<button data-act="statsview" data-v="' + o[0] + '" aria-pressed="' + ((ui.statsView || 'potje') === o[0]) + '">' + o[1] + '</button>';
+    }).join('') + '</div>';
+    if (ui.statsView === 'altijd') return '<div class="topbar"><h1>Statistieken</h1></div>' + seg + allTimeHtml();
+    return renderPotjeStats().replace('<div class="stack">', seg + '<div class="stack">');
+  }
+
+  function renderPotjeStats() {
     var g = G(), st = computeStats(), html = '<div class="topbar"><h1>Statistieken</h1></div><div class="stack">';
     html += '<div class="tiles"><div class="tile"><b>' + st.rounds + '</b><span>Rondes</span></div>' +
       '<div class="tile"><b>' + st.totalToeps + '</b><span>Keer getoept</span></div>' +
@@ -806,12 +909,6 @@
       html += '<tr><td>' + esc(p.name) + '</td><td>' + x.toeps + '</td><td>' + x.passed + '</td><td>' + x.lost + '</td><td>' + p.score + '</td></tr>';
     });
     html += '</tbody></table></div></div>';
-    var wk = Object.keys(state.wins).filter(function (k) { return state.wins[k] > 0; });
-    if (wk.length) {
-      wk.sort(function (a, b) { return state.wins[b] - state.wins[a]; });
-      html += '<div class="panel"><div class="label">Potjes gewonnen (alle potjes)</div><div>' +
-        wk.map(function (k) { return '<span class="pill win">' + esc(k) + ' · ' + state.wins[k] + '</span>'; }).join('') + '</div></div>';
-    }
     return html + '</div>';
   }
 
@@ -841,7 +938,7 @@
       '</div>';
     html += '<div class="panel"><div class="label">Gegevens</div>';
     if (ui.confirmReset) {
-      html += '<div class="confirm"><b>Alles wissen? Spelers, stand en gewonnen potjes gaan verloren.</b>' +
+      html += '<div class="confirm"><b>Alles wissen? Spelers, stand, ranglijst en eerdere potjes gaan verloren.</b>' +
         '<div class="row"><button class="btn ghost" data-act="reset-no">Nee</button><button class="btn danger" data-act="reset-yes">Ja, alles wissen</button></div></div>';
     } else {
       html += '<button class="btn danger" data-act="reset-ask">Alles wissen</button>';
@@ -863,7 +960,7 @@
   function renderLayer() {
     var html = '';
     var sh = ui.sheet;
-    if (sh && state.game) {
+    if (sh && (state.game || sh.type === 'board')) {
       var inner = '';
       if (sh.type === 'toep') {
         var rt = G().round.toeps, lastT = rt.length ? rt[rt.length - 1].by : null;
@@ -880,6 +977,8 @@
           '<div class="pick">' + inRoundPlayers().map(function (p) {
             return '<button data-act="finish" data-id="' + p.id + '">' + avatar(p, true) + '<span>' + esc(p.name) + '</span></button>';
           }).join('') + '</div>';
+      } else if (sh.type === 'board') {
+        inner = '<h2>Ranglijst</h2>' + allTimeHtml();
       } else if (sh.type === 'was1') {
         inner = '<h2>Wie heeft witte was?</h2><p class="muted small">Alleen boeren, vrouwen, heren en azen in de hand.</p>' +
           '<div class="pick">' + inRoundPlayers().map(function (p) {
@@ -978,6 +1077,8 @@
       case 'sheet-toep': ui.sheet = { type: 'toep' }; renderLayer(); break;
       case 'sheet-finish': ui.sheet = { type: 'finish' }; renderLayer(); break;
       case 'sheet-was': ui.sheet = { type: 'was1' }; renderLayer(); break;
+      case 'sheet-board': ui.sheet = { type: 'board' }; renderLayer(); break;
+      case 'statsview': ui.statsView = v; render(); break;
       case 'was-who': ui.sheet = { type: 'was2', id: id }; renderLayer(); break;
       case 'was-check': ui.sheet = { type: 'was3', id: id, by: el.dataset.by }; renderLayer(); break;
       case 'was-none': ui.sheet = null; doWas(id, null, null); break;
