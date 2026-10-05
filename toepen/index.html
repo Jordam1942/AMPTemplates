@@ -317,7 +317,7 @@
 (function () {
   'use strict';
   var KEY = 'toepen-scorebord-v2';
-  var VERSION = '13 (ongedaan maken en opnieuw doen)';
+  var VERSION = '14 (spelers toevoegen tijdens het spel)';
   var COLORS = ['#2f7d5b', '#c2571a', '#3b6fb6', '#a63d6b', '#7a5bb5', '#a67c12', '#1f8a8f', '#5d6b1f'];
   var app = document.getElementById('app');
   var layer = document.getElementById('layer');
@@ -610,6 +610,35 @@
     commit();
   }
 
+  function canAddPlayer() { var g = G(); return g && !g.done && g.players.filter(function (p) { return !p.left; }).length < 8; }
+  function topScore() {
+    var a = alive();
+    return a.length ? Math.max.apply(null, a.map(function (p) { return p.score; })) : 0;
+  }
+  function addPlayer(name, start) {
+    var g = G();
+    name = (name || '').trim();
+    if (!name) { toast('Vul eerst een naam in.'); renderLayer(); return false; }
+    if (g.players.some(function (p) { return p.name.toLowerCase() === name.toLowerCase(); })) { toast(name + ' speelt al mee.'); renderLayer(); return false; }
+    if (!canAddPlayer()) { toast('Er kunnen maximaal 8 spelers meedoen.'); renderLayer(); return false; }
+    var roster = state.setup.roster, rr = roster.filter(function (r) { return r.name.toLowerCase() === name.toLowerCase(); })[0];
+    if (!rr) { rr = { name: name, on: true, color: freeColor() }; roster.push(rr); }
+    else if (!rr.on && activeRoster().length < 8) rr.on = true;
+    var used = g.players.map(function (p) { return p.color; });
+    var color = used.indexOf(rr.color) < 0 ? rr.color : (COLORS.filter(function (c) { return used.indexOf(c) < 0; })[0] || rr.color);
+    var score = start === 'top' ? topScore() : 0;
+    snapshot(name + ' doet mee');
+    var n = 0; g.players.forEach(function (p) { n = Math.max(n, +p.id.slice(1) + 1); });
+    var id = 'p' + n;
+    g.players.push({ id: id, name: rr.name, color: color, score: score, out: false, bought: 0 });
+    g.round.passed[id] = 0;
+    g.log.push({ t: 'join', id: id, score: score, round: g.round.n, at: Date.now() });
+    toast(rr.name + ' doet mee vanaf de volgende ronde' + (score ? ', met ' + score : ''));
+    buzz(30);
+    commit();
+    return true;
+  }
+
   function rejoinPlayer(id) {
     var g = G(), p = byId(id);
     if (!p.left || g.done) return;
@@ -850,7 +879,7 @@
       if (p.left) chips += '<span class="chip left">Gestopt</span>';
       else if (af) chips += '<span class="chip af">Af</span>';
       if (passed) chips += '<span class="chip">Gepast +' + r.passed[p.id] + '</span>';
-      if (waiting) chips += '<span class="chip">Volgende ronde weer mee</span>';
+      if (waiting) chips += '<span class="chip">Doet mee vanaf volgende ronde</span>';
       if (p.bought) chips += '<span class="chip">Ingekocht</span>';
       html += '<div class="player' + (af ? ' af' : '') + (p.left ? ' left' : '') + (scherp ? ' scherp' : '') + (passed ? ' passed' : '') + '">' +
         '<div class="p-head">' + avatar(p) +
@@ -872,7 +901,11 @@
 
     var dirty = g.log.length || r.toeps.length || g.players.some(function (p) { return p.score > 0; });
     if (!w && dirty) {
-      html += '<button class="btn ghost wide" style="margin-top:14px" data-act="ask" data-v="potje">Stand op 0 zetten</button>';
+      html += '<div class="row" style="margin-top:14px">' +
+        (canAddPlayer() ? '<button class="btn ghost" style="flex:1" data-act="sheet-addp">+ Speler toevoegen</button>' : '') +
+        '<button class="btn ghost" style="flex:1" data-act="ask" data-v="potje">Stand op 0 zetten</button></div>';
+    } else if (!w && canAddPlayer()) {
+      html += '<button class="btn ghost wide" style="margin-top:14px" data-act="sheet-addp">+ Speler toevoegen</button>';
     }
 
     if (!w && r.n === 1 && !r.toeps.length && !g.log.length) {
@@ -907,6 +940,9 @@
                   nameOf(e.by) + ' controleert ' + nameOf(e.id) + ': vuile was, ' + nameOf(e.id) + ' +' + e.pts);
         html += '<div class="log-item"><div class="log-head"><span>Witte was</span><span class="muted small">ronde ' + e.round + '</span></div>' +
           '<div class="small">' + wtxt + '</div></div>';
+      } else if (e.t === 'join') {
+        html += '<div class="log-item"><div class="log-head"><span>Nieuwe speler</span><span class="muted small">ronde ' + e.round + '</span></div>' +
+          '<div class="small">' + nameOf(e.id) + ' doet mee, met ' + plural(e.score, 'strafpunt', 'strafpunten') + '</div></div>';
       } else if (e.t === 'left' || e.t === 'back') {
         html += '<div class="log-item"><div class="log-head"><span>' + (e.t === 'left' ? 'Gestopt' : 'Doet weer mee') + '</span><span class="muted small">ronde ' + e.round + '</span></div>' +
           '<div class="small">' + nameOf(e.id) + (e.t === 'left' ? ' stopt met spelen, met ' + plural(e.score, 'strafpunt', 'strafpunten') : ' doet weer mee') + '</div></div>';
@@ -1239,7 +1275,8 @@
         k('Op scherp', 'warn') + ' nog één strafpunt en je ligt eruit.',
         '<b>Af</b>: ligt eruit. ' + k('Inkopen') + ' verschijnt als terugkomen mag.',
         '<b>Gepast</b>: doet deze ronde niet meer mee.',
-        '<b>Gestopt</b>: wil iemand stoppen? Tik op de <b>score</b> van die speler en kies <b>stopt met spelen</b>, of ga naar <b>Meer</b> → Spelers. Daar kan diegene ook weer meedoen.'
+        '<b>Gestopt</b>: wil iemand stoppen? Tik op de <b>score</b> van die speler en kies <b>stopt met spelen</b>, of ga naar <b>Meer</b> → Spelers. Daar kan diegene ook weer meedoen.',
+        'Komt er iemand bij? Tik op ' + k('+ Speler toevoegen') + ' onder de spelers. Kies een naam en of de speler met 0 of op de hoogste stand begint. Meedoen gaat vanaf de volgende ronde.'
       ]) +
       step(5, 'Winnaar en nieuw potje', [
         'Blijft er één speler over, dan is die de winnaar en komt het potje op de ranglijst.',
@@ -1285,6 +1322,7 @@
         return '<div class="quit-row">' + avatar(p, true) + '<b>' + esc(p.name) + '</b><span class="small muted num">' +
           (p.left ? 'gestopt' : p.out ? 'af' : p.score + ' / ' + g.limit) + '</span>' + btn + '</div>';
       }).join('') +
+      (canAddPlayer() ? '<button class="btn ghost" data-act="sheet-addp">+ Speler toevoegen</button>' : '') +
       '<div class="label" style="margin-top:4px">Huisregels</div>' + rulesPanel(g.rules, 'game') +
       '<div class="row"><button class="btn ghost" style="flex:1" data-act="ask" data-v="potje">Stand op 0 zetten</button>' +
       '<button class="btn ghost" style="flex:1" data-act="tosetup">Spelers wijzigen</button></div></div>';
@@ -1389,6 +1427,21 @@
           (G().done ? '' : p.left
             ? '<button class="btn" data-act="rejoin" data-id="' + p.id + '">' + esc(p.name) + ' doet weer mee</button>'
             : '<button class="btn ghost" data-act="ask-quit" data-id="' + p.id + '">' + esc(p.name) + ' stopt met spelen…</button>');
+      } else if (sh.type === 'addp') {
+        var gn = G().players.map(function (p) { return p.name.toLowerCase(); });
+        var bench = state.setup.roster.filter(function (r) { return gn.indexOf(r.name.toLowerCase()) < 0; });
+        var top = topScore(), startTop = sh.start === 'top';
+        inner = '<h2>Speler toevoegen</h2><p class="muted small">De nieuwe speler doet mee vanaf de volgende ronde en schuift aan het eind van de tafel aan.</p>' +
+          '<div class="label">Begint met</div><div class="seg">' +
+          '<button data-act="addp-start" data-v="zero" aria-pressed="' + !startTop + '">0 strafpunten</button>' +
+          '<button data-act="addp-start" data-v="top" aria-pressed="' + startTop + '">' + plural(top, 'strafpunt', 'strafpunten') + ' (hoogste)</button></div>' +
+          (bench.length ? '<div class="label">Uit je spelerslijst</div><div class="pick">' + bench.map(function (r) {
+            return '<button data-act="addp-pick" data-v="' + esc(r.name) + '"><div class="avatar sm" style="background:' + r.color + '" aria-hidden="true">' +
+              esc((r.name.trim()[0] || '?').toUpperCase()) + '</div><span>' + esc(r.name) + '</span></button>';
+          }).join('') + '</div>' : '') +
+          '<div class="label">Of een nieuwe naam</div>' +
+          '<div class="name-row"><input id="addname" maxlength="18" autocomplete="off" placeholder="Naam" aria-label="Naam nieuwe speler">' +
+          '<button class="btn primary" data-act="addp-new">Toevoegen</button></div>';
       } else if (sh.type === 'quit') {
         var q = byId(sh.id), others = alive().filter(function (o) { return o.id !== q.id; }).length;
         inner = '<div class="row">' + avatar(q) + '<h2>' + esc(q.name) + ' stopt met spelen?</h2></div>' +
@@ -1489,6 +1542,14 @@
       case 'ask-quit': ui.sheet = { type: 'quit', id: id }; renderLayer(); break;
       case 'do-quit': ui.sheet = null; quitPlayer(id); break;
       case 'rejoin': ui.sheet = null; rejoinPlayer(id); break;
+      case 'sheet-addp': ui.sheet = { type: 'addp', start: 'zero' }; renderLayer(); break;
+      case 'addp-start': ui.sheet.start = v; renderLayer(); break;
+      case 'addp-pick': var st0 = ui.sheet.start; ui.sheet = null; if (!addPlayer(v, st0)) ui.sheet = { type: 'addp', start: st0 }; break;
+      case 'addp-new':
+        var inp = document.getElementById('addname'), st1 = ui.sheet.start, nm = inp ? inp.value : '';
+        ui.sheet = null;
+        if (!addPlayer(nm, st1)) { ui.sheet = { type: 'addp', start: st1 }; renderLayer(); var i2 = document.getElementById('addname'); if (i2) { i2.value = nm; i2.focus(); } }
+        break;
       case 'buyin': buyIn(id); break;
       case 'again':
         var g = G();
@@ -1523,6 +1584,7 @@
   });
 
   document.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' && e.target.id === 'addname') { var b = layer.querySelector('[data-act=addp-new]'); if (b) b.click(); return; }
     if (e.key === 'Escape' && ui.sheet) { ui.sheet = null; renderLayer(); }
   });
 
