@@ -1,0 +1,866 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1f6b4a">
+<meta name="description" content="Speel Toepen samen, ieder op de eigen telefoon.">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<title>Toepen Multiplayer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Figtree:wght@400;500;600;700&display=swap">
+<style>
+  /* Layout: one column. Table felt (stake + trick) on top, players list, own hand docked at the bottom */
+  :root {
+    --bg: #eef1ea; --surface: #fbfcf8; --sunken: #e3e8df; --fg: #1d2620; --muted: #5f6b62; --line: #d5dbd0;
+    --accent: #1f6b4a; --accent-fg: #ffffff; --accent-soft: #dcebe2;
+    --warn: #b4540f; --warn-soft: #fbe7d6; --danger: #b3261e; --danger-soft: #f9dedc;
+    --ink: #253a2e; --ink-fg: #eef1ea; --felt: #1d5c40; --felt-line: #2f7354;
+    --card: #ffffff; --card-red: #c62828; --card-black: #1b1f1d; --scrim: rgba(18, 26, 21, 0.5);
+    --font-display: "Bricolage Grotesque", "Arial Rounded MT Bold", system-ui, sans-serif;
+    --font-body: "Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #121a15; --surface: #1b251f; --sunken: #16201a; --fg: #e8eee8; --muted: #9eaba1; --line: #2c3a31;
+      --accent: #4fbf89; --accent-fg: #0d1a13; --accent-soft: #1f3a2b;
+      --warn: #f0a160; --warn-soft: #3a2817; --danger: #f2b8b5; --danger-soft: #4a1f1c;
+      --ink: #dfe9e1; --ink-fg: #121a15; --felt: #17432f; --felt-line: #24573f; --scrim: rgba(0, 0, 0, 0.65);
+      color-scheme: dark;
+    }
+  }
+  * { box-sizing: border-box; }
+  html { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+  body { margin: 0; background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 16px; line-height: 1.4; -webkit-tap-highlight-color: transparent; }
+  .wrap { max-width: 560px; margin: 0 auto; padding-inline: 16px; padding-block: 12px 40px; }
+  .wrap.has-hand { padding-bottom: 210px; }
+  h1, h2, h3 { font-family: var(--font-display); margin: 0; text-wrap: balance; letter-spacing: -0.01em; }
+  h1 { font-size: 1.7rem; font-weight: 800; }
+  h2 { font-size: 1.25rem; font-weight: 700; }
+  h3 { font-size: 1.05rem; font-weight: 600; }
+  p { margin: 0; }
+  a { color: var(--accent); }
+  button { font: inherit; color: inherit; cursor: pointer; border: 0; background: none; }
+  button:focus-visible, input:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+  .muted { color: var(--muted); } .small { font-size: 0.875rem; }
+  .label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 700; }
+  .stack { display: grid; gap: 12px; } .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .num { font-variant-numeric: tabular-nums; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 48px; padding: 0 18px; border-radius: 12px; font-weight: 700; background: var(--accent-soft); color: var(--accent); text-align: center; text-decoration: none; }
+  .btn.primary { background: var(--accent); color: var(--accent-fg); }
+  .btn.ghost { background: transparent; border: 1.5px solid var(--line); color: var(--fg); }
+  .btn.warn { background: var(--warn-soft); color: var(--warn); }
+  .btn.danger { background: var(--danger-soft); color: var(--danger); }
+  .btn.big { min-height: 56px; font-size: 1.1rem; } .btn.sm { min-height: 40px; padding: 0 12px; font-size: 0.9rem; }
+  .btn:disabled { opacity: 0.4; cursor: default; }
+  .btn:active:not(:disabled) { transform: scale(0.97); }
+  .panel { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 16px; display: grid; gap: 12px; grid-template-columns: minmax(0, 1fr); }
+  .topbar { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 12px; }
+  .topbar .meta { min-width: 0; }
+  .tools { display: flex; gap: 8px; flex: none; }
+  .icon-round { width: 40px; min-height: 40px; padding: 0; font-weight: 800; }
+  input.text { width: 100%; height: 50px; border-radius: 12px; border: 1.5px solid var(--line); background: var(--bg); color: var(--fg); padding: 0 14px; font: inherit; font-size: 1.05rem; }
+  input.code { text-transform: uppercase; letter-spacing: 0.3em; font-weight: 800; font-family: var(--font-display); text-align: center; font-size: 1.4rem; }
+  .choice { display: grid; gap: 4px; text-align: left; padding: 14px; border-radius: 14px; border: 1.5px solid var(--line); background: var(--surface); }
+  .choice b { font-size: 1.05rem; } .choice span { color: var(--muted); font-size: 0.9rem; }
+  .choice[aria-pressed="true"] { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); background: var(--accent-soft); }
+  .seg { display: flex; gap: 6px; flex-wrap: wrap; }
+  .seg button { min-height: 44px; min-width: 56px; padding: 0 14px; border-radius: 10px; font-weight: 700; border: 1.5px solid var(--line); }
+  .seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+  .toggle-row { display: flex; align-items: center; gap: 12px; min-height: 48px; width: 100%; text-align: left; }
+  .toggle-row .txt { flex: 1; min-width: 0; } .toggle-row .txt div:last-child { font-size: 0.85rem; color: var(--muted); }
+  .switch { width: 50px; height: 30px; border-radius: 15px; background: var(--line); position: relative; flex: none; transition: background 0.2s; }
+  .switch::after { content: ""; position: absolute; top: 3px; left: 3px; width: 24px; height: 24px; border-radius: 50%; background: var(--surface); transition: transform 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.25); }
+  .toggle-row[aria-checked="true"] .switch { background: var(--accent); }
+  .toggle-row[aria-checked="true"] .switch::after { transform: translateX(20px); }
+  .stepper { display: flex; align-items: center; gap: 12px; }
+  .stepper b { min-width: 2ch; text-align: center; font-size: 1.3rem; font-family: var(--font-display); }
+  .notice { background: var(--warn-soft); color: var(--fg); border-radius: 12px; padding: 12px 14px; font-size: 0.92rem; }
+  .avatar { width: 36px; height: 36px; border-radius: 50%; flex: none; display: grid; place-items: center; color: #fff; font-weight: 800; font-family: var(--font-display); }
+  .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--accent); flex: none; }
+  .dot.off { background: var(--danger); }
+
+  /* Lobby */
+  .qr { background: #fff; border-radius: 16px; padding: 14px; justify-self: center; width: min(280px, 100%); }
+  .qr svg { display: block; width: 100%; height: auto; }
+  .bigcode { font-family: var(--font-display); font-weight: 800; font-size: 2.6rem; letter-spacing: 0.2em; text-align: center; }
+  .plist { display: grid; gap: 8px; }
+  .prow { display: flex; align-items: center; gap: 10px; min-height: 44px; }
+  .prow b { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .chip { font-size: 0.72rem; font-weight: 700; padding: 2px 8px; border-radius: 999px; white-space: nowrap; background: var(--sunken); color: var(--muted); }
+  .chip.turn { background: var(--accent); color: var(--accent-fg); }
+  .chip.deler { background: var(--accent-soft); color: var(--accent); }
+  .chip.scherp { background: var(--warn-soft); color: var(--warn); }
+  .chip.af { background: var(--danger-soft); color: var(--danger); }
+
+  /* Table */
+  .felt { background: var(--felt); color: #eef1ea; border-radius: 20px; padding: 14px; display: grid; gap: 12px; box-shadow: inset 0 0 0 2px var(--felt-line); }
+  .felt .stakeline { display: flex; align-items: center; gap: 12px; }
+  .felt .stake { font-family: var(--font-display); font-weight: 800; font-size: 2.6rem; line-height: 1; min-width: 1.3ch; text-align: center; }
+  .felt .stake-txt { flex: 1; min-width: 0; font-size: 0.9rem; opacity: 0.9; }
+  .felt .stake-txt .label { color: inherit; opacity: 0.75; }
+  .trick { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; min-height: 112px; align-items: flex-end; padding: 6px 0; }
+  .tslot { display: grid; justify-items: center; gap: 4px; font-size: 0.78rem; max-width: 80px; }
+  .tslot span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 80px; opacity: 0.9; }
+  .tslot.win .pc { box-shadow: 0 0 0 3px #f0a160; }
+  .trick .empty { opacity: 0.75; font-size: 0.9rem; align-self: center; text-align: center; }
+  .status { text-align: center; font-weight: 700; font-size: 1rem; }
+  .status.me { background: #f0a160; color: #1d2620; border-radius: 10px; padding: 6px 10px; }
+
+  /* Cards */
+  .pc { width: 62px; height: 88px; border-radius: 9px; background: var(--card); color: var(--card-black); border: 1px solid rgba(0,0,0,0.15); position: relative; display: block; flex: none; box-shadow: 0 2px 6px rgba(0,0,0,0.25); font-family: var(--font-display); }
+  .pc.red { color: var(--card-red); }
+  .pc .r { position: absolute; top: 4px; left: 6px; font-weight: 800; font-size: 1.15rem; line-height: 1; }
+  .pc .s1 { position: absolute; top: 24px; left: 6px; font-size: 0.95rem; line-height: 1; }
+  .pc .s2 { position: absolute; right: 6px; bottom: 4px; font-size: 2rem; line-height: 1; }
+  .pc.sm { width: 40px; height: 56px; border-radius: 6px; }
+  .pc.sm .r { font-size: 0.85rem; top: 3px; left: 4px; } .pc.sm .s1 { display: none; } .pc.sm .s2 { font-size: 1.25rem; right: 4px; bottom: 2px; }
+  .pc.back { background: repeating-linear-gradient(45deg, #2f7354 0 6px, #24573f 6px 12px); border-color: rgba(255,255,255,0.3); }
+  .minis { display: flex; gap: 4px; flex-wrap: wrap; }
+  .hand { position: fixed; left: 0; right: 0; bottom: 0; z-index: 8; background: var(--surface); border-top: 1px solid var(--line); padding: 10px 16px calc(12px + env(safe-area-inset-bottom, 0px)); box-shadow: 0 -8px 24px -16px rgba(0,0,0,0.5); }
+  .hand .inner { max-width: 560px; margin: 0 auto; display: grid; gap: 10px; }
+  .hand .cards { display: flex; gap: 10px; justify-content: center; }
+  .hand .pc { width: 72px; height: 104px; } .hand .pc .r { font-size: 1.3rem; } .hand .pc .s2 { font-size: 2.3rem; }
+  .hand button.pc { cursor: pointer; transition: transform 0.12s; }
+  .hand button.pc.legal { transform: translateY(-6px); box-shadow: 0 0 0 3px var(--accent), 0 6px 12px rgba(0,0,0,0.25); }
+  .hand button.pc:disabled { cursor: default; transform: none; }
+  .hand.myturn button.pc:disabled { opacity: 0.4; box-shadow: none; }
+  .hand .acts { display: flex; gap: 8px; }
+  .hand .acts .btn { flex: 1; }
+  .btn.toep { background: var(--ink); color: var(--ink-fg); font-size: 1.15rem; }
+
+  .players { display: grid; gap: 8px; margin-top: 14px; }
+  .pl { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 10px 12px; display: grid; gap: 8px; }
+  .pl.turn { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+  .pl.af, .pl.passed { opacity: 0.6; }
+  .pl .head { display: flex; align-items: center; gap: 10px; }
+  .pl .who { flex: 1; min-width: 0; } .pl .who b { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pl .score { font-family: var(--font-display); font-weight: 800; font-size: 1.5rem; } .pl .score small { font-size: 0.8rem; color: var(--muted); }
+  .chips { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 2px; }
+
+  .result { background: var(--warn-soft); color: var(--fg); border-radius: 14px; padding: 12px 14px; font-weight: 600; text-align: center; }
+  .winner { background: var(--accent); color: var(--accent-fg); border-radius: 20px; padding: 22px 18px; display: grid; gap: 12px; text-align: center; }
+  .winner h2 { font-size: 2rem; font-weight: 800; }
+  .winner .btn { background: var(--accent-fg); color: var(--accent); }
+  .winner .btn.ghost { background: transparent; color: var(--accent-fg); border-color: var(--accent-fg); }
+
+  /* Sheets */
+  .scrim { position: fixed; inset: 0; background: var(--scrim); z-index: 20; display: flex; align-items: flex-end; justify-content: center; }
+  .sheet { background: var(--surface); width: 100%; max-width: 560px; border-radius: 20px 20px 0 0; padding: 18px 16px calc(18px + env(safe-area-inset-bottom, 0px)); display: grid; gap: 14px; max-height: 88vh; overflow-y: auto; grid-template-columns: minmax(0, 1fr); }
+  .sheet .grip { width: 40px; height: 4px; border-radius: 2px; background: var(--line); justify-self: center; }
+  .rulebook p, .rulebook li { color: var(--muted); }
+  .rulebook ul { margin: 6px 0 0; padding-left: 20px; display: grid; gap: 4px; }
+  .rulebook b { color: var(--fg); }
+  details.rule { border-bottom: 1px solid var(--line); padding: 10px 0; }
+  details.rule summary { font-weight: 700; cursor: pointer; min-height: 32px; display: flex; align-items: center; }
+  .toast { position: fixed; left: 50%; bottom: calc(220px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); z-index: 30; background: var(--ink); color: var(--ink-fg); padding: 10px 16px; border-radius: 12px; font-weight: 600; font-size: 0.92rem; max-width: calc(100% - 32px); text-align: center; pointer-events: none; }
+  .conn { position: fixed; top: env(safe-area-inset-top, 0px); left: 0; right: 0; z-index: 40; background: var(--danger); color: #fff; text-align: center; font-weight: 700; font-size: 0.85rem; padding: 4px; }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+</head>
+<body>
+<div class="wrap" id="app"></div>
+<div id="layer"></div>
+<script src="vendor/qrcode.js"></script>
+<script src="engine.js"></script>
+<script src="net.js"></script>
+<script src="firebase-config.js"></script>
+<script>
+(function () {
+  'use strict';
+  var E = window.ToepenEngine;
+  var Q = new URLSearchParams(location.search);
+  var FAST = Q.get('fast') === '1';
+  var NET = Q.get('net') === 'local' ? 'local' : (window.TOEPEN_FIREBASE_CONFIG ? 'firebase' : null);
+  var DELAY = { round: FAST ? 150 : 3500, bot: FAST ? 40 : 900 };
+  var COLORS = ['#2f7d5b', '#c2571a', '#3b6fb6', '#a63d6b', '#7a5bb5', '#a67c12', '#1f8a8f', '#5d6b1f'];
+  var BOTS = ['Kees', 'Mies', 'Joop', 'Truus', 'Henk', 'Ria', 'Piet'];
+  var SUIT = { h: '♥', r: '♦', k: '♣', s: '♠' };
+  var SUITNAME = { h: 'harten', r: 'ruiten', k: 'klaveren', s: 'schoppen' };
+  var K = { name: 'toepen-mp-name', host: 'toepen-mp-host', join: 'toepen-mp-join', sb: 'toepen-scorebord-v2' };
+  var app = document.getElementById('app'), layer = document.getElementById('layer');
+
+  // In local test mode every browser tab acts as a separate phone, so per-phone
+  // settings live in sessionStorage there.
+  function ls(k, v) {
+    var st = (NET === 'local' && k !== K.sb) ? sessionStorage : localStorage;
+    try {
+      if (v === undefined) return JSON.parse(st.getItem(k));
+      if (v === null) st.removeItem(k); else st.setItem(k, JSON.stringify(v));
+    } catch (e) { return null; }
+  }
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function plural(n, a, b) { return n + ' ' + (n === 1 ? a : b); }
+
+  var sbRules = (function () { var s = ls(K.sb); return s && s.setup ? s.setup : {}; })();
+  var S = {
+    view: 'home', name: ls(K.name) || '', db: null, uid: null, code: null, role: null, practice: false,
+    meta: null, players: {}, pub: null, hand: [], subs: [], G: null, sheet: null, toast: '', connected: true,
+    lastHands: {}, lastResultKey: '', hostTimer: null, err: '', busy: false,
+    create: {
+      mode: 'play', limit: sbRules.limit || 10, bots: 0,
+      rules: {
+        wittewas: sbRules.rules ? sbRules.rules.wittewas !== false : true,
+        dubbelToep: sbRules.rules ? !!sbRules.rules.dubbelToep : false,
+        scherpPassen: sbRules.rules ? sbRules.rules.scherpPassen !== false : true
+      }
+    }
+  };
+  var toastTimer;
+  function toast(m) { S.toast = m; renderLayer(); clearTimeout(toastTimer); toastTimer = setTimeout(function () { S.toast = ''; renderLayer(); }, 2600); }
+  function buzz(p) { if (navigator.vibrate) { try { navigator.vibrate(p); } catch (e) {} } }
+
+  /* ---------- Connection ---------- */
+  var fbLoading = null;
+  function loadFirebase() {
+    if (window.firebase && window.firebase.database) return Promise.resolve();
+    if (fbLoading) return fbLoading;
+    fbLoading = ['vendor/firebase-app-compat.js', 'vendor/firebase-auth-compat.js', 'vendor/firebase-database-compat.js'].reduce(function (p, src) {
+      return p.then(function () {
+        return new Promise(function (res, rej) { var s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = function () { rej(new Error('Laden mislukt: ' + src)); }; document.head.appendChild(s); });
+      });
+    }, Promise.resolve());
+    return fbLoading;
+  }
+  function connect(kind, practice) {
+    var p = kind === 'firebase' ? loadFirebase().then(function () { return window.ToepenNet.firebase(window.TOEPEN_FIREBASE_CONFIG); })
+      : Promise.resolve(window.ToepenNet.local(practice ? 'practice' : 'test'));
+    return p.then(function (db) {
+      S.db = db;
+      return db.ready().then(function (uid) {
+        S.uid = uid;
+        S.subs.push(db.onConnection(function (c) { S.connected = c; renderLayer(); }));
+      });
+    });
+  }
+  function base() { return 'rooms/' + S.code; }
+  function unsubscribe() { S.subs.forEach(function (f) { try { f(); } catch (e) {} }); S.subs = []; }
+
+  function subscribe() {
+    var db = S.db, b = base();
+    S.subs.push(db.on(b + '/meta', function (m) { S.meta = m; if (S.role === 'client' && (!m || m.status === 'closed')) { leave(); toast('De host heeft de tafel gesloten.'); return; } render(); }));
+    S.subs.push(db.on(b + '/players', function (p) {
+      S.players = p || {};
+      if (S.role === 'client' && S.meta && !S.players[S.uid] && S.view !== 'home') { leave(); toast('Je bent van de tafel gehaald.'); return; }
+      render(); if (S.role === 'host') scheduleHost();
+    }));
+    if (S.role === 'client') {
+      S.subs.push(db.on(b + '/state', function (st) { onPub(st); }));
+      S.subs.push(db.on(b + '/hands/' + S.uid, function (h) { S.hand = h || []; render(); }));
+    } else {
+      S.subs.push(db.onChildAdded(b + '/actions', function (k, v) {
+        db.remove(b + '/actions/' + k);
+        if (v && v.uid && v.a) hostHandle(v.uid, v.a, true);
+      }));
+    }
+  }
+
+  function onPub(st) {
+    var prevPending = S.pub && S.pub.round && S.pub.round.pending;
+    S.pub = st;
+    if (st && st.lastResult && st.phase !== 'play') {
+      var key = st.round.n + '-' + st.lastResult.n;
+      if (key !== S.lastResultKey) { S.lastResultKey = key; buzz(st.lastResult.losers.indexOf(S.uid) >= 0 ? [40, 30, 40] : 30); }
+    }
+    if (st && st.round && st.round.pending && !prevPending && st.round.pending.by !== S.uid) buzz([60, 40, 60]);
+    if (st && st.round && st.round.turn === S.uid && st.phase === 'play' && !st.round.pending) buzz(25);
+    render();
+  }
+
+  /* ---------- Host ---------- */
+  function genCode() {
+    var A = 'ABCDEFGHJKLMNPQRSTUVWXYZ', s = '';
+    for (var i = 0; i < 4; i++) s += A[Math.floor(Math.random() * A.length)];
+    return s;
+  }
+
+  function createTable(practice) {
+    var kind = practice ? 'local' : NET;
+    if (!kind) { toast('Online spelen is nog niet ingesteld.'); return; }
+    if (!S.name.trim() && S.create.mode === 'play') { toast('Vul eerst je naam in.'); return; }
+    S.busy = true; render();
+    connect(kind, practice).then(function () {
+      if (practice && S.db.reset) S.db.reset();
+      return tryCode(5);
+    }).then(function (code) {
+      S.code = code; S.role = 'host'; S.practice = practice;
+      var c = S.create, mode = practice ? 'play' : c.mode, now = Date.now();
+      var meta = { host: S.uid, hostName: S.name.trim() || 'Tafelleider', mode: mode, limit: c.limit, rules: c.rules, status: 'lobby', created: now };
+      var jobs = [S.db.set(base() + '/meta', meta)];
+      if (mode === 'play') jobs.push(S.db.set(base() + '/players/' + S.uid, { name: S.name.trim(), joined: now, online: true }));
+      var nb = practice ? Math.max(1, c.bots) : c.bots;
+      for (var i = 0; i < nb; i++) jobs.push(S.db.set(base() + '/players/bot' + (i + 1), { name: BOTS[i], bot: true, joined: now + i + 1, online: true }));
+      return Promise.all(jobs).then(function () {
+        if (mode === 'play') S.db.onDisconnect(base() + '/players/' + S.uid + '/online', false);
+        ls(K.host, { code: S.code, kind: kind, practice: practice });
+        S.meta = meta;
+        subscribe();
+        S.busy = false;
+        if (practice) { setTimeout(hostStart, 50); }
+        S.view = 'table'; render();
+      });
+    }).catch(function (e) { S.busy = false; showError(e); });
+  }
+
+  function tryCode(n) {
+    var code = genCode();
+    return S.db.get('rooms/' + code + '/meta').then(function (m) {
+      if (!m || m.status === 'closed' || Date.now() - (m.created || 0) > 864e5) return code;
+      if (n <= 0) throw new Error('Geen vrije tafelcode gevonden.');
+      return tryCode(n - 1);
+    });
+  }
+
+  function seatList() {
+    return Object.keys(S.players).map(function (id) { return { id: id, name: S.players[id].name, bot: !!S.players[id].bot, joined: S.players[id].joined || 0 }; })
+      .sort(function (a, b) { return a.joined - b.joined; });
+  }
+
+  function hostStart() {
+    var seats = seatList();
+    if (seats.length < 2) { toast('Er zijn minstens 2 spelers nodig.'); return; }
+    if (seats.length > 8) { toast('Maximaal 8 spelers.'); return; }
+    var prev = S.G;
+    var dealer = prev ? (prev.dealer + 1) % seats.length : Math.floor(Math.random() * seats.length);
+    S.G = E.newGame({ seats: seats, limit: S.meta.limit, rules: S.meta.rules, dealer: dealer });
+    S.G.recorded = false;
+    S.lastHands = {};
+    S.db.update(base() + '/meta', { status: 'playing' });
+    publish();
+  }
+
+  function publish() {
+    var G = S.G; if (!G) return;
+    try { localStorage.setItem('toepen-mp-game-' + S.code, JSON.stringify(G)); } catch (e) {}
+    var pub = E.publicState(G);
+    pub.at = Date.now();
+    S.db.set(base() + '/state', pub);
+    G.seats.forEach(function (id) {
+      if (S.players[id] && S.players[id].bot) return;
+      var h = JSON.stringify(G.round.hands[id] || []);
+      if (S.lastHands[id] !== h) { S.lastHands[id] = h; S.db.set(base() + '/hands/' + id, G.round.hands[id] || []); }
+    });
+    var prevPending = S.pub && S.pub.round && S.pub.round.pending;
+    S.pub = pub;
+    S.hand = (G.round.hands[S.uid] || []).slice();
+    if (G.phase === 'done' && !G.recorded) { G.recorded = true; recordResult(G); S.db.update(base() + '/meta', { status: 'done' }); }
+    if (pub.round.pending && !prevPending && pub.round.pending.by !== S.uid && E.inRound(G, S.uid)) buzz([60, 40, 60]);
+    render();
+    scheduleHost();
+  }
+
+  function autoFor(id) { var p = S.players[id]; return p && (p.bot || p.auto); }
+
+  function scheduleHost() {
+    var G = S.G; if (!G || S.role !== 'host') return;
+    clearTimeout(S.hostTimer);
+    if (G.phase === 'roundEnd') {
+      S.hostTimer = setTimeout(function () { if (E.nextRound(G)) publish(); }, DELAY.round);
+      return;
+    }
+    if (G.phase !== 'play') return;
+    var r = G.round, actor = null;
+    if (r.pending) actor = r.pending.awaiting.filter(function (id) { return !r.pending.answers[id] && autoFor(id); })[0];
+    else if (autoFor(r.turn)) actor = r.turn;
+    if (!actor) return;
+    S.hostTimer = setTimeout(function () {
+      var a = E.botAction(G, actor);
+      if (a) hostHandle(actor, a);
+    }, DELAY.bot * (r.pending ? 0.6 : 1));
+  }
+
+  function hostHandle(uid, a, remote) {
+    if (!S.G) return { ok: false };
+    var res = E.apply(S.G, uid, a);
+    if (res.ok) {
+      res.events.forEach(function (ev) {
+        if (ev.t === 'toep' && ev.by !== S.uid) toastIfLeader(name(ev.by) + ' toept! Inzet ' + ev.to);
+      });
+      publish();
+    } else if (!remote) toast(res.error);
+    return res;
+  }
+  function toastIfLeader(m) { if (S.meta && S.meta.mode === 'lead') toast(m); }
+
+  function recordResult(G) {
+    if (S.practice) return;
+    var sb = ls(K.sb);
+    var names = G.seats.map(function (id) { return G.players[id].name; });
+    if (!sb || sb.v !== 2) {
+      sb = { v: 2, screen: 'setup', setup: { roster: names.map(function (n, i) { return { name: n, on: true, color: COLORS[i % 8] }; }), limit: G.limit, rules: {} },
+        settings: { theme: 'system', sound: true, vibrate: true, wake: true }, game: null, undo: [], redo: [], wins: {}, archive: [] };
+    }
+    sb.wins = sb.wins || {}; sb.archive = sb.archive || [];
+    var w = G.players[G.winner].name;
+    sb.wins[w] = (sb.wins[w] || 0) + 1;
+    sb.archive.push({
+      at: Date.now(), limit: G.limit, rounds: G.roundNo, winner: w,
+      maxStake: G.results.reduce(function (m, r) { return Math.max(m, r.stake); }, 1),
+      players: G.seats.map(function (id, i) { var p = G.players[id]; return { name: p.name, color: COLORS[i % 8], score: p.score, won: p.roundsWon, toeps: p.toeps }; })
+    });
+    ls(K.sb, sb);
+  }
+
+  function resumeHost(saved) {
+    S.busy = true; render();
+    connect(saved.kind, saved.practice).then(function () {
+      S.code = saved.code; S.role = 'host'; S.practice = !!saved.practice;
+      return S.db.get(base() + '/meta');
+    }).then(function (m) {
+      if (!m || m.host !== S.uid) { ls(K.host, null); throw new Error('Deze tafel bestaat niet meer.'); }
+      S.meta = m;
+      if (m.mode === 'play') {
+        S.db.update(base() + '/players/' + S.uid, { online: true });
+        S.db.onDisconnect(base() + '/players/' + S.uid + '/online', false);
+      }
+      try { S.G = JSON.parse(localStorage.getItem('toepen-mp-game-' + S.code)); } catch (e) { S.G = null; }
+      subscribe();
+      S.busy = false; S.view = 'table';
+      if (S.G) { S.lastHands = {}; publish(); } else render();
+    }).catch(function (e) { S.busy = false; showError(e); });
+  }
+
+  function closeTable() {
+    if (S.role === 'host' && S.db) S.db.update(base() + '/meta', { status: 'closed' });
+    ls(K.host, null);
+    leave();
+  }
+
+  /* ---------- Client ---------- */
+  function joinTable(code) {
+    code = (code || '').toUpperCase().replace(/[^A-Z]/g, '');
+    if (code.length !== 4) { toast('Een tafelcode heeft 4 letters.'); return; }
+    if (!S.name.trim()) { S.pendingJoin = code; render(); toast('Vul eerst je naam in.'); return; }
+    if (!NET) { toast('Online spelen is nog niet ingesteld.'); return; }
+    S.busy = true; render();
+    connect(NET, false).then(function () {
+      S.code = code;
+      return S.db.get(base() + '/meta');
+    }).then(function (m) {
+      if (!m || m.status === 'closed') throw new Error('Tafel ' + code + ' bestaat niet (meer). Controleer de code.');
+      S.meta = m;
+      if (m.host === S.uid) { S.role = 'host'; return resumeHost({ code: code, kind: NET }); }
+      S.role = 'client';
+      return S.db.get(base() + '/players/' + S.uid).then(function (me) {
+        var p = { name: S.name.trim(), joined: (me && me.joined) || Date.now(), online: true };
+        return S.db.update(base() + '/players/' + S.uid, p);
+      }).then(function () {
+        S.db.onDisconnect(base() + '/players/' + S.uid + '/online', false);
+        ls(K.join, { code: code });
+        subscribe();
+        S.busy = false; S.view = 'table'; render();
+      });
+    }).catch(function (e) { S.busy = false; showError(e); });
+  }
+
+  function leave() {
+    clearTimeout(S.hostTimer);
+    if (S.role === 'client' && S.db && S.code) { ls(K.join, null); }
+    unsubscribe();
+    S.view = 'home'; S.role = null; S.code = null; S.meta = null; S.players = {}; S.pub = null; S.hand = []; S.G = null; S.sheet = null;
+    S.urlCode = null;
+    try { var q2 = new URLSearchParams(location.search); q2.delete('tafel'); history.replaceState(null, '', location.pathname + (q2.toString() ? '?' + q2 : '')); } catch (e) {}
+    render();
+  }
+
+  function showError(e) {
+    S.err = (e && e.message) || 'Er ging iets mis.';
+    if (/permission|PERMISSION/.test(S.err)) S.err = 'Geen toegang tot de database. Kloppen de Firebase-regels?';
+    if (/network|offline/i.test(S.err)) S.err = 'Geen verbinding. Controleer je internet en probeer opnieuw.';
+    S.view = 'home'; render();
+  }
+
+  /* ---------- Actions from this phone ---------- */
+  function act(a) {
+    if (S.role === 'host') return hostHandle(S.uid, a);
+    S.db.push(base() + '/actions', { uid: S.uid, a: a, at: Date.now() });
+  }
+
+  // Engine queries need a game-like object; build one from the public state and own hand.
+  function viewGame() {
+    var p = S.pub; if (!p) return null;
+    if (S.role === 'host' && S.G) return S.G;
+    var hands = {}; hands[S.uid] = S.hand || [];
+    var round = Object.assign({}, p.round, { hands: hands, stock: new Array(p.round.stockCount || 0), passed: p.round.passed || {}, trick: p.round.trick || [], toeps: p.round.toeps || [], wasDone: p.round.wasDone || {} });
+    if (round.pending) round.pending = Object.assign({ answers: {} }, round.pending, { answers: round.pending.answers || {}, awaiting: round.pending.awaiting || [] });
+    return { phase: p.phase, rules: p.rules, players: p.players, seats: p.seats, limit: p.limit, round: round, dealer: p.dealer, winner: p.winner };
+  }
+
+  function name(id) {
+    var g = S.pub; return (g && g.players && g.players[id] && g.players[id].name) || (S.players[id] && S.players[id].name) || '?';
+  }
+  function seatColor(id) { var g = S.pub || {}, i = (g.seats || seatList().map(function (s) { return s.id; })).indexOf(id); return COLORS[(i < 0 ? 0 : i) % 8]; }
+
+  /* ---------- Rendering ---------- */
+  function card(c, cls, attrs) {
+    var red = c[c.length - 1] === 'h' || c[c.length - 1] === 'r';
+    var r = E.rankOf(c), s = SUIT[E.suitOf(c)];
+    return '<' + (attrs ? 'button' : 'div') + ' class="pc' + (red ? ' red' : '') + (cls ? ' ' + cls : '') + '"' + (attrs || '') +
+      ' aria-label="' + r + ' ' + SUITNAME[E.suitOf(c)] + '"><span class="r">' + r + '</span><span class="s1">' + s + '</span><span class="s2">' + s + '</span></' + (attrs ? 'button' : 'div') + '>';
+  }
+  function avatar(id, nm) { return '<div class="avatar" style="background:' + seatColor(id) + '" aria-hidden="true">' + esc((nm || '?').trim()[0] || '?').toUpperCase() + '</div>'; }
+  function toggleRow(act, on, title, sub) {
+    return '<button class="toggle-row" role="switch" aria-checked="' + !!on + '" data-act="' + act + '"><div class="txt"><div><b>' + title + '</b></div><div>' + sub + '</div></div><span class="switch" aria-hidden="true"></span></button>';
+  }
+  function topbar(title, sub, extra) {
+    return '<div class="topbar"><div class="meta"><h1>' + title + '</h1>' + (sub ? '<div class="small muted">' + sub + '</div>' : '') + '</div>' +
+      '<div class="tools"><button class="btn ghost sm icon-round" data-act="help" aria-label="Spelregels en uitleg">?</button>' + (extra || '') + '</div></div>';
+  }
+
+  function renderHome() {
+    var saved = ls(K.host), html = '';
+    html += topbar('Multiplayer', 'Toepen, ieder op de eigen telefoon', '<a class="btn ghost sm" href="index.html">Scorebord</a>');
+    if (S.err) html += '<div class="notice" role="alert">' + esc(S.err) + '</div>';
+    html += '<div class="panel"><label class="label" for="myname">Jouw naam</label><input class="text" id="myname" maxlength="18" autocomplete="off" value="' + esc(S.name) + '" placeholder="Bijvoorbeeld Anna"></div>';
+    if (S.pendingJoin || S.urlCode) {
+      var pc = S.pendingJoin || S.urlCode;
+      html += '<div class="panel"><h2>Meedoen aan tafel ' + esc(pc.toUpperCase()) + '</h2><p class="muted small">Vul je naam in en tik op Meedoen.</p>' +
+        '<button class="btn primary big" data-act="join" data-v="' + esc(pc) + '"' + (S.busy ? ' disabled' : '') + '>Meedoen</button></div>';
+    }
+    if (saved && saved.code) {
+      html += '<div class="panel"><b>Je tafel ' + esc(saved.code) + ' is nog open' + (saved.practice ? ' (oefenen)' : '') + '.</b>' +
+        '<div class="row"><button class="btn primary" style="flex:1" data-act="resume">Verder spelen</button><button class="btn ghost" data-act="forget">Sluiten</button></div></div>';
+    }
+    if (!NET) html += '<div class="notice">Online spelen is nog niet ingesteld (Firebase). <b>Oefenen tegen de computer</b> werkt wel.</div>';
+    html += '<button class="choice" data-act="go-create"' + (NET ? '' : ' disabled') + '><b>Tafel maken</b><span>Jij bent de host. Je vrienden scannen jouw QR-code en zitten direct aan tafel.</span></button>';
+    html += '<div class="panel"><b>Meedoen met een code</b><p class="small muted">Of scan de QR-code van de host met je camera.</p>' +
+      '<div class="row"><input class="text code" id="joincode" maxlength="4" autocomplete="off" placeholder="KLAV" style="flex:1;min-width:0">' +
+      '<button class="btn primary" data-act="join"' + (NET && !S.busy ? '' : ' disabled') + '>Meedoen</button></div></div>';
+    html += '<button class="choice" data-act="go-practice"><b>Oefenen tegen de computer</b><span>Speel alleen op deze telefoon tegen computerspelers. Werkt zonder internet.</span></button>';
+    html += '<button class="btn ghost" data-act="help">Spelregels en uitleg</button>';
+    return '<div class="stack">' + html + '</div>';
+  }
+
+  function renderCreate() {
+    var c = S.create, practice = S.view === 'practice', html = '';
+    html += topbar(practice ? 'Oefenen' : 'Tafel maken', practice ? 'Tegen computerspelers, op deze telefoon' : 'Kies hoe jij meedoet', '<button class="btn ghost sm" data-act="home">Terug</button>');
+    if (!practice) {
+      html += '<div class="stack"><div class="label">Hoe doe jij mee?</div>' +
+        '<button class="choice" data-act="mode" data-v="play" aria-pressed="' + (c.mode === 'play') + '"><b>Ik speel mee</b><span>Je ziet je eigen kaarten en speelt mee. Je telefoon is ook de host.</span></button>' +
+        '<button class="choice" data-act="mode" data-v="lead" aria-pressed="' + (c.mode === 'lead') + '"><b>Tafelleider</b><span>Je speelt niet mee. Je ziet alle kaarten en het scorebord. Spelers zien dat er een tafelleider meekijkt.</span></button></div>';
+    }
+    html += '<div class="panel"><div class="label">Af bij</div><div class="seg">' + [10, 15, 21].map(function (l) {
+      return '<button data-act="limit" data-v="' + l + '" aria-pressed="' + (c.limit === l) + '">' + l + '</button>';
+    }).join('') + '</div></div>';
+    html += '<div class="panel"><div class="label">Huisregels</div>' +
+      toggleRow('rule-wittewas', c.rules.wittewas, 'Witte was', 'Wie alleen boeren, vrouwen, heren en azen heeft, mag 4 nieuwe kaarten nemen. De app controleert het.') +
+      toggleRow('rule-dubbelToep', c.rules.dubbelToep, 'Twee keer achter elkaar toepen', 'Uit: na jouw toep moet eerst iemand anders toepen.') +
+      toggleRow('rule-scherpPassen', c.rules.scherpPassen, 'Passen als je op scherp staat', 'Uit: wie op scherp staat, moet mee.') + '</div>';
+    var minB = practice ? 1 : 0;
+    html += '<div class="panel"><div class="label">Computerspelers</div><div class="stepper">' +
+      '<button class="btn ghost sm icon-round" data-act="bots" data-v="-1"' + (c.bots <= minB ? ' disabled' : '') + ' aria-label="Minder">−</button><b class="num">' + c.bots + '</b>' +
+      '<button class="btn ghost sm icon-round" data-act="bots" data-v="1"' + (c.bots >= 7 ? ' disabled' : '') + ' aria-label="Meer">+</button>' +
+      '<span class="small muted">' + (practice ? 'Tegenstanders voor jou.' : 'Vullen lege plekken aan tafel.') + '</span></div></div>';
+    html += '<button class="btn primary big" data-act="' + (practice ? 'start-practice' : 'create') + '"' + (S.busy ? ' disabled' : '') + '>' + (practice ? 'Start oefenpotje' : 'Tafel openen') + '</button>';
+    return '<div class="stack">' + html + '</div>';
+  }
+
+  function joinUrl() {
+    var u = location.origin + location.pathname + '?tafel=' + S.code;
+    if (NET === 'local') u += '&net=local' + (FAST ? '&fast=1' : '');
+    return u;
+  }
+
+  function playerRows(withRemove) {
+    var list = seatList();
+    if (!list.length) return '<p class="muted small">Nog niemand aan tafel.</p>';
+    return '<div class="plist">' + list.map(function (s) {
+      var p = S.players[s.id], me = s.id === S.uid;
+      return '<div class="prow">' + avatar(s.id, s.name) + '<b>' + esc(s.name) + (me ? ' (jij)' : '') + '</b>' +
+        (p.bot ? '<span class="chip">Computer</span>' : '<span class="dot' + (p.online === false ? ' off' : '') + '" title="' + (p.online === false ? 'offline' : 'online') + '"></span>') +
+        (withRemove && !me ? '<button class="btn ghost sm icon-round" data-act="kick" data-id="' + esc(s.id) + '" aria-label="' + esc(s.name) + ' verwijderen">×</button>' : '') + '</div>';
+    }).join('') + '</div>';
+  }
+
+  function renderLobby() {
+    var html = '', m = S.meta || {}, host = S.role === 'host', n = seatList().length;
+    html += topbar('Tafel ' + esc(S.code), host ? (m.mode === 'lead' ? 'Jij bent tafelleider' : 'Jij bent de host') : 'Host: ' + esc(m.hostName || ''), '<button class="btn ghost sm" data-act="' + (host ? 'ask-close' : 'leave') + '">' + (host ? 'Sluiten' : 'Verlaten') + '</button>');
+    if (host) {
+      var qr = '';
+      try { var q = qrcode(0, 'M'); q.addData(joinUrl()); q.make(); qr = q.createSvgTag({ cellSize: 6, margin: 2, scalable: true }); } catch (e) { qr = ''; }
+      html += '<div class="panel" style="text-align:center"><b>Laat je vrienden deze code scannen</b><p class="small muted">Met de gewone camera van hun telefoon. Ze zitten dan meteen aan tafel.</p>' +
+        '<div class="qr" id="qr">' + qr + '</div><div class="bigcode" aria-label="Tafelcode ' + esc(S.code) + '">' + esc(S.code) + '</div>' +
+        '<p class="small muted">Of laat ze de code invullen bij <b>Meedoen</b>.</p>' +
+        '<button class="btn ghost" data-act="share-link">Link delen</button></div>';
+    } else {
+      html += '<div class="panel" style="text-align:center"><h2>Je zit aan tafel!</h2><p class="muted">Wachten tot ' + esc(m.hostName || 'de host') + ' het spel start…</p>' +
+        (m.mode === 'lead' ? '<p class="small muted">Er is een tafelleider. Die speelt niet mee en kan alle kaarten zien.</p>' : '') + '</div>';
+    }
+    html += '<div class="panel"><div class="label">Aan tafel · ' + n + '</div>' + playerRows(host) +
+      (host ? '<button class="btn ghost" data-act="addbot"' + (n >= 8 ? ' disabled' : '') + '>+ Computerspeler</button>' : '') + '</div>';
+    if (host) html += '<button class="btn primary big" data-act="start"' + (n < 2 || n > 8 ? ' disabled' : '') + '>' + (n < 2 ? 'Wachten op spelers…' : 'Start met ' + n + ' spelers') + '</button>';
+    html += '<p class="small muted" style="text-align:center">Iedereen kan de spelregels lezen via <b>?</b> rechtsboven.</p>';
+    return '<div class="stack">' + html + '</div>';
+  }
+
+  function chipsFor(G, id) {
+    var p = G.players[id], r = G.round, out = '';
+    if (r.turn === id && G.phase === 'play' && !r.pending) out += '<span class="chip turn">Aan de beurt</span>';
+    if (r.pending && (r.pending.awaiting || []).indexOf(id) >= 0 && !(r.pending.answers || {})[id]) out += '<span class="chip turn">Kiest…</span>';
+    if (G.seats[G.dealer] === id) out += '<span class="chip deler">Deler</span>';
+    if (p.out) out += '<span class="chip af">Af</span>';
+    else if (p.score === G.limit - 1) out += '<span class="chip scherp">Op scherp</span>';
+    if ((r.passed || {})[id] !== undefined) out += '<span class="chip">Gepast +' + r.passed[id] + '</span>';
+    if (S.players[id] && S.players[id].bot) out += '<span class="chip">Computer</span>';
+    else if (S.players[id] && S.players[id].auto) out += '<span class="chip">Computer speelt</span>';
+    else if (S.players[id] && S.players[id].online === false) out += '<span class="chip af">Offline</span>';
+    return out;
+  }
+
+  function renderTable() {
+    var m = S.meta || {};
+    if (!S.pub || !m.status || m.status === 'lobby') return renderLobby();
+    var G = viewGame(), r = G.round, host = S.role === 'host', lead = host && m.mode === 'lead';
+    var seated = G.seats.indexOf(S.uid) >= 0, html = '';
+    html += topbar('Ronde ' + r.n, 'Tafel ' + esc(S.code) + ' · af bij ' + G.limit,
+      '<button class="btn ghost sm" data-act="menu">Menu</button>');
+
+    if (G.phase === 'done') {
+      var w = G.winner;
+      html += '<div class="winner"><div class="label" style="color:inherit;opacity:.8">Winnaar</div><h2>' + esc(name(w)) + (w === S.uid ? ' (jij!)' : '') + '</h2>' +
+        '<p>Na ' + plural(r.n, 'ronde', 'rondes') + '.</p>' +
+        (host ? '<button class="btn big" data-act="again">Nog een potje</button><button class="btn ghost" data-act="ask-close">Tafel sluiten</button>'
+              : '<p class="small">Wachten tot de host een nieuw potje start…</p><button class="btn ghost" data-act="leave">Tafel verlaten</button>') + '</div>';
+    } else {
+      // Felt: stake, trick, status
+      var toeps = (r.toeps || []).map(function (t) { return esc(name(t.by)); }).join(' → ');
+      html += '<div class="felt"><div class="stakeline"><div class="stake num">' + r.stake + '</div><div class="stake-txt"><div class="label">Inzet</div>' +
+        '<div>Verliezers krijgen ' + plural(r.stake, 'strafpunt', 'strafpunten') + (toeps ? ' · getoept: ' + toeps : '') + '</div></div>' +
+        '<div class="small num" style="text-align:right">Slag ' + Math.min(r.trickNo, 4) + '/4</div></div>';
+      var trick = r.trick || [], showLast = !trick.length && r.lastTrick && G.phase === 'play';
+      var shown = showLast ? r.lastTrick.cards : trick;
+      html += '<div class="trick">' + (shown.length ? shown.map(function (t) {
+        return '<div class="tslot' + (showLast && r.lastTrick.winner === t.id ? ' win' : '') + '"' + (showLast ? ' style="opacity:.6"' : '') + '>' + card(t.card) + '<span>' + esc(name(t.id)) + '</span></div>';
+      }).join('') : '<div class="empty">Nog geen kaarten op tafel</div>') + '</div>';
+      if (showLast) html += '<div class="small" style="text-align:center;opacity:.85">Vorige slag: ' + esc(name(r.lastTrick.winner)) + '</div>';
+      html += '<div class="status' + (statusMine(G) ? ' me' : '') + '" role="status">' + esc(statusText(G)) + '</div></div>';
+      if (G.phase === 'roundEnd' && S.pub.lastResult) {
+        var lr = S.pub.lastResult;
+        html += '<div class="result" style="margin-top:12px">' + esc(name(lr.winner)) + ' wint ronde ' + lr.n +
+          (lr.losers.length ? ' · ' + lr.losers.map(function (id) { return esc(name(id)) + ' +' + lr.stake; }).join(', ') : '') + '</div>';
+      }
+    }
+
+    // Players and scores
+    html += '<div class="players">';
+    G.seats.forEach(function (id) {
+      var p = G.players[id], cls = 'pl';
+      if (r.turn === id && G.phase === 'play') cls += ' turn';
+      if (p.out) cls += ' af'; else if ((r.passed || {})[id] !== undefined) cls += ' passed';
+      html += '<div class="' + cls + '"><div class="head">' + avatar(id, p.name) + '<div class="who"><b>' + esc(p.name) + (id === S.uid ? ' (jij)' : '') + '</b><div class="chips">' + chipsFor(G, id) + '</div></div>' +
+        '<div class="score num">' + p.score + '<small> / ' + G.limit + '</small></div></div>';
+      if (lead && G.phase !== 'done' && S.G.round.hands[id] && S.G.round.hands[id].length) {
+        html += '<div class="minis">' + S.G.round.hands[id].map(function (c) { return card(c, 'sm'); }).join('') + '</div>';
+      }
+      html += '</div>';
+    });
+    html += '</div>';
+    if (lead && G.phase === 'play') html += '<p class="small muted" style="margin-top:10px">Je bent tafelleider: je ziet alle kaarten en speelt niet mee.</p>';
+    if (!seated && !lead) html += '<p class="small muted" style="margin-top:10px">Je kijkt mee. Je doet mee vanaf het volgende potje als de host je toevoegt.</p>';
+
+    app.classList.toggle('has-hand', seated && G.phase === 'play' && !(G.players[S.uid] && G.players[S.uid].out));
+    return html + renderHand(G, seated);
+  }
+
+  function statusMine(G) {
+    var r = G.round;
+    return G.phase === 'play' && ((r.turn === S.uid && !r.pending) || (r.pending && (r.pending.awaiting || []).indexOf(S.uid) >= 0 && !(r.pending.answers || {})[S.uid]));
+  }
+  function statusText(G) {
+    var r = G.round;
+    if (G.phase === 'roundEnd') return 'Volgende ronde begint zo…';
+    if (r.pending) {
+      var waiting = (r.pending.awaiting || []).filter(function (id) { return !(r.pending.answers || {})[id]; });
+      if (waiting.indexOf(S.uid) >= 0) return name(r.pending.by) + ' toept! Ga je mee?';
+      return name(r.pending.by) + ' toept. Wachten op: ' + waiting.map(name).join(', ');
+    }
+    if (r.turn === S.uid) return (r.trick || []).length ? 'Jij bent aan de beurt. Beken kleur als je kunt.' : 'Jij komt uit. Kies een kaart.';
+    return name(r.turn) + ' is aan de beurt';
+  }
+
+  function renderHand(G, seated) {
+    if (!seated || G.phase !== 'play') return '';
+    var p = G.players[S.uid]; if (!p || p.out) return '';
+    var r = G.round, hand = S.hand || [], folded = (r.passed || {})[S.uid] !== undefined;
+    var myTurn = r.turn === S.uid && !r.pending && !folded;
+    var legal = myTurn ? E.legalCards(G, S.uid) : [];
+    var html = '<div class="hand' + (myTurn ? ' myturn' : '') + '"><div class="inner">';
+    if (folded) html += '<div class="small muted" style="text-align:center">Je hebt gepast en doet deze ronde niet meer mee.</div>';
+    var acts = '';
+    if (E.canToep(G, S.uid)) acts += '<button class="btn toep" data-act="toep">Toep! → ' + (r.stake + 1) + '</button>';
+    if (E.canWas(G, S.uid)) acts += '<button class="btn warn" data-act="was">Witte was</button>';
+    if (acts) html += '<div class="acts">' + acts + '</div>';
+    html += '<div class="cards">' + (hand.length ? hand.map(function (c) {
+      var ok = legal.indexOf(c) >= 0;
+      return card(c, ok ? 'legal' : '', ' data-act="play" data-v="' + c + '"' + (ok ? '' : ' disabled'));
+    }).join('') : '<span class="small muted">Geen kaarten meer</span>') + '</div>';
+    return html + '</div></div>';
+  }
+
+  /* ---------- Help ---------- */
+  function rulesHtml() {
+    var m = S.meta || {}, R = m.rules || S.create.rules, limit = m.limit || S.create.limit;
+    var sec = function (t, b, open) { return '<details class="rule"' + (open ? ' open' : '') + '><summary>' + t + '</summary><div class="rulebook">' + b + '</div></details>'; };
+    var cards = ['B', 'V', 'H', 'A', '7', '8', '9', '10'].map(function (r) { return card(r + 's', 'sm'); }).join('');
+    return '<div>' +
+      sec('Doel', '<p>Zo min mogelijk strafpunten. Bij <b>' + limit + '</b> lig je eruit. Wie overblijft, wint.</p>', true) +
+      sec('Kaarten', '<p>32 kaarten. Van laag naar hoog:</p><div class="minis" style="margin-top:8px">' + cards + '</div><p style="margin-top:8px">De <b>10</b> is het hoogst, de <b>boer</b> het laagst. Er is geen troef.</p>', true) +
+      sec('Een ronde', '<ul><li>Iedereen krijgt <b>4 kaarten</b>. Links van de deler komt uit.</li><li>Je moet <b>kleur bekennen</b>. De app laat alleen kaarten oplichten die mogen.</li><li>Hoogste kaart van de gevraagde kleur wint de slag en komt daarna uit.</li><li>Alleen de <b>laatste (4e) slag</b> telt: die wint de ronde.</li></ul>') +
+      sec('Toepen', '<ul><li>Ben je aan de beurt, dan mag je <b>toepen</b>: de inzet gaat 1 omhoog.</li><li>De anderen kiezen <b>Meegaan</b> of <b>Passen</b>. Wie past, krijgt de inzet van vóór de toep en doet niet meer mee.</li>' +
+        (R.dubbelToep ? '<li>Je mag meerdere keren achter elkaar toepen.</li>' : '<li>Na jouw toep moet eerst een ander toepen.</li>') +
+        (R.scherpPassen ? '' : '<li>Sta je <b>op scherp</b>, dan moet je mee.</li>') + '<li>Gaat niemand mee, dan wint de toeper de ronde.</li></ul>') +
+      sec('Strafpunten', '<p>Wie aan het eind nog meedoet en de laatste slag niet haalt, krijgt de inzet.</p>') +
+      (R.wittewas ? sec('Witte was', '<p>Heb je alleen boeren, vrouwen, heren en azen, dan verschijnt de knop <b>Witte was</b> voordat er een kaart is gespeeld. Je krijgt 4 nieuwe kaarten van de stapel. Bluffen kan niet: de app controleert het. Bij 8 spelers is er geen stapel, dan kan het niet.</p>') : '') +
+      '</div>';
+  }
+  function guideHtml() {
+    var step = function (t, items) { return '<div class="stack" style="gap:4px;padding:10px 0;border-bottom:1px solid var(--line)"><h3>' + t + '</h3><ul style="margin:0;padding-left:18px;color:var(--muted);display:grid;gap:4px">' + items.map(function (i) { return '<li>' + i + '</li>'; }).join('') + '</ul></div>'; };
+    return '<div>' +
+      step('Aan tafel', ['De host tikt op <b>Tafel maken</b> en laat de QR-code zien.', 'Scan die met de camera van je telefoon, of vul de 4 letters in bij <b>Meedoen</b>.', 'Vul je naam in. De volgende keer onthoudt je telefoon die.']) +
+      step('Spelen', ['Jouw kaarten staan onderin. Ben je aan de beurt, dan lichten de kaarten op die je mag spelen. Tik erop.', 'Wil je toepen? Tik op <b>Toep!</b> als je aan de beurt bent, vóór je een kaart speelt.', 'Toept een ander, dan vraagt je telefoon <b>Meegaan</b> of <b>Passen</b>. Je telefoon trilt.', 'Midden op tafel zie je de slag en wie er aan de beurt is.']) +
+      step('Punten', ['De punten worden automatisch bijgehouden. Na elke ronde zie je wie er wat kreeg.', 'Aan het eind komt de uitslag op de ranglijst van de host.']) +
+      step('Goed om te weten', ['Iedereen heeft internet nodig. Valt je verbinding weg, open dan de app opnieuw: je zit weer aan tafel.', 'Is er een <b>tafelleider</b>, dan speelt die niet mee en kan die alle kaarten zien.', 'Laat je scherm aan staan; de app probeert dat zelf te regelen.']) +
+      '</div>';
+  }
+
+  function renderLayer() {
+    var html = '';
+    if (!S.connected && S.view === 'table') html += '<div class="conn" role="alert">Geen verbinding. Even geduld…</div>';
+    var sh = S.sheet, G = viewGame(), inner = '';
+    var mustAnswer = G && G.phase === 'play' && G.round.pending && (G.round.pending.awaiting || []).indexOf(S.uid) >= 0 && !(G.round.pending.answers || {})[S.uid];
+    if (mustAnswer && S.view === 'table') {
+      var pd = G.round.pending, cost = pd.to - 1, must = E.mustPlay(G, S.uid);
+      inner = '<h2>' + esc(name(pd.by)) + ' toept!</h2><p class="muted">De inzet gaat naar <b>' + pd.to + '</b>. Ga je mee, dan speel je door voor ' + plural(pd.to, 'punt', 'punten') + '. Pas je, dan krijg je nu ' + plural(cost, 'strafpunt', 'strafpunten') + '.</p>' +
+        '<div class="hand-peek minis" style="justify-content:center">' + (S.hand || []).map(function (c) { return card(c); }).join('') + '</div>' +
+        '<button class="btn primary big" data-act="answer" data-v="mee">Meegaan</button>' +
+        '<button class="btn warn big" data-act="answer" data-v="pas"' + (must ? ' disabled' : '') + '>Passen (+' + cost + ')</button>' +
+        (must ? '<p class="small muted">Je staat op scherp en moet mee.</p>' : '');
+      html += '<div class="scrim"><div class="sheet" role="dialog" aria-modal="true" aria-label="Toep"><div class="grip"></div>' + inner + '</div></div>';
+    } else if (sh) {
+      if (sh.type === 'help') {
+        var v = sh.view || 'regels';
+        inner = '<h2>' + (v === 'regels' ? 'Spelregels' : 'Zo speel je') + '</h2><div class="seg">' +
+          [['regels', 'Spelregels'], ['uitleg', 'Zo speel je']].map(function (o) { return '<button data-act="helpview" data-v="' + o[0] + '" aria-pressed="' + (v === o[0]) + '">' + o[1] + '</button>'; }).join('') +
+          '</div>' + (v === 'regels' ? rulesHtml() : guideHtml());
+      } else if (sh.type === 'menu') {
+        var host = S.role === 'host';
+        inner = '<h2>Menu</h2>';
+        if (host && S.G) {
+          inner += '<div class="label">Spelers</div>' + S.G.seats.map(function (id) {
+            var p = S.players[id] || {};
+            if (p.bot) return '';
+            return '<div class="prow">' + avatar(id, name(id)) + '<b>' + esc(name(id)) + '</b>' +
+              (id === S.uid ? '' : '<button class="btn sm ' + (p.auto ? '' : 'ghost') + '" data-act="auto" data-id="' + esc(id) + '">' + (p.auto ? 'Computer speelt' : 'Laat computer spelen') + '</button>') + '</div>';
+          }).join('') + '<p class="small muted">Valt iemand weg? Laat de computer tijdelijk voor die speler spelen.</p>';
+          inner += '<button class="btn danger" data-act="ask-close">Tafel sluiten</button>';
+        } else {
+          inner += '<button class="btn ghost" data-act="leave">Tafel verlaten</button><p class="small muted">Je kunt later weer meedoen met dezelfde code.</p>';
+        }
+        inner += '<a class="btn ghost" href="index.html">Naar het scorebord</a>';
+      } else if (sh.type === 'close') {
+        inner = '<h2>Tafel sluiten?</h2><p class="muted">Het spel stopt voor iedereen aan tafel. De ranglijst blijft bewaard.</p><button class="btn danger big" data-act="close">Ja, tafel sluiten</button>';
+      }
+      html += '<div class="scrim" data-act="sheet-close"><div class="sheet" role="dialog" aria-modal="true"><div class="grip"></div>' + inner +
+        '<button class="btn ghost" data-act="sheet-close">Sluiten</button></div></div>';
+    }
+    if (S.toast) html += '<div class="toast" role="status">' + esc(S.toast) + '</div>';
+    layer.innerHTML = html;
+  }
+
+  function render() {
+    var html;
+    app.classList.remove('has-hand');
+    if (S.view === 'table') html = renderTable();
+    else if (S.view === 'create' || S.view === 'practice') html = renderCreate();
+    else html = renderHome();
+    app.innerHTML = html;
+    renderLayer();
+    wake();
+  }
+
+  var lock = null;
+  function wake() {
+    var want = S.view === 'table' && document.visibilityState === 'visible';
+    if (want && !lock && navigator.wakeLock) navigator.wakeLock.request('screen').then(function (l) { lock = l; l.addEventListener('release', function () { lock = null; }); }).catch(function () {});
+    else if (!want && lock) { lock.release().catch(function () {}); lock = null; }
+  }
+  document.addEventListener('visibilitychange', wake);
+
+  /* ---------- Events ---------- */
+  document.addEventListener('input', function (e) {
+    if (e.target.id === 'myname') { S.name = e.target.value; ls(K.name, S.name); }
+    if (e.target.id === 'joincode') e.target.value = e.target.value.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 4);
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' && e.target.id === 'joincode') joinTable(e.target.value);
+    if (e.key === 'Escape' && S.sheet) { S.sheet = null; renderLayer(); }
+  });
+  document.addEventListener('click', function (e) {
+    var el = e.target.closest('[data-act]'); if (!el) return;
+    if (el.classList.contains('scrim') && e.target !== el) return;
+    var a = el.dataset.act, v = el.dataset.v, id = el.dataset.id, c = S.create;
+    switch (a) {
+      case 'help': S.sheet = { type: 'help', view: 'regels' }; renderLayer(); break;
+      case 'helpview': S.sheet.view = v; renderLayer(); break;
+      case 'menu': S.sheet = { type: 'menu' }; renderLayer(); break;
+      case 'sheet-close': S.sheet = null; renderLayer(); break;
+      case 'home': S.view = 'home'; render(); break;
+      case 'go-create': S.err = ''; S.view = 'create'; c.bots = 0; render(); break;
+      case 'go-practice': S.err = ''; S.view = 'practice'; c.bots = Math.max(c.bots, 3); render(); break;
+      case 'mode': c.mode = v; render(); break;
+      case 'limit': c.limit = +v; render(); break;
+      case 'bots': c.bots = Math.max(0, Math.min(7, c.bots + +v)); render(); break;
+      case 'rule-wittewas': case 'rule-dubbelToep': case 'rule-scherpPassen':
+        var k = a.slice(5); c.rules[k] = !c.rules[k]; render(); break;
+      case 'create': createTable(false); break;
+      case 'start-practice':
+        if (!S.name.trim()) { S.name = 'Ik'; }
+        c.mode = 'play'; createTable(true); break;
+      case 'join':
+        var code = v || (document.getElementById('joincode') || {}).value;
+        S.err = ''; S.pendingJoin = null; joinTable(code); break;
+      case 'resume': var sv = ls(K.host); if (sv) resumeHost(sv); break;
+      case 'forget': var sv2 = ls(K.host); ls(K.host, null); if (sv2) { try { localStorage.removeItem('toepen-mp-game-' + sv2.code); } catch (e2) {} } render(); break;
+      case 'share-link':
+        var url = joinUrl();
+        if (navigator.share) navigator.share({ title: 'Toepen', text: 'Doe mee aan mijn tafel ' + S.code, url: url }).catch(function () {});
+        else { try { navigator.clipboard.writeText(url).then(function () { toast('Link gekopieerd'); }); } catch (e3) { toast(url); } }
+        break;
+      case 'addbot':
+        var used = Object.keys(S.players).filter(function (x) { return S.players[x].bot; }).length;
+        var bid = 'bot' + (Date.now() % 100000);
+        S.db.set(base() + '/players/' + bid, { name: BOTS[used % BOTS.length], bot: true, joined: Date.now(), online: true });
+        break;
+      case 'kick': S.db.remove(base() + '/players/' + id); break;
+      case 'start': hostStart(); break;
+      case 'again': hostStart(); break;
+      case 'ask-close': S.sheet = { type: 'close' }; renderLayer(); break;
+      case 'close': S.sheet = null; closeTable(); break;
+      case 'leave': S.sheet = null; leave(); break;
+      case 'auto': S.db.update(base() + '/players/' + id, { auto: !(S.players[id] && S.players[id].auto) }); S.sheet = null; renderLayer(); break;
+      case 'play': act({ type: 'play', card: v }); break;
+      case 'toep': act({ type: 'toep' }); buzz(40); break;
+      case 'was': act({ type: 'was' }); break;
+      case 'answer': act({ type: 'answer', mee: v === 'mee' }); break;
+    }
+  });
+
+  /* ---------- Start ---------- */
+  var qcode = Q.get('tafel');
+  S.urlCode = qcode ? qcode.toUpperCase() : null;
+  if (qcode && S.name.trim() && NET) joinTable(qcode);
+  else {
+    var j = ls(K.join);
+    if (!qcode && j && j.code && S.name.trim() && NET) joinTable(j.code);
+    else render();
+  }
+})();
+</script>
+<script>
+  if ('serviceWorker' in navigator) window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js'); });
+</script>
+</body>
+</html>

@@ -1,7 +1,13 @@
-// Offline support: app files are cached on install, everything else
-// (including Google Fonts) is cached the first time it loads.
-var CACHE = 'toepen-v3';
-var FILES = ['./', 'index.html', 'manifest.webmanifest', 'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png'];
+// Offline support: app files are cached on install; Google Fonts are cached
+// the first time they load. Everything else (such as the Firebase
+// connection) goes straight to the network.
+var CACHE = 'toepen-v4';
+var FILES = [
+  './', 'index.html', 'spelen.html', 'engine.js', 'net.js', 'firebase-config.js', 'manifest.webmanifest',
+  'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png',
+  'vendor/qrcode.js', 'vendor/firebase-app-compat.js', 'vendor/firebase-auth-compat.js', 'vendor/firebase-database-compat.js'
+];
+var FONT_HOSTS = ['fonts.googleapis.com', 'fonts.gstatic.com'];
 
 self.addEventListener('install', function (e) {
   e.waitUntil(caches.open(CACHE).then(function (c) { return c.addAll(FILES); }));
@@ -18,9 +24,11 @@ self.addEventListener('activate', function (e) {
 // Network first so updates arrive; fall back to the cache when offline.
 self.addEventListener('fetch', function (e) {
   if (e.request.method !== 'GET') return;
+  var url = new URL(e.request.url), own = url.origin === self.location.origin;
+  if (!own && FONT_HOSTS.indexOf(url.hostname) < 0) return;
   e.respondWith(
-    // Same-origin files skip the browser's HTTP cache, so a new version shows up right away.
-    (new URL(e.request.url).origin === self.location.origin ? fetch(e.request.url, { cache: 'no-cache' }) : fetch(e.request)).then(function (res) {
+    // Own files skip the browser's HTTP cache, so a new version shows up right away.
+    (own ? fetch(url.href, { cache: 'no-cache' }) : fetch(e.request)).then(function (res) {
       var copy = res.clone();
       caches.open(CACHE).then(function (c) { c.put(e.request, copy); });
       return res;

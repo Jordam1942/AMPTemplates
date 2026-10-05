@@ -254,6 +254,10 @@
   .topbar.game h1 { font-size: clamp(1.3rem, 5.6vw, 1.6rem); overflow: hidden; text-overflow: ellipsis; }
   .btn .sub { display: block; font-weight: 500; font-size: 0.8rem; opacity: 0.8; }
   .btn.stacked { flex-direction: column; gap: 0; padding-block: 8px; }
+  .mp-link { display: flex; align-items: center; gap: 12px; text-decoration: none; color: inherit; padding: 14px 16px; border-radius: 16px; background: var(--ink); color: var(--ink-fg); }
+  .mp-link b { display: block; font-size: 1.05rem; }
+  .mp-link span { font-size: 0.85rem; opacity: 0.85; }
+  .mp-link .go { margin-left: auto; font-weight: 800; font-size: 1.3rem; }
   .icon-round { width: 40px; min-height: 40px; padding: 0; font-weight: 800; font-size: 1.15rem; }
   .topbar h1 { white-space: nowrap; }
   details.rule { border-bottom: 1px solid var(--line); padding: 10px 0; }
@@ -319,7 +323,7 @@
 (function () {
   'use strict';
   var KEY = 'toepen-scorebord-v2';
-  var VERSION = '16 (sneller opslaan)';
+  var VERSION = '17 (multiplayer)';
   var COLORS = ['#2f7d5b', '#c2571a', '#3b6fb6', '#a63d6b', '#7a5bb5', '#a67c12', '#1f8a8f', '#5d6b1f'];
   var app = document.getElementById('app');
   var layer = document.getElementById('layer');
@@ -808,6 +812,12 @@
     }).join('');
   }
 
+  // The multiplayer page only exists next to the installed app, not in previews.
+  var HAS_MP = /github\.io$|^localhost$|^127\./.test(location.hostname);
+  function mpLink() {
+    return HAS_MP ? '<a class="mp-link" href="spelen.html"><div><b>Multiplayer</b><span>Speel Toepen samen, ieder op de eigen telefoon</span></div><span class="go" aria-hidden="true">→</span></a>' : '';
+  }
+
   function renderSetup() {
     var s = state.setup;
     var act = activeRoster();
@@ -839,6 +849,7 @@
       '<div class="stack" style="gap:16px">' +
         '<div class="topbar" style="padding-top:8px;margin-bottom:0"><div class="meta"><h1>Toepen</h1></div><div class="tools"><button class="btn ghost sm" data-act="sheet-rules" data-v="uitleg">Uitleg</button><button class="btn ghost sm" data-act="sheet-rules">Spelregels</button></div></div>' +
         '<p class="muted" style="margin-top:-8px">Zet aan wie er meespeelt, zet ze op volgorde van de tafel en kies je huisregels.</p>' +
+        mpLink() +
         '<div class="panel"><div class="label">Spelers · ' + act.length + ' van ' + s.roster.length + ' doen mee</div>' + rows +
           (s.roster.length < 20 ? '<button class="btn ghost" data-act="add">+ Nieuwe speler</button>' : '') +
           '<p class="small muted">Namen blijven bewaard. Zet iemand uit als die er een keer niet bij is.</p>' +
@@ -1349,6 +1360,7 @@
       '<div class="label" style="margin-top:4px">Huisregels</div>' + rulesPanel(g.rules, 'game') +
       '<div class="row"><button class="btn ghost" style="flex:1" data-act="ask" data-v="potje">Stand op 0 zetten</button>' +
       '<button class="btn ghost" style="flex:1" data-act="sheet-new">Nieuw spel</button></div></div>';
+    if (HAS_MP) html += mpLink();
     html += '<div class="panel"><div class="label">Spelregels en uitleg</div>' +
       '<p class="small muted">Alle regels, jullie huisregels en eigen afspraken, en hoe de app werkt.</p>' +
       '<div class="row"><button class="btn" style="flex:1" data-act="sheet-rules">Spelregels</button>' +
