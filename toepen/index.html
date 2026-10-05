@@ -340,7 +340,11 @@
   .navrow .sub { flex: 1; min-width: 0; color: var(--muted); font-size: 0.85rem; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .navrow::after { content: "›"; color: var(--muted); font-size: 1.4rem; flex: none; }
   .navrow .n { width: 28px; height: 28px; border-radius: 50%; background: var(--accent); color: var(--accent-fg); display: grid; place-items: center; font-weight: 800; font-size: 0.85rem; flex: none; }
-  .pager { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 10px; }
+  .pager { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: auto; padding-top: 10px; }
+  /* a screen with a pager fills the height, so Vorige/Volgende never move between pages */
+  .wrap:has(.pager) { min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; }
+  .wrap:has(.pager) > :has(.pager) { flex: 1; display: flex; flex-direction: column; align-content: start; }
+  .wrap:has(.pager) > :has(.pager) > .paged { display: block; }
   .pager .btn { min-width: 112px; }
   .page-nav { display: flex; gap: 8px; margin-top: 4px; }
   .page-nav .btn { flex: 1; }
@@ -418,7 +422,7 @@
 (function () {
   'use strict';
   var KEY = 'toepen-scorebord-v2';
-  var VERSION = '25 (pagina’s in plaats van scrollen)';
+  var VERSION = '26 (vaste knoppen, nooit scrollen)';
   var COLORS = ['#2f7d5b', '#c2571a', '#3b6fb6', '#a63d6b', '#7a5bb5', '#a67c12', '#1f8a8f', '#5d6b1f'];
   var app = document.getElementById('app');
   var layer = document.getElementById('layer');
@@ -980,7 +984,7 @@
   function isCompact() {
     var m = state.settings.compact || 'auto';
     if (m === 'on') return true;
-    if (m === 'off') return false;
+    if (m === 'off') return ui.fit >= 3;
     return ui.fit >= 3 || G().players.filter(function (p) { return !p.left; }).length >= 6;
   }
 
@@ -1663,7 +1667,7 @@
     for (;;) {
       renderGameOnce();
       var over = document.documentElement.scrollHeight - window.innerHeight;
-      if (ui.tab !== 'spel' || over <= 1 || ui.fit >= 4 || (state.settings.compact && state.settings.compact !== 'auto' && ui.fit >= 1)) break;
+      if (ui.tab !== 'spel' || over <= 1 || ui.fit >= 4) break;
       ui.fit++;
     }
   }
