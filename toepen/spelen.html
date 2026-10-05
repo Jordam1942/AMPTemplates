@@ -151,6 +151,27 @@
   .players.compact .chip { font-size: 0.66rem; padding: 1px 6px; }
   .players.compact .score { font-size: 1.25rem; }
   .players.compact .pc.sm { width: 34px; height: 48px; }
+  /* Fit levels: applied one by one until the table fits the screen */
+  .fit1 .felt { padding: 10px 12px; gap: 8px; }
+  .fit1 .felt .stake { font-size: 2.1rem; }
+  .fit1 .trick { min-height: 96px; padding: 0; }
+  .fit1 .topbar { margin-bottom: 8px; }
+  .fit1 .hand { padding-top: 8px; }
+  .fit1 .hand .pc { width: 62px; height: 90px; } .fit1 .hand .pc .s2 { font-size: 2rem; }
+  .wrap.has-hand.fit1 { padding-bottom: 175px; }
+  .fit2 .trick .pc { width: 52px; height: 74px; } .fit2 .trick .pc .s2 { font-size: 1.6rem; } .fit2 .trick .pc .s1 { top: 21px; }
+  .fit2 .trick { min-height: 84px; gap: 6px; }
+  .fit2 .players.compact .pl { padding: 4px 10px; }
+  .fit2 .players { margin-top: 8px; }
+  /* Home screen spacing */
+  .home .panel { padding: 12px 14px; gap: 8px; }
+  .home .choice { padding: 12px 14px; }
+  .fit1 .choice span, .fit1 .toggle-row .txt div:last-child { font-size: 0.8rem; }
+  .fit1.home .stack, .fit1 .stack { gap: 8px; }
+  .fit1 .toggle-row { min-height: 40px; }
+  .fit1 .panel { padding: 10px 12px; gap: 8px; }
+  .fit2 .choice span { display: none; }
+  .fit2 .toggle-row .txt div:last-child { display: none; }
 
   .result { background: var(--warn-soft); color: var(--fg); border-radius: 14px; padding: 12px 14px; font-weight: 600; text-align: center; }
   .winner { background: var(--accent); color: var(--accent-fg); border-radius: 20px; padding: 22px 18px; display: grid; gap: 12px; text-align: center; }
@@ -922,14 +943,18 @@
     layer.innerHTML = html;
   }
 
+  // Tighten the layout step by step until the screen fits without scrolling.
   function render() {
-    var html;
-    app.classList.remove('has-hand');
-    if (S.view === 'table') html = renderTable();
-    else if (S.view === 'create' || S.view === 'practice') html = renderCreate();
-    else if (S.view === 'fb') html = renderFb();
-    else html = renderHome();
-    app.innerHTML = html;
+    for (var lvl = 0; lvl <= 2; lvl++) {
+      app.className = 'wrap' + (lvl ? ' fit1' : '') + (lvl > 1 ? ' fit2' : '') + (S.view === 'home' ? ' home' : '');
+      var html;
+      if (S.view === 'table') html = renderTable();
+      else if (S.view === 'create' || S.view === 'practice') html = renderCreate();
+      else if (S.view === 'fb') html = renderFb();
+      else html = renderHome();
+      app.innerHTML = html;
+      if (S.view === 'fb' || document.documentElement.scrollHeight <= window.innerHeight + 1) break;
+    }
     renderLayer();
     wake();
   }
@@ -947,6 +972,17 @@
     if (e.target.id === 'myname') { S.name = e.target.value; ls(K.name, S.name); }
     if (e.target.id === 'joincode') e.target.value = e.target.value.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 4);
   });
+  // Re-fit after rotating the phone, but never while someone is typing.
+  var resizeTimer;
+  window.addEventListener('resize', function () {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(function () {
+      var a = document.activeElement;
+      if (a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA' || a.tagName === 'SELECT')) return;
+      render();
+    }, 200);
+  });
+
   document.addEventListener('keydown', function (e) {
     if (e.key === 'Enter' && e.target.id === 'joincode') joinTable(e.target.value);
     if (e.key === 'Escape' && S.sheet) { S.sheet = null; renderLayer(); }

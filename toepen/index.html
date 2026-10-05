@@ -269,11 +269,52 @@
   .player.compact .bar { height: 4px; }
   .player.compact .p-score { font-size: 1.45rem; padding: 2px 4px; flex: none; }
   .player.compact .p-score small { font-size: 0.75rem; }
-  .player.compact .btn.sm { min-height: 36px; padding: 0 10px; font-size: 0.82rem; flex: none; }
+  .player.compact .btn.sm, .p-head .btn.sm { min-height: 36px; padding: 0 10px; font-size: 0.82rem; flex: none; }
   .wrap.compact .stake { padding: 10px 12px; gap: 8px; margin-bottom: 10px; }
   .wrap.compact .stake .big { font-size: 2.2rem; }
   .wrap.compact .stake .btn.finish, .wrap.compact .stake .btn.wit { min-height: 40px; }
   .wrap.compact .stake .btn.toep { min-height: 44px; }
+  /* Fit-to-screen helpers */
+  .set-row { display: flex; align-items: center; gap: 10px; min-height: 44px; }
+  .set-row > .label { flex: none; width: 92px; }
+  .seg.sm button { min-height: 40px; min-width: 48px; padding: 0 10px; }
+  select.sel { flex: 1; min-width: 0; height: 42px; border-radius: 10px; border: 1.5px solid var(--line); background: var(--bg); color: var(--fg); font: inherit; font-weight: 600; padding: 0 10px; }
+  .rules-btn { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 44px; text-align: left; }
+  .rules-btn .sum { flex: 1; min-width: 0; color: var(--muted); font-size: 0.9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .rules-btn .go { color: var(--accent); font-weight: 800; }
+  .panel.tight { padding: 12px 14px; gap: 8px; }
+  .panel-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .roster { display: grid; gap: 6px; }
+  .roster.scroll { max-height: 384px; overflow-y: auto; padding-right: 2px; }
+  .name-row input { height: 42px; }
+  .icon-btn { width: 40px; height: 40px; }
+  .menu-list { display: grid; gap: 8px; }
+  .menu-list .btn { justify-content: flex-start; }
+  details.msec { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; }
+  details.msec > summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 0 16px; font-weight: 700; }
+  details.msec > summary::-webkit-details-marker { display: none; }
+  details.msec { min-width: 0; max-width: 100%; }
+  table.stats.six th { font-size: 0.62rem; letter-spacing: 0; padding: 6px 2px; }
+  table.stats.six td { padding: 7px 2px; }
+  table.stats.six td:first-child { max-width: 24vw; }
+  table.stats.six .dot { margin-right: 4px; width: 8px; height: 8px; }
+  .stack > * { min-width: 0; }
+  details.msec > summary .t { flex: none; white-space: nowrap; }
+  details.msec > summary .sum { flex: 1; text-align: right; }
+  details.msec > summary::after { content: "›"; margin-left: auto; color: var(--muted); font-size: 1.4rem; transition: transform 0.15s; }
+  details.msec[open] > summary::after { transform: rotate(90deg); }
+  details.msec > summary .sum { color: var(--muted); font-weight: 500; font-size: 0.85rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+  details.msec > .body { padding: 0 16px 16px; display: grid; gap: 12px; }
+  .players.compact.tight { gap: 4px; }
+  .players.compact.tight .player.compact { padding: 5px 10px; }
+  .wrap.tight .history-bar { margin-bottom: 8px; }
+  .wrap.tight .topbar { margin-bottom: 8px; }
+  .wrap.tight .stake .toeplog { display: none; }
+  .wrap.setup-tight .roster { gap: 4px; }
+  .wrap.setup-tight .name-row input, .wrap.setup-tight .icon-btn { height: 38px; }
+  .wrap.setup-tight .name-row .switch-btn { min-height: 38px; }
+  .wrap.setup-tight .panel.tight { padding: 10px 12px; }
+  .wrap.setup-tight .set-row { min-height: 40px; }
   .icon-round { width: 40px; min-height: 40px; padding: 0; font-weight: 800; font-size: 1.15rem; }
   .topbar h1 { white-space: nowrap; }
   details.rule { border-bottom: 1px solid var(--line); padding: 10px 0; }
@@ -339,7 +380,7 @@
 (function () {
   'use strict';
   var KEY = 'toepen-scorebord-v2';
-  var VERSION = '22 (compacte spelerslijst)';
+  var VERSION = '23 (past op één scherm)';
   var COLORS = ['#2f7d5b', '#c2571a', '#3b6fb6', '#a63d6b', '#7a5bb5', '#a67c12', '#1f8a8f', '#5d6b1f'];
   var app = document.getElementById('app');
   var layer = document.getElementById('layer');
@@ -368,7 +409,7 @@
     return COLORS.filter(function (c) { return used.indexOf(c) < 0; })[0] || COLORS[state.setup.roster.length % COLORS.length];
   }
   if (state.game) rulesOf(state.game);
-  var ui = { tab: 'spel', sheet: null, toast: '', bump: false };
+  var ui = { tab: 'spel', sheet: null, toast: '', bump: false, fit: 0 };
   var toastTimer = null;
 
   function fresh() {
@@ -829,8 +870,18 @@
   function dealersHtml() {
     var di = dealerIndex();
     return activeRoster().map(function (r, i) {
-      return '<button data-act="firstdealer" data-v="' + esc(r.name) + '" aria-pressed="' + (di === i) + '">' + esc(r.name.trim() || 'Speler') + '</button>';
+      return '<option value="' + esc(r.name) + '"' + (di === i ? ' selected' : '') + '>' + esc(r.name.trim() || 'Speler') + '</option>';
     }).join('');
+  }
+
+  function rulesSummary(R) {
+    var on = [];
+    if (R.wittewas) on.push('Vuile was');
+    if (R.dubbelToep) on.push('Dubbel toepen');
+    if (!R.scherpPassen) on.push('Op scherp mee');
+    if (R.hoogsteDeelt) on.push('Hoogste deelt');
+    if (R.inkopen) on.push('Inkopen');
+    return on.length ? on.join(', ') : 'Geen';
   }
 
   // The multiplayer page only exists next to the installed app, not in previews.
@@ -857,41 +908,49 @@
     }).join('');
     var dealers = dealersHtml();
 
-    var winsHtml = '';
     var br = boardRows();
-    if (br.length) {
-      winsHtml = '<div class="panel"><div class="label">Ranglijst</div><div class="top3">' +
-        br.slice(0, 3).map(function (x, i) {
-          return '<div class="line">' + rankBadge(i) + dot(x.color) + '<b>' + esc(x.name) + '</b><span class="muted small num">' + plural(x.won, 'potje', 'potjes') + ' gewonnen</span></div>';
-        }).join('') + '</div><button class="btn ghost" data-act="sheet-board">Hele ranglijst en eerdere potjes</button></div>';
-    }
 
+    var many = s.roster.length > 8;
     app.innerHTML =
-      '<div class="stack" style="gap:16px">' +
-        '<div class="topbar" style="padding-top:8px;margin-bottom:0"><div class="meta"><h1>Toepen</h1></div><div class="tools"><button class="btn ghost sm" data-act="sheet-rules" data-v="uitleg">Uitleg</button><button class="btn ghost sm" data-act="sheet-rules">Spelregels</button></div></div>' +
-        '<p class="muted" style="margin-top:-8px">Zet aan wie er meespeelt, zet ze op volgorde van de tafel en kies je huisregels.</p>' +
-        mpLink() +
-        '<div class="panel"><div class="label">Spelers · ' + act.length + ' van ' + s.roster.length + ' doen mee</div>' + rows +
-          (s.roster.length < 20 ? '<button class="btn ghost" data-act="add">+ Nieuwe speler</button>' : '') +
-          '<p class="small muted">Namen blijven bewaard. Zet iemand uit als die er een keer niet bij is.</p>' +
+      '<div class="stack" style="gap:12px">' +
+        '<div class="topbar" style="padding-top:4px;margin-bottom:0"><div class="meta"><h1>Toepen</h1></div><div class="tools">' +
+          '<button class="btn ghost sm icon-round" data-act="sheet-rules" data-v="uitleg" aria-label="Uitleg en spelregels">?</button>' +
+          (HAS_MP ? '<a class="btn ghost sm" href="spelen.html">Multiplayer</a>' : '') + '</div></div>' +
+        '<div class="panel tight"><div class="panel-head"><div class="label">Spelers · ' + act.length + ' van ' + s.roster.length + ' doen mee</div>' +
+          (s.roster.length < 20 ? '<button class="btn ghost sm" data-act="add">+ Nieuw</button>' : '') + '</div>' +
+          '<div class="roster' + (many ? ' scroll' : '') + '">' + rows + '</div></div>' +
+        '<div class="panel tight">' +
+          '<div class="set-row"><span class="label">Af bij</span><div class="seg sm">' + limits + '</div></div>' +
+          '<div class="set-row"><label class="label" for="dealers">Eerste deler</label><select class="sel" id="dealers">' + dealers + '</select></div>' +
+          '<button class="rules-btn" data-act="sheet-setrules"><span class="label" style="width:92px">Huisregels</span><span class="sum">' + esc(rulesSummary(s.rules)) + '</span><span class="go">Wijzig ›</span></button>' +
+          (br.length ? '<button class="rules-btn" data-act="sheet-board"><span class="label" style="width:92px">Ranglijst</span><span class="sum">1. ' + esc(br[0].name) + ' · ' + plural(br[0].won, 'potje', 'potjes') + '</span><span class="go">Bekijk ›</span></button>' : '') +
         '</div>' +
-        '<div class="panel"><div class="label">Af bij</div><div class="seg">' + limits + '</div>' +
-          '<p class="small muted">Wie dit aantal strafpunten haalt, ligt eruit. De laatste die overblijft, wint het potje.</p></div>' +
-        '<div class="panel"><div class="label">Eerste deler</div><div class="seg" id="dealers">' + dealers + '</div>' +
-          '<p class="small muted">' + (s.rules && s.rules.hoogsteDeelt ? 'Daarna deelt steeds wie de meeste strafpunten heeft.' : 'Daarna schuift de deler automatisch door naar links.') + '</p></div>' +
-        '<div class="panel"><div class="label">Huisregels</div>' +
-          rulesPanel(s.rules, 'setup') +
-        '</div>' +
-        winsHtml +
         '<button class="btn primary big" data-act="start"' + (act.length < 2 ? ' disabled' : '') + '>' + (act.length < 2 ? 'Zet minstens 2 spelers aan' : 'Start spel met ' + act.length + ' spelers') + '</button>' +
       '</div>';
+  }
+
+  // Setup should fit too: first tighten the rows, then let only the player
+  // list scroll inside its own box.
+  function renderSetupFit() {
+    app.classList.remove('setup-tight', 'compact', 'tight');
+    renderSetup();
+    var over = function () { return document.documentElement.scrollHeight - window.innerHeight; };
+    if (over() <= 1) return;
+    app.classList.add('setup-tight');
+    if (over() <= 1) return;
+    var list = app.querySelector('.roster');
+    if (list) {
+      var h = list.getBoundingClientRect().height - over() - 2;
+      list.style.maxHeight = Math.max(120, h) + 'px';
+      list.style.overflowY = 'auto';
+    }
   }
 
   function isCompact() {
     var m = state.settings.compact || 'auto';
     if (m === 'on') return true;
     if (m === 'off') return false;
-    return G().players.filter(function (p) { return !p.left; }).length >= 6;
+    return ui.fit >= 3 || G().players.filter(function (p) { return !p.left; }).length >= 6;
   }
 
   function renderSpel() {
@@ -902,7 +961,7 @@
       '<div class="small muted">Deler: <b>' + esc(dealer.name) + '</b> · af bij ' + g.limit + '</div></div>' +
       '<div class="tools"><button class="btn ghost sm icon-round" data-act="sheet-rules" aria-label="Spelregels">?</button>' +
       '<button class="btn ghost sm" data-act="sheet-share" data-v="stand" aria-label="Stand delen">Delen</button>' +
-      '<button class="btn ghost sm" data-act="sheet-new">Nieuw</button></div></div>';
+      '<button class="btn ghost sm" data-act="sheet-gamemenu">Menu</button></div></div>';
     var lastU = state.undo.length ? entryOf(state.undo[state.undo.length - 1]).label : '';
     var lastR = state.redo.length ? state.redo[state.redo.length - 1].label : '';
     html += '<div class="history-bar">' +
@@ -931,7 +990,8 @@
 
     var compact = isCompact();
     app.classList.toggle('compact', compact);
-    html += '<div class="players' + (compact ? ' compact' : '') + '">';
+    app.classList.toggle('tight', compact && ui.fit >= 4);
+    html += '<div class="players' + (compact ? ' compact' : '') + (compact && ui.fit >= 4 ? ' tight' : '') + '">';
     g.players.forEach(function (p, i) {
       var af = p.out, passed = (p.id in r.passed) && !p.left && r.passed[p.id] > 0, waiting = (p.id in r.passed) && r.passed[p.id] === 0;
       var scherp = !af && p.score === g.limit - 1;
@@ -956,12 +1016,17 @@
           '<button class="p-score" data-act="sheet-adjust" data-id="' + p.id + '" aria-label="Score van ' + esc(p.name) + ' aanpassen">' + p.score + '<small>/' + g.limit + '</small></button></div>';
         return;
       }
+      // Medium step: no tally marks, buttons on the name line.
+      var medium = ui.fit === 2 && (state.settings.compact || 'auto') === 'auto';
+      var inline = medium ? (canPass ? '<button class="btn warn sm" data-act="pass" data-id="' + p.id + '">Past +' + (r.stake - 1) + '</button>' : '') +
+        (canBuyIn(p) ? '<button class="btn sm" data-act="buyin" data-id="' + p.id + '">Inkopen</button>' : '') : '';
       html += '<div class="player' + cls + '">' +
         '<div class="p-head">' + avatar(p) +
-          '<div class="p-who"><div class="p-name">' + esc(p.name) + '</div>' + (chips ? '<div class="chips">' + chips + '</div>' : '') + '</div>' +
+          '<div class="p-who"><div class="p-name">' + esc(p.name) + '</div>' + (chips ? '<div class="chips">' + chips + '</div>' : '') + '</div>' + inline +
           '<button class="p-score" data-act="sheet-adjust" data-id="' + p.id + '" aria-label="Score van ' + esc(p.name) + ' aanpassen">' + p.score + '<small> / ' + g.limit + '</small></button></div>' +
-        '<div class="tally" aria-label="' + p.score + ' strafpunten">' + tally(p.score) + '</div>' +
+        (medium ? '' : '<div class="tally" aria-label="' + p.score + ' strafpunten">' + tally(p.score) + '</div>') +
         '<div class="bar"><span style="width:' + pct + '%"></span></div>';
+      if (medium) { html += '</div>'; return; }
       var acts = '';
       var lastToep = r.toeps.length ? r.toeps[r.toeps.length - 1].by : null;
       var mustPlay = scherp && !g.rules.scherpPassen;
@@ -974,16 +1039,8 @@
     });
     html += '</div>';
 
-    var dirty = g.log.length || r.toeps.length || g.players.some(function (p) { return p.score > 0; });
-    if (!w && dirty) {
-      html += '<div class="row" style="margin-top:14px">' +
-        (canAddPlayer() ? '<button class="btn ghost" style="flex:1" data-act="sheet-addp">+ Speler toevoegen</button>' : '') +
-        '<button class="btn ghost" style="flex:1" data-act="ask" data-v="potje">Stand op 0 zetten</button></div>';
-    } else if (!w && canAddPlayer()) {
-      html += '<button class="btn ghost wide" style="margin-top:14px" data-act="sheet-addp">+ Speler toevoegen</button>';
-    }
 
-    if (!w && r.n === 1 && !r.toeps.length && !g.log.length) {
+    if (!w && r.n === 1 && !r.toeps.length && !g.log.length && ui.fit < 1) {
       html += '<div class="panel small muted" style="margin-top:14px"><div><b style="color:var(--fg)">Zo werkt het:</b> tik op <b>Toep!</b> als iemand toept. ' +
         'Gaat iemand niet mee, tik dan bij die speler op <b>Gaat niet mee</b>. Aan het eind tik je op <b>Wie wint de ronde?</b>; de rest krijgt de inzet. ' +
         'Tik op een score om die met de hand aan te passen.</div>' +
@@ -1104,15 +1161,15 @@
         (toepKing && toepKing.n ? '<div class="record"><span>Meeste toeps in één potje</span><span>' + esc(toepKing.name) + ' · ' + toepKing.n + '×</span></div>' : '') +
         '<div class="record"><span>Hoogste inzet</span><span>' + bigStake.n + ' · ' + fmtDate(bigStake.g.at) + '</span></div>' +
         '</div>';
-      html += '<div class="panel" style="padding-block:4px"><div class="label" style="padding-top:12px">Laatste potjes</div>';
+      var last = '';
       A.slice(-15).reverse().forEach(function (g) {
         var stand = g.players.slice().sort(function (a, b) { return a.score - b.score; });
-        html += '<div class="log-item"><div class="log-head"><span>' + esc(g.winner) + ' wint</span><span class="muted small">' + fmtDate(g.at) + '</span></div>' +
+        last += '<div class="log-item"><div class="log-head"><span>' + esc(g.winner) + ' wint</span><span class="muted small">' + fmtDate(g.at) + '</span></div>' +
           '<div class="small muted">' + plural(g.rounds, 'ronde', 'rondes') + ' · af bij ' + g.limit + '</div><div>' +
           stand.map(function (p) { return '<span class="pill' + (p.name === g.winner ? ' win' : '') + '">' + esc(p.name) + ' ' + p.score + '</span>'; }).join('') +
           '</div></div>';
       });
-      html += '</div>';
+      html += msec('laatste', 'Laatste potjes', 'laatste: ' + esc(A[A.length - 1].winner) + ' won', '<div>' + last + '</div>');
     }
     return html + '</div>';
   }
@@ -1256,21 +1313,12 @@
     var g = G(), st = computeStats(), html = '<div class="topbar"><h1>Statistieken</h1></div><div class="stack">';
     html += '<div class="tiles"><div class="tile"><b>' + st.rounds + '</b><span>Rondes</span></div>' +
       '<div class="tile"><b>' + st.totalToeps + '</b><span>Keer getoept</span></div>' +
-      '<div class="tile"><b>' + st.maxStake + '</b><span>Hoogste inzet</span></div></div>';
-    if (st.maxRound) {
-      html += '<p class="small muted">Duurste ronde: ronde ' + st.maxRound.n + ', gewonnen door ' + nameOf(st.maxRound.winner) + ' bij inzet ' + st.maxStake + '.</p>';
-    }
+      '<div class="tile"><b>' + st.maxStake + '</b><span>Hoogste inzet' + (st.maxRound ? ' · ' + nameOf(st.maxRound.winner) : '') + '</span></div></div>';
     var maxWon = Math.max.apply(null, g.players.map(function (p) { return st.per[p.id].won; }).concat([1]));
-    html += '<div class="panel"><div class="label">Rondes gewonnen</div>';
-    g.players.forEach(function (p) {
-      var v = st.per[p.id].won;
-      html += '<div class="hbar"><span class="name">' + esc(p.name) + '</span><div class="track"><span style="width:' + (v / maxWon * 100) + '%;background:' + p.color + '"></span></div><span class="val">' + v + '</span></div>';
-    });
-    html += '</div>';
-    html += '<div class="panel"><div class="label">Per speler</div><div class="table-wrap"><table class="stats"><thead><tr><th>Speler</th><th>Keer<br>getoept</th><th>Keer<br>gepast</th><th>Rondes<br>verloren</th><th>Straf-<br>punten</th></tr></thead><tbody>';
+    html += '<div class="panel tight"><div class="label">Per speler</div><div class="table-wrap"><table class="stats six"><thead><tr><th>Speler</th><th>Rondes<br>gewonnen</th><th>Keer<br>getoept</th><th>Keer<br>gepast</th><th>Rondes<br>verloren</th><th>Straf-<br>punten</th></tr></thead><tbody>';
     g.players.forEach(function (p) {
       var x = st.per[p.id];
-      html += '<tr><td>' + esc(p.name) + '</td><td>' + x.toeps + '</td><td>' + x.passed + '</td><td>' + x.lost + '</td><td>' + p.score + '</td></tr>';
+      html += '<tr><td>' + dot(p.color) + esc(p.name) + '</td><td' + (x.won === maxWon && x.won > 0 ? ' style="color:var(--accent);font-weight:800"' : '') + '>' + x.won + '</td><td>' + x.toeps + '</td><td>' + x.passed + '</td><td>' + x.lost + '</td><td>' + p.score + '</td></tr>';
     });
     html += '</tbody></table></div><p class="small muted"><b>Rondes verloren</b>: aan het eind nog meedoen en de laatste slag niet halen. Gepast telt daar niet bij.</p></div>';
     return html + '</div>';
@@ -1380,22 +1428,18 @@
       '</div>';
   }
 
+  // Sections fold open one at a time so the page fits the screen.
+  function msec(key, title, sum, body) {
+    var open = ui.open && ui.open[key];
+    return '<details class="msec" data-sec="' + key + '"' + (open ? ' open' : '') + '><summary><span class="t">' + title + '</span>' +
+      (sum ? '<span class="sum">' + sum + '</span>' : '') + '</summary><div class="body">' + body + '</div></details>';
+  }
+
   function renderMeer() {
-    var st = state.settings, g = G(), html = '<div class="topbar"><h1>Meer</h1></div><div class="stack">';
-    html += '<div class="panel"><div class="label">Weergave</div><div class="seg">' +
-      [['system', 'Systeem'], ['light', 'Licht'], ['dark', 'Donker']].map(function (o) {
-        return '<button data-act="theme" data-v="' + o[0] + '" aria-pressed="' + (st.theme === o[0]) + '">' + o[1] + '</button>';
-      }).join('') + '</div>' +
-      '<div class="label" style="margin-top:4px">Spelerslijst</div><div class="seg">' +
-      [['auto', 'Automatisch'], ['on', 'Compact'], ['off', 'Groot']].map(function (o) {
-        return '<button data-act="compact" data-v="' + o[0] + '" aria-pressed="' + ((st.compact || 'auto') === o[0]) + '">' + o[1] + '</button>';
-      }).join('') + '</div><p class="small muted">Automatisch: één regel per speler vanaf 6 spelers.</p>' +
-      toggleRow('sound', st.sound, 'Geluid', 'Korte tonen bij toepen, rondes en de winnaar.') +
-      toggleRow('vibrate', st.vibrate, 'Trillen', 'Voelbare tik bij elke actie.') +
-      toggleRow('wake', st.wake, 'Scherm aan houden', 'Je telefoon gaat niet op slot tijdens het spel.') +
-      '</div>';
-    html += '<div class="panel"><div class="label">Dit potje</div>' +
-      '<div class="label" style="margin-top:4px">Spelers</div>' +
+    var st = state.settings, g = G(), html = '<div class="topbar"><h1>Meer</h1></div><div class="stack" style="gap:10px">';
+    var themeName = { system: 'Systeem', light: 'Licht', dark: 'Donker' }[st.theme] || 'Systeem';
+    var listName = { auto: 'Automatisch', on: 'Compact', off: 'Groot' }[st.compact || 'auto'];
+    html += msec('potje', 'Spelers en huisregels', g.players.filter(function (p) { return !p.left; }).length + ' spelers · ' + esc(rulesSummary(g.rules)),
       g.players.map(function (p) {
         var btn = g.done ? '' : p.left
           ? '<button class="btn sm" data-act="rejoin" data-id="' + p.id + '">Doet weer mee</button>'
@@ -1404,28 +1448,47 @@
           (p.left ? 'gestopt' : p.out ? 'af' : p.score + ' / ' + g.limit) + '</span>' + btn + '</div>';
       }).join('') +
       (canAddPlayer() ? '<button class="btn ghost" data-act="sheet-addp">+ Speler toevoegen</button>' : '') +
-      '<div class="label" style="margin-top:4px">Huisregels</div>' + rulesPanel(g.rules, 'game') +
-      '<div class="row"><button class="btn ghost" style="flex:1" data-act="ask" data-v="potje">Stand op 0 zetten</button>' +
-      '<button class="btn ghost" style="flex:1" data-act="sheet-new">Nieuw spel</button></div></div>';
-    if (HAS_MP) html += mpLink();
-    html += '<div class="panel"><div class="label">Spelregels en uitleg</div>' +
-      '<p class="small muted">Alle regels, jullie huisregels en eigen afspraken, en hoe de app werkt.</p>' +
-      '<div class="row"><button class="btn" style="flex:1" data-act="sheet-rules">Spelregels</button>' +
-      '<button class="btn" style="flex:1" data-act="sheet-rules" data-v="uitleg">Uitleg app</button></div></div>';
-    html += '<div class="panel"><div class="label">Opnieuw beginnen</div>';
-    html += '<button class="btn ghost" data-act="ask" data-v="potje">Stand op 0 zetten</button>' +
+      '<div class="label" style="margin-top:4px">Huisregels</div>' + rulesPanel(g.rules, 'game'));
+    html += msec('weergave', 'Weergave en geluid', themeName + ' · ' + listName,
+      '<div class="seg">' + [['system', 'Systeem'], ['light', 'Licht'], ['dark', 'Donker']].map(function (o) {
+        return '<button data-act="theme" data-v="' + o[0] + '" aria-pressed="' + (st.theme === o[0]) + '">' + o[1] + '</button>';
+      }).join('') + '</div>' +
+      '<div class="label" style="margin-top:4px">Spelerslijst</div><div class="seg">' +
+      [['auto', 'Automatisch'], ['on', 'Compact'], ['off', 'Groot']].map(function (o) {
+        return '<button data-act="compact" data-v="' + o[0] + '" aria-pressed="' + ((st.compact || 'auto') === o[0]) + '">' + o[1] + '</button>';
+      }).join('') + '</div><p class="small muted">Automatisch: groot als het past, anders één regel per speler, zodat je niet hoeft te scrollen.</p>' +
+      toggleRow('sound', st.sound, 'Geluid', 'Korte tonen bij toepen, rondes en de winnaar.') +
+      toggleRow('vibrate', st.vibrate, 'Trillen', 'Voelbare tik bij elke actie.') +
+      toggleRow('wake', st.wake, 'Scherm aan houden', 'Je telefoon gaat niet op slot tijdens het spel.'));
+    html += msec('opnieuw', 'Opnieuw beginnen', 'Nieuw spel, stand op 0, wissen',
+      '<button class="btn ghost" data-act="sheet-new">Nieuw spel</button>' +
+      '<button class="btn ghost" data-act="ask" data-v="potje">Stand op 0 zetten</button>' +
       '<p class="small muted">Alleen de strafpunten van dit potje. Spelers en ranglijst blijven.</p>' +
       '<button class="btn warn" data-act="ask" data-v="ranglijst">Ranglijst wissen</button>' +
       '<p class="small muted">Gewonnen potjes, records en eerdere potjes. Spelers blijven.</p>' +
       '<button class="btn danger" data-act="ask" data-v="alles">Alles wissen</button>' +
-      '<p class="small muted">Ook je spelerslijst. Alleen je instellingen blijven.</p>';
-    html += '<p class="small muted">De stand wordt alleen op dit toestel bewaard.</p></div>';
+      '<p class="small muted">Ook je spelerslijst. Alleen je instellingen blijven. De stand staat alleen op dit toestel.</p>');
+    html += '<div class="row"><button class="btn" style="flex:1" data-act="sheet-rules">Spelregels</button>' +
+      '<button class="btn" style="flex:1" data-act="sheet-rules" data-v="uitleg">Uitleg app</button></div>';
+    if (HAS_MP) html += mpLink();
     html += '<p class="small muted" style="text-align:center">Toepen Scorebord · versie ' + VERSION + '</p>';
     return html + '</div>';
   }
   function rule(t, body) { return '<details class="rule"><summary>' + t + '</summary><p>' + body + '</p></details>'; }
 
+  // The game screen should fit the phone without scrolling: if it does not,
+  // drop the first-round hint, then the tally marks, then switch to compact
+  // rows, then tighten them.
   function renderGame() {
+    ui.fit = 0;
+    for (;;) {
+      renderGameOnce();
+      var over = document.documentElement.scrollHeight - window.innerHeight;
+      if (ui.tab !== 'spel' || over <= 1 || ui.fit >= 4 || (state.settings.compact && state.settings.compact !== 'auto' && ui.fit >= 1)) break;
+      ui.fit++;
+    }
+  }
+  function renderGameOnce() {
     var body = { spel: renderSpel, verloop: renderVerloop, stats: renderStats, meer: renderMeer }[ui.tab]();
     var tabs = [['spel', 'Spel'], ['verloop', 'Verloop'], ['stats', 'Stats'], ['meer', 'Meer']];
     app.innerHTML = body +
@@ -1437,7 +1500,7 @@
   function renderLayer() {
     var html = '';
     var sh = ui.sheet;
-    if (sh && (state.game || sh.type === 'board' || sh.type === 'rules' || (sh.type === 'share' && sh.kind === 'board'))) {
+    if (sh && (state.game || sh.type === 'board' || sh.type === 'rules' || sh.type === 'setrules' || (sh.type === 'share' && sh.kind === 'board'))) {
       var inner = '';
       if (sh.type === 'toep') {
         var rt = G().round.toeps, lastT = rt.length ? rt[rt.length - 1].by : null;
@@ -1454,6 +1517,16 @@
           '<div class="pick">' + inRoundPlayers().map(function (p) {
             return '<button data-act="finish" data-id="' + p.id + '">' + avatar(p, true) + '<span>' + esc(p.name) + '</span></button>';
           }).join('') + '</div>';
+      } else if (sh.type === 'setrules') {
+        inner = '<h2>Huisregels</h2><p class="small muted">Spreek ze af voordat je begint. Tijdens het spel kun je ze nog wijzigen onder Meer.</p>' + rulesPanel(state.setup.rules, 'setup');
+      } else if (sh.type === 'gamemenu') {
+        inner = '<h2>Menu</h2><div class="menu-list">' +
+          '<button class="btn ghost" data-act="sheet-new">Nieuw spel…</button>' +
+          (canAddPlayer() ? '<button class="btn ghost" data-act="sheet-addp">+ Speler toevoegen</button>' : '') +
+          '<button class="btn ghost" data-act="ask" data-v="potje">Stand op 0 zetten…</button>' +
+          '<button class="btn ghost" data-act="menu-meer">Spelers en huisregels</button>' +
+          '<button class="btn ghost" data-act="sheet-rules" data-v="uitleg">Uitleg en spelregels</button>' +
+          (HAS_MP ? '<a class="btn ghost" href="spelen.html">Multiplayer</a>' : '') + '</div>';
       } else if (sh.type === 'rules') {
         var rv = sh.view || 'regels';
         inner = '<h2>' + (rv === 'uitleg' ? 'Uitleg van de app' : 'Spelregels Toepen') + '</h2>' +
@@ -1550,7 +1623,7 @@
 
   function render() {
     applyTheme();
-    if (state.screen === 'game' && state.game) renderGame(); else renderSetup();
+    if (state.screen === 'game' && state.game) renderGame(); else renderSetupFit();
     renderLayer();
     updateWake();
   }
@@ -1572,6 +1645,7 @@
 
   document.addEventListener('change', function (e) {
     var d = document.getElementById('dealers');
+    if (e.target.id === 'dealers') { state.setup.firstDealerName = e.target.value; save(); return; }
     if (d && e.target.matches && e.target.matches('input[data-i]')) d.innerHTML = dealersHtml();
   });
 
@@ -1666,6 +1740,9 @@
       case 'vibrate': state.settings.vibrate = !state.settings.vibrate; commit(); buzz(30); break;
       case 'wake': state.settings.wake = !state.settings.wake; commit(); break;
       case 'ask': ui.sheet = { type: 'confirm', what: v }; renderLayer(); break;
+      case 'sheet-setrules': ui.sheet = { type: 'setrules' }; renderLayer(); break;
+      case 'sheet-gamemenu': ui.sheet = { type: 'gamemenu' }; renderLayer(); break;
+      case 'menu-meer': ui.sheet = null; ui.tab = 'meer'; ui.open = ui.open || {}; ui.open.potje = true; render(); window.scrollTo(0, 0); break;
       case 'sheet-rules': ui.sheet = { type: 'rules', view: v || 'regels' }; renderLayer(); break;
       case 'rulesview':
         ui.sheet.view = v; renderLayer();
@@ -1678,6 +1755,27 @@
         state = fresh(); state.settings = keepSettings; ui.tab = 'spel';
         toast('Alles gewist'); commit(); window.scrollTo(0, 0); break;
     }
+  });
+
+  document.addEventListener('toggle', function (e) {
+    var d = e.target;
+    if (d.classList && d.classList.contains('msec')) {
+      ui.open = ui.open || {};
+      ui.open[d.dataset.sec] = d.open;
+      // Only one section open at a time keeps the page short.
+      if (d.open) document.querySelectorAll('details.msec[open]').forEach(function (o) { if (o !== d) { o.open = false; ui.open[o.dataset.sec] = false; } });
+    }
+  }, true);
+
+  // Re-fit after rotating the phone, but never while someone is typing.
+  var resizeTimer;
+  window.addEventListener('resize', function () {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(function () {
+      var a = document.activeElement;
+      if (a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA' || a.tagName === 'SELECT')) return;
+      render();
+    }, 200);
   });
 
   document.addEventListener('keydown', function (e) {
