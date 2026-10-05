@@ -256,6 +256,12 @@
   @keyframes fade { from { opacity: 0; } }
   @keyframes up { from { transform: translateY(40px); opacity: 0.5; } }
 
+  a.btn { text-decoration: none; }
+  .btn.wa { background: #1f8f4e; color: #ffffff; }
+  .share-preview { white-space: pre-wrap; font-family: var(--font-body); font-size: 0.85rem; background: var(--sunken); border-radius: 12px; padding: 12px; margin: 0; max-height: 30vh; overflow-y: auto; }
+  .share-img { display: grid; gap: 8px; }
+  .share-img img { width: 100%; border-radius: 12px; border: 1px solid var(--line); }
+  .topbar .tools { display: flex; gap: 8px; flex: none; }
   .toast {
     position: fixed; left: 50%; bottom: calc(84px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%);
     z-index: 30; background: var(--ink); color: var(--ink-fg); padding: 10px 16px; border-radius: 12px;
@@ -581,7 +587,7 @@
   function toast(msg) {
     ui.toast = msg;
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(function () { ui.toast = ''; renderLayer(); }, 2600);
+    toastTimer = setTimeout(function () { ui.toast = ''; var t = layer.querySelector('.toast'); if (t) t.remove(); }, 2600);
   }
 
   function applyTheme() {
@@ -704,7 +710,8 @@
 
     html += '<div class="topbar"><div class="meta"><h1>Ronde ' + r.n + '</h1>' +
       '<div class="small muted">Deler: <b>' + esc(dealer.name) + '</b> · af bij ' + g.limit + '</div></div>' +
-      '<button class="btn ghost sm" data-act="undo"' + (state.undo.length ? '' : ' disabled') + '>↶ Ongedaan</button></div>';
+      '<div class="tools"><button class="btn ghost sm" data-act="sheet-share" data-v="stand" aria-label="Stand delen">Delen</button>' +
+      '<button class="btn ghost sm" data-act="undo"' + (state.undo.length ? '' : ' disabled') + '>↶ Ongedaan</button></div></div>';
 
     if (w) {
       var rounds = g.log.filter(function (e) { return e.t === 'round'; }).length;
@@ -713,6 +720,7 @@
         '<p>Na ' + plural(rounds, 'ronde', 'rondes') + ', met ' + plural(w.score, 'strafpunt', 'strafpunten') + '. ' +
         'Totaal ' + plural(state.wins[w.name] || 1, 'potje', 'potjes') + ' gewonnen.</p>' +
         '<button class="btn big" data-act="again">Nog een potje</button>' +
+        '<button class="btn ghost" data-act="sheet-share" data-v="stand">Uitslag delen</button>' +
         '<button class="btn ghost" data-act="tosetup">Andere spelers of regels</button></div>';
     } else {
       var toepNames = r.toeps.map(function (t) { return esc(byId(t.by).name); }).join(' → ');
@@ -841,7 +849,7 @@
     var totalGames = Math.max(A.length, Object.keys(state.wins).reduce(function (n, k) { return n + state.wins[k]; }, 0));
     var totalRounds = A.reduce(function (n, g) { return n + g.rounds; }, 0);
     var maxStake = A.reduce(function (m, g) { return Math.max(m, g.maxStake || 1); }, 0);
-    var html = '<div class="stack">';
+    var html = '<div class="stack"><button class="btn" data-act="sheet-share" data-v="board">Ranglijst delen</button>';
     html += '<div class="tiles"><div class="tile"><b>' + totalGames + '</b><span>Potjes</span></div>' +
       '<div class="tile"><b>' + totalRounds + '</b><span>Rondes</span></div>' +
       '<div class="tile"><b>' + (maxStake || '–') + '</b><span>Hoogste inzet</span></div></div>';
@@ -878,6 +886,133 @@
       html += '</div>';
     }
     return html + '</div>';
+  }
+
+  function shareRows(kind) {
+    if (kind === 'board') {
+      return boardRows().slice(0, 10).map(function (x, i) {
+        return { rank: i + 1, name: x.name, color: x.color, value: x.won + '', sub: 'van ' + x.played + ' gewonnen' };
+      });
+    }
+    var g = G();
+    var ps = g.players.slice().sort(function (a, b) { return (a.out - b.out) || (a.score - b.score); });
+    return ps.map(function (p, i) {
+      var sub = p.out ? 'af' : (p.score === g.limit - 1 ? 'op scherp' : '');
+      return { rank: i + 1, name: p.name, color: p.color, value: p.score + '', sub: sub, out: p.out };
+    });
+  }
+
+  function standLabel() { var n = G().round.n - 1; return n < 1 ? 'stand' : 'stand na ronde ' + n; }
+
+  function shareTitle(kind) {
+    if (kind === 'board') return 'Toepen ranglijst';
+    var w = winner();
+    return w ? w.name + ' wint het potje!' : 'Toepen · ' + standLabel();
+  }
+
+  function shareText(kind) {
+    var medals = ['🥇', '🥈', '🥉'];
+    var lines = [];
+    if (kind === 'board') {
+      lines.push('*🃏 Toepen ranglijst*', '');
+      shareRows('board').forEach(function (r, i) {
+        lines.push((medals[i] || (r.rank + '.')) + ' ' + r.name + ' – ' + r.value + ' ' + (r.value === '1' ? 'potje' : 'potjes') + ' gewonnen (' + r.sub.replace('van ', '') + ' gespeeld)');
+      });
+      var A = state.archive;
+      if (A.length) {
+        var last = A[A.length - 1];
+        lines.push('', 'Laatste potje: ' + last.winner + ' won op ' + fmtDate(last.at) + '.');
+      }
+    } else {
+      var g = G(), w = winner();
+      lines.push(w ? '*🏆 ' + w.name + ' wint het potje!*' : '*🃏 Toepen · ' + standLabel() + '*');
+      lines.push('Strafpunten, af bij ' + g.limit, '');
+      shareRows('stand').forEach(function (r) {
+        lines.push((r.out ? '❌ ' : (w && r.name === w.name ? '🏆 ' : r.rank + '. ')) + r.name + ' – ' + r.value + (r.sub ? ' (' + r.sub + ')' : ''));
+      });
+    }
+    lines.push('', 'Bijgehouden met Toepen Scorebord');
+    return lines.join('\n');
+  }
+
+  function shareCanvas(kind) {
+    var rows = shareRows(kind), W = 1080, rowH = 120, top = 250;
+    var H = top + rows.length * rowH + 110;
+    var c = document.createElement('canvas'); c.width = W; c.height = H;
+    var x = c.getContext('2d');
+    var disp = '"Bricolage Grotesque", system-ui, sans-serif', body = '"Figtree", system-ui, sans-serif';
+    x.fillStyle = '#eef1ea'; x.fillRect(0, 0, W, H);
+    x.fillStyle = '#253a2e'; x.fillRect(0, 0, W, 200);
+    // tally mark logo
+    x.strokeStyle = '#eef1ea'; x.lineWidth = 9; x.lineCap = 'round';
+    for (var i = 0; i < 4; i++) { x.beginPath(); x.moveTo(70 + i * 22, 60); x.lineTo(73 + i * 22, 140); x.stroke(); }
+    x.strokeStyle = '#f0a160'; x.beginPath(); x.moveTo(56, 128); x.lineTo(152, 74); x.stroke();
+    x.fillStyle = '#eef1ea'; x.font = '800 60px ' + disp; x.textBaseline = 'middle';
+    x.fillText(shareTitle(kind), 190, 88, W - 230);
+    x.font = '500 34px ' + body; x.globalAlpha = 0.8;
+    x.fillText(kind === 'board' ? 'Meeste potjes gewonnen' : 'Strafpunten · af bij ' + G().limit, 190, 148, W - 230);
+    x.globalAlpha = 1;
+    var maxV = Math.max.apply(null, rows.map(function (r) { return +r.value; }).concat([1]));
+    if (kind !== 'board') maxV = Math.max(maxV, G().limit);
+    rows.forEach(function (r, i) {
+      var y = top + i * rowH;
+      x.globalAlpha = r.out ? 0.5 : 1;
+      x.fillStyle = '#fbfcf8'; roundRect(x, 50, y, W - 100, rowH - 18, 24); x.fill();
+      x.fillStyle = r.color || '#5f6b62'; x.beginPath(); x.arc(110, y + 51, 34, 0, 6.29); x.fill();
+      x.fillStyle = '#ffffff'; x.font = '800 36px ' + disp; x.textAlign = 'center';
+      x.fillText((r.name.trim()[0] || '?').toUpperCase(), 110, y + 53);
+      x.textAlign = 'left'; x.fillStyle = '#1d2620'; x.font = '700 40px ' + body;
+      x.fillText(r.name, 170, y + 38, 560);
+      x.fillStyle = '#d5dbd0'; roundRect(x, 170, y + 70, 600, 12, 6); x.fill();
+      x.fillStyle = r.sub === 'op scherp' ? '#b4540f' : r.out ? '#b3261e' : '#1f6b4a';
+      roundRect(x, 170, y + 70, Math.max(12, 600 * Math.min(1, (+r.value) / maxV)), 12, 6); x.fill();
+      x.textAlign = 'right'; x.fillStyle = '#1d2620'; x.font = '800 60px ' + disp;
+      x.fillText(r.value, W - 90, y + 42);
+      if (r.sub) { x.font = '600 26px ' + body; x.fillStyle = r.sub === 'op scherp' ? '#b4540f' : '#5f6b62'; x.fillText(r.sub, W - 90, y + 84); }
+      x.textAlign = 'left'; x.globalAlpha = 1;
+    });
+    x.fillStyle = '#5f6b62'; x.font = '500 28px ' + body; x.textAlign = 'center';
+    x.fillText('Toepen Scorebord · ' + fmtDate(Date.now()), W / 2, H - 55);
+    return c;
+  }
+  function roundRect(x, l, t, w, h, r) {
+    x.beginPath(); x.moveTo(l + r, t); x.arcTo(l + w, t, l + w, t + h, r); x.arcTo(l + w, t + h, l, t + h, r);
+    x.arcTo(l, t + h, l, t, r); x.arcTo(l, t, l + w, t, r); x.closePath();
+  }
+
+  function shareImage(kind) {
+    var c = shareCanvas(kind), out = document.getElementById('share-img-out');
+    function showImage() {
+      if (out) out.innerHTML = '<div class="share-img"><img alt="Scorebord als plaatje" src="' + c.toDataURL('image/png') + '">' +
+        '<p class="small muted">Houd het plaatje ingedrukt om het op te slaan of te delen, en stuur het daarna in WhatsApp.</p></div>';
+    }
+    if (!c.toBlob || !navigator.canShare) { showImage(); return; }
+    c.toBlob(function (blob) {
+      var file;
+      try { file = new File([blob], 'toepen-scorebord.png', { type: 'image/png' }); } catch (e) { showImage(); return; }
+      if (navigator.canShare({ files: [file] })) {
+        navigator.share({ files: [file], title: shareTitle(kind) }).catch(function (err) {
+          if (!err || err.name !== 'AbortError') showImage();
+        });
+      } else showImage();
+    }, 'image/png');
+  }
+
+  function copyShare(kind) {
+    var text = shareText(kind);
+    function fallback() {
+      var pre = document.getElementById('share-text');
+      if (pre) { var r = document.createRange(); r.selectNodeContents(pre); var sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); }
+      toast('Tekst geselecteerd. Kies Kopiëren.'); renderLayerToastOnly();
+    }
+    try {
+      navigator.clipboard.writeText(text).then(function () { toast('Gekopieerd. Plak het in WhatsApp.'); renderLayerToastOnly(); }, fallback);
+    } catch (e) { fallback(); }
+  }
+  function renderLayerToastOnly() {
+    var t = layer.querySelector('.toast');
+    if (t) t.remove();
+    if (ui.toast) layer.insertAdjacentHTML('beforeend', '<div class="toast" role="status">' + esc(ui.toast) + '</div>');
   }
 
   function renderStats() {
@@ -960,7 +1095,7 @@
   function renderLayer() {
     var html = '';
     var sh = ui.sheet;
-    if (sh && (state.game || sh.type === 'board')) {
+    if (sh && (state.game || sh.type === 'board' || (sh.type === 'share' && sh.kind === 'board'))) {
       var inner = '';
       if (sh.type === 'toep') {
         var rt = G().round.toeps, lastT = rt.length ? rt[rt.length - 1].by : null;
@@ -977,6 +1112,14 @@
           '<div class="pick">' + inRoundPlayers().map(function (p) {
             return '<button data-act="finish" data-id="' + p.id + '">' + avatar(p, true) + '<span>' + esc(p.name) + '</span></button>';
           }).join('') + '</div>';
+      } else if (sh.type === 'share') {
+        var stext = shareText(sh.kind);
+        inner = '<h2>' + (sh.kind === 'board' ? 'Ranglijst delen' : 'Stand delen') + '</h2>' +
+          '<a class="btn wa big" href="https://wa.me/?text=' + encodeURIComponent(stext) + '" target="_blank" rel="noopener">Delen via WhatsApp</a>' +
+          '<div class="row"><button class="btn" style="flex:1" data-act="share-img" data-v="' + sh.kind + '">Als plaatje</button>' +
+          '<button class="btn ghost" style="flex:1" data-act="share-copy" data-v="' + sh.kind + '">Tekst kopiëren</button></div>' +
+          '<div id="share-img-out"></div>' +
+          '<div class="label">Voorbeeld</div><pre class="share-preview" id="share-text">' + esc(stext) + '</pre>';
       } else if (sh.type === 'board') {
         inner = '<h2>Ranglijst</h2>' + allTimeHtml();
       } else if (sh.type === 'was1') {
@@ -1079,6 +1222,9 @@
       case 'sheet-was': ui.sheet = { type: 'was1' }; renderLayer(); break;
       case 'sheet-board': ui.sheet = { type: 'board' }; renderLayer(); break;
       case 'statsview': ui.statsView = v; render(); break;
+      case 'sheet-share': ui.sheet = { type: 'share', kind: v }; renderLayer(); break;
+      case 'share-img': shareImage(v); break;
+      case 'share-copy': copyShare(v); break;
       case 'was-who': ui.sheet = { type: 'was2', id: id }; renderLayer(); break;
       case 'was-check': ui.sheet = { type: 'was3', id: id, by: el.dataset.by }; renderLayer(); break;
       case 'was-none': ui.sheet = null; doWas(id, null, null); break;
