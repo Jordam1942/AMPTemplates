@@ -232,7 +232,6 @@
   .cards-cap { display: flex; justify-content: space-between; max-width: 268px; font-size: 0.75rem; color: var(--muted); font-weight: 700; margin-top: 4px; }
   .card { width: 30px; height: 42px; border-radius: 6px; border: 1.5px solid var(--line); background: var(--surface); display: grid; place-items: center; font-family: var(--font-display); font-weight: 800; color: var(--fg); }
   .card.hi { border-color: var(--accent); color: var(--accent); }
-  .cards .arrow { font-size: 0.8rem; color: var(--muted); font-weight: 700; }
   .rulebook p, .rulebook li { color: var(--muted); }
   .rulebook ul, .rulebook ol { margin: 6px 0 0; padding-left: 20px; display: grid; gap: 4px; }
   .rulebook b { color: var(--fg); }
@@ -320,7 +319,7 @@
 (function () {
   'use strict';
   var KEY = 'toepen-scorebord-v2';
-  var VERSION = '15 (knop nieuw spel)';
+  var VERSION = '16 (sneller opslaan)';
   var COLORS = ['#2f7d5b', '#c2571a', '#3b6fb6', '#a63d6b', '#7a5bb5', '#a67c12', '#1f8a8f', '#5d6b1f'];
   var app = document.getElementById('app');
   var layer = document.getElementById('layer');
@@ -373,7 +372,20 @@
       return d && d.v === 2 ? d : null;
     } catch (e) { return null; }
   }
-  function save() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
+  // Only the most recent undo/redo steps are stored; the full history stays in memory.
+  // If storage is full, keep the score itself and drop the history.
+  var SAVED_STEPS = 20;
+  function save() {
+    var data = {};
+    Object.keys(state).forEach(function (k) { data[k] = state[k]; });
+    data.undo = state.undo.slice(-SAVED_STEPS);
+    data.redo = state.redo.slice(-SAVED_STEPS);
+    try { localStorage.setItem(KEY, JSON.stringify(data)); return; } catch (e) {}
+    data.undo = []; data.redo = [];
+    try { localStorage.setItem(KEY, JSON.stringify(data)); } catch (e) {
+      if (!save.warned) { save.warned = true; toast('Opslaan lukt niet: het geheugen van de browser is vol.'); }
+    }
+  }
 
   function esc(s) {
     return String(s).replace(/[&<>"']/g, function (c) {
