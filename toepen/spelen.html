@@ -188,6 +188,12 @@
   .rulebook b { color: var(--fg); }
   details.rule { border-bottom: 1px solid var(--line); padding: 10px 0; }
   details.rule summary { font-weight: 700; cursor: pointer; min-height: 32px; display: flex; align-items: center; }
+  /* Full-screen rules page with a back button */
+  .fullpage { position: fixed; inset: 0; z-index: 25; background: var(--bg); overflow-y: auto; padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+  .fp-bar { position: sticky; top: 0; z-index: 2; background: var(--bg); border-bottom: 1px solid var(--line); }
+  .fp-bar .in { max-width: 560px; margin: 0 auto; display: flex; align-items: center; gap: 12px; padding: 10px 16px; }
+  .fp-bar h2 { font-size: 1.15rem; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .fp-body { max-width: 560px; margin: 0 auto; padding: 14px 16px 40px; display: grid; gap: 14px; grid-template-columns: minmax(0, 1fr); }
   .toast { position: fixed; left: 50%; bottom: calc(220px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); z-index: 30; background: var(--ink); color: var(--ink-fg); padding: 10px 16px; border-radius: 12px; font-weight: 600; font-size: 0.92rem; max-width: calc(100% - 32px); text-align: center; pointer-events: none; }
   .conn { position: fixed; top: env(safe-area-inset-top, 0px); left: 0; right: 0; z-index: 40; background: var(--danger); color: #fff; text-align: center; font-weight: 700; font-size: 0.85rem; padding: 4px; }
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
@@ -900,6 +906,7 @@
   }
 
   function renderLayer() {
+    var full = '';
     var html = '';
     if (!S.connected && S.view === 'table') html += '<div class="conn" role="alert">Geen verbinding. Even geduld…</div>';
     var sh = S.sheet, G = viewGame(), inner = '';
@@ -915,7 +922,8 @@
     } else if (sh) {
       if (sh.type === 'help') {
         var v = sh.view || 'regels';
-        inner = '<h2>' + (v === 'regels' ? 'Spelregels' : 'Zo speel je') + '</h2><div class="seg">' +
+        full = v === 'regels' ? 'Spelregels' : 'Zo speel je';
+        inner = '<div class="seg">' +
           [['regels', 'Spelregels'], ['uitleg', 'Zo speel je']].map(function (o) { return '<button data-act="helpview" data-v="' + o[0] + '" aria-pressed="' + (v === o[0]) + '">' + o[1] + '</button>'; }).join('') +
           '</div>' + (v === 'regels' ? rulesHtml() : guideHtml());
       } else if (sh.type === 'menu') {
@@ -936,11 +944,20 @@
       } else if (sh.type === 'close') {
         inner = '<h2>Tafel sluiten?</h2><p class="muted">Het spel stopt voor iedereen aan tafel. De ranglijst blijft bewaard.</p><button class="btn danger big" data-act="close">Ja, tafel sluiten</button>';
       }
-      html += '<div class="scrim" data-act="sheet-close"><div class="sheet" role="dialog" aria-modal="true"><div class="grip"></div>' + inner +
-        '<button class="btn ghost" data-act="sheet-close">Sluiten</button></div></div>';
+      if (full) {
+        html += '<div class="fullpage" role="dialog" aria-modal="true" aria-label="' + full + '"><div class="fp-bar"><div class="in">' +
+          '<button class="btn ghost sm" data-act="back">← Terug</button><h2>' + full + '</h2></div></div><div class="fp-body">' + inner + '</div></div>';
+      } else {
+        html += '<div class="scrim" data-act="sheet-close"><div class="sheet" role="dialog" aria-modal="true"><div class="grip"></div>' + inner +
+          '<button class="btn ghost" data-act="sheet-close">Sluiten</button></div></div>';
+      }
     }
     if (S.toast) html += '<div class="toast" role="status">' + esc(S.toast) + '</div>';
+    var fpPrev = layer.querySelector('.fullpage'), fpTop = fpPrev ? fpPrev.scrollTop : 0;
     layer.innerHTML = html;
+    var fp = layer.querySelector('.fullpage');
+    if (fp && fpPrev) fp.scrollTop = fpTop;
+    document.body.style.overflow = fp ? 'hidden' : '';
   }
 
   // Tighten the layout step by step until the screen fits without scrolling.
@@ -983,16 +1000,28 @@
     }, 200);
   });
 
+  // The phone's back button (or back swipe) closes the rules page.
+  window.addEventListener('popstate', function () {
+    if (S.sheet && S.sheet.type === 'help') { S.sheet = null; renderLayer(); }
+  });
+
   document.addEventListener('keydown', function (e) {
     if (e.key === 'Enter' && e.target.id === 'joincode') joinTable(e.target.value);
-    if (e.key === 'Escape' && S.sheet) { S.sheet = null; renderLayer(); }
+    if (e.key === 'Escape' && S.sheet) { if (S.sheet.type === 'help' && history.state && history.state.toepenPage) history.back(); else { S.sheet = null; renderLayer(); } }
   });
   document.addEventListener('click', function (e) {
     var el = e.target.closest('[data-act]'); if (!el) return;
     if (el.classList.contains('scrim') && e.target !== el) return;
     var a = el.dataset.act, v = el.dataset.v, id = el.dataset.id, c = S.create;
     switch (a) {
-      case 'help': S.sheet = { type: 'help', view: 'regels' }; renderLayer(); break;
+      case 'help':
+        S.sheet = { type: 'help', view: 'regels' };
+        try { history.pushState({ toepenPage: 1 }, '', location.href); } catch (e6) {}
+        renderLayer(); break;
+      case 'back':
+        if (history.state && history.state.toepenPage) history.back();
+        else { S.sheet = null; renderLayer(); }
+        break;
       case 'go-fb': S.err = ''; S.view = 'fb'; S.fb = S.fb || { text: '', parsed: null, cfg: null, checks: [], running: false, done: false };
         if (CFG && CFG_SRC !== 'app' && !S.fb.cfg) S.fb.cfg = compactCfg(CFG);
         render(); window.scrollTo(0, 0); break;
@@ -1013,7 +1042,7 @@
         }).catch(function () { toast('Kopiëren lukte niet. Open database.rules.json en kopieer het handmatig.'); });
         break;
       case 'copy': try { navigator.clipboard.writeText(v).then(function () { toast('Gekopieerd'); }); } catch (e5) { toast(v); } break;
-      case 'helpview': S.sheet.view = v; renderLayer(); break;
+      case 'helpview': S.sheet.view = v; renderLayer(); var fpg = layer.querySelector('.fullpage'); if (fpg) fpg.scrollTop = 0; break;
       case 'menu': S.sheet = { type: 'menu' }; renderLayer(); break;
       case 'sheet-close': S.sheet = null; renderLayer(); break;
       case 'home': S.view = 'home'; render(); break;

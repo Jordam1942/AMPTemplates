@@ -315,6 +315,14 @@
   .wrap.setup-tight .name-row .switch-btn { min-height: 38px; }
   .wrap.setup-tight .panel.tight { padding: 10px 12px; }
   .wrap.setup-tight .set-row { min-height: 40px; }
+  /* Full-screen pages (rules and app guide) with a back button */
+  .fullpage { position: fixed; inset: 0; z-index: 25; background: var(--bg); overflow-y: auto; -webkit-overflow-scrolling: touch;
+    padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+  .fp-bar { position: sticky; top: 0; z-index: 2; background: var(--bg); border-bottom: 1px solid var(--line); }
+  .fp-bar .in { max-width: 560px; margin: 0 auto; display: flex; align-items: center; gap: 12px; padding: 10px 16px; }
+  .fp-bar h2 { font-size: 1.15rem; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .fp-bar .btn { flex: none; }
+  .fp-body { max-width: 560px; margin: 0 auto; padding: 14px 16px 40px; display: grid; gap: 14px; grid-template-columns: minmax(0, 1fr); }
   .icon-round { width: 40px; min-height: 40px; padding: 0; font-weight: 800; font-size: 1.15rem; }
   .topbar h1 { white-space: nowrap; }
   details.rule { border-bottom: 1px solid var(--line); padding: 10px 0; }
@@ -380,7 +388,7 @@
 (function () {
   'use strict';
   var KEY = 'toepen-scorebord-v2';
-  var VERSION = '23 (past op één scherm)';
+  var VERSION = '24 (spelregels volledig scherm)';
   var COLORS = ['#2f7d5b', '#c2571a', '#3b6fb6', '#a63d6b', '#7a5bb5', '#a67c12', '#1f8a8f', '#5d6b1f'];
   var app = document.getElementById('app');
   var layer = document.getElementById('layer');
@@ -1498,6 +1506,7 @@
   }
 
   function renderLayer() {
+    var full = '';
     var html = '';
     var sh = ui.sheet;
     if (sh && (state.game || sh.type === 'board' || sh.type === 'rules' || sh.type === 'setrules' || (sh.type === 'share' && sh.kind === 'board'))) {
@@ -1529,8 +1538,8 @@
           (HAS_MP ? '<a class="btn ghost" href="spelen.html">Multiplayer</a>' : '') + '</div>';
       } else if (sh.type === 'rules') {
         var rv = sh.view || 'regels';
-        inner = '<h2>' + (rv === 'uitleg' ? 'Uitleg van de app' : 'Spelregels Toepen') + '</h2>' +
-          '<div class="seg">' + [['regels', 'Spelregels'], ['uitleg', 'Uitleg app']].map(function (o) {
+        full = rv === 'uitleg' ? 'Uitleg van de app' : 'Spelregels Toepen';
+        inner = '<div class="seg">' + [['regels', 'Spelregels'], ['uitleg', 'Uitleg app']].map(function (o) {
             return '<button data-act="rulesview" data-v="' + o[0] + '" aria-pressed="' + (rv === o[0]) + '">' + o[1] + '</button>';
           }).join('') + '</div>' +
           (rv === 'uitleg' ? guideHtml() : rulebookHtml());
@@ -1614,11 +1623,21 @@
           (others === 1 ? '<p class="small" style="color:var(--warn)"><b>Let op:</b> er blijft dan één speler over. Die wint het potje.</p>' : '') +
           '<button class="btn warn big" data-act="do-quit" data-id="' + q.id + '">Ja, ' + esc(q.name) + ' stopt</button>';
       }
-      html += '<div class="scrim" data-act="close"><div class="sheet" role="dialog" aria-modal="true"><div class="grip"></div>' + inner +
-        '<button class="btn ghost" data-act="close">Annuleren</button></div></div>';
+      if (full) {
+        html += '<div class="fullpage" role="dialog" aria-modal="true" aria-label="' + full + '"><div class="fp-bar"><div class="in">' +
+          '<button class="btn ghost sm" data-act="back">← Terug</button><h2>' + full + '</h2></div></div>' +
+          '<div class="fp-body">' + inner + '</div></div>';
+      } else {
+        html += '<div class="scrim" data-act="close"><div class="sheet" role="dialog" aria-modal="true"><div class="grip"></div>' + inner +
+          '<button class="btn ghost" data-act="close">Annuleren</button></div></div>';
+      }
     }
     if (ui.toast) html += '<div class="toast" role="status">' + esc(ui.toast) + '</div>';
+    var fpPrev = layer.querySelector('.fullpage'), fpTop = fpPrev ? fpPrev.scrollTop : 0;
     layer.innerHTML = html;
+    var fp = layer.querySelector('.fullpage');
+    if (fp && fpPrev) fp.scrollTop = fpTop;
+    document.body.style.overflow = fp ? 'hidden' : '';
   }
 
   function render() {
@@ -1743,10 +1762,17 @@
       case 'sheet-setrules': ui.sheet = { type: 'setrules' }; renderLayer(); break;
       case 'sheet-gamemenu': ui.sheet = { type: 'gamemenu' }; renderLayer(); break;
       case 'menu-meer': ui.sheet = null; ui.tab = 'meer'; ui.open = ui.open || {}; ui.open.potje = true; render(); window.scrollTo(0, 0); break;
-      case 'sheet-rules': ui.sheet = { type: 'rules', view: v || 'regels' }; renderLayer(); break;
+      case 'sheet-rules':
+        ui.sheet = { type: 'rules', view: v || 'regels' };
+        try { history.pushState({ toepenPage: 1 }, ''); } catch (e7) {}
+        renderLayer(); break;
+      case 'back':
+        if (history.state && history.state.toepenPage) history.back();
+        else { ui.sheet = null; renderLayer(); }
+        break;
       case 'rulesview':
         ui.sheet.view = v; renderLayer();
-        var sht = layer.querySelector('.sheet'); if (sht) sht.scrollTop = 0; break;
+        var sht = layer.querySelector('.fullpage') || layer.querySelector('.sheet'); if (sht) sht.scrollTop = 0; break;
       case 'do-reset':
         ui.sheet = null;
         if (v === 'potje') { resetPotje(); break; }
@@ -1778,9 +1804,14 @@
     }, 200);
   });
 
+  // The phone's back button (or back swipe) closes a full-screen page.
+  window.addEventListener('popstate', function () {
+    if (ui.sheet && ui.sheet.type === 'rules') { ui.sheet = null; renderLayer(); }
+  });
+
   document.addEventListener('keydown', function (e) {
     if (e.key === 'Enter' && e.target.id === 'addname') { var b = layer.querySelector('[data-act=addp-new]'); if (b) b.click(); return; }
-    if (e.key === 'Escape' && ui.sheet) { ui.sheet = null; renderLayer(); }
+    if (e.key === 'Escape' && ui.sheet) { if (ui.sheet.type === 'rules' && history.state && history.state.toepenPage) history.back(); else { ui.sheet = null; renderLayer(); } }
   });
 
   if (state.settings.theme !== 'system') applyTheme.touched = true;
