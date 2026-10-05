@@ -90,6 +90,8 @@
   .btn:active:not(:disabled) { transform: scale(0.97); }
 
   .panel { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 16px; display: grid; gap: 12px; }
+  .panel { grid-template-columns: minmax(0, 1fr); }
+  .name-row input { width: 100%; }
 
   .avatar {
     width: 40px; height: 40px; border-radius: 50%; flex: none;
@@ -105,6 +107,9 @@
   }
   .icon-btn { width: 44px; height: 44px; border-radius: 10px; font-size: 1.3rem; color: var(--muted); flex: none; display: grid; place-items: center; }
   .icon-btn:disabled { opacity: 0.3; }
+  .name-row .switch-btn { flex: none; width: auto; min-height: 44px; padding: 0; }
+  .name-row.off input, .name-row.off .avatar { opacity: 0.45; }
+  .name-row.off input { text-decoration: line-through; }
   .seg { display: flex; gap: 6px; flex-wrap: wrap; }
   .seg button {
     min-height: 44px; min-width: 56px; padding: 0 14px; border-radius: 10px; font-weight: 700;
@@ -279,6 +284,15 @@
   }
   var state = load() || fresh();
   rulesOf(state.setup);
+  if (!state.setup.roster) {
+    state.setup.roster = (state.setup.names || []).map(function (n, i) { return { name: n, on: true, color: COLORS[i % COLORS.length] }; });
+    delete state.setup.names; delete state.setup.firstDealer;
+  }
+  function activeRoster() { return state.setup.roster.filter(function (r) { return r.on; }); }
+  function freeColor() {
+    var used = state.setup.roster.map(function (r) { return r.color; });
+    return COLORS.filter(function (c) { return used.indexOf(c) < 0; })[0] || COLORS[state.setup.roster.length % COLORS.length];
+  }
   if (state.game) rulesOf(state.game);
   var ui = { tab: 'spel', sheet: null, toast: '', confirmReset: false, bump: false };
   var toastTimer = null;
@@ -287,7 +301,7 @@
     return {
       v: 2,
       screen: 'setup',
-      setup: { names: ['Speler 1', 'Speler 2', 'Speler 3', 'Speler 4'], limit: 10, rules: JSON.parse(JSON.stringify(RULES)) },
+      setup: { roster: ['Speler 1', 'Speler 2', 'Speler 3', 'Speler 4'].map(function (n, i) { return { name: n, on: true, color: COLORS[i] }; }), limit: 10, rules: JSON.parse(JSON.stringify(RULES)) },
       settings: { theme: 'system', sound: true, vibrate: true, wake: true },
       game: null,
       undo: [],
@@ -321,12 +335,12 @@
 
   function newRound(n) { return { n: n, stake: 1, toeps: [], passed: {} }; }
 
-  function startGame(names, limit, rules, dealerIdx) {
+  function startGame(names, limit, rules, dealerIdx, colors) {
     state.game = {
       limit: limit,
       rules: JSON.parse(JSON.stringify(rules)),
       players: names.map(function (n, i) {
-        return { id: 'p' + i, name: n, color: COLORS[i % COLORS.length], score: 0, out: false, bought: 0 };
+        return { id: 'p' + i, name: n, color: (colors && colors[i]) || COLORS[i % COLORS.length], score: 0, out: false, bought: 0 };
       }),
       dealer: dealerIdx || 0,
       round: newRound(1),
@@ -603,22 +617,35 @@
         seg('inkopenMax', [[1, '1 keer'], [2, '2 keer'], [0, 'Onbeperkt']]) + '</div>' : '');
   }
 
+  function dealerIndex() {
+    var act = activeRoster(), i = act.map(function (r) { return r.name; }).indexOf(state.setup.firstDealerName);
+    return i < 0 ? 0 : i;
+  }
+
+  function dealersHtml() {
+    var di = dealerIndex();
+    return activeRoster().map(function (r, i) {
+      return '<button data-act="firstdealer" data-v="' + esc(r.name) + '" aria-pressed="' + (di === i) + '">' + esc(r.name.trim() || 'Speler') + '</button>';
+    }).join('');
+  }
+
   function renderSetup() {
     var s = state.setup;
-    var rows = s.names.map(function (n, i) {
-      return '<div class="name-row">' +
-        '<div class="avatar sm" style="background:' + COLORS[i % COLORS.length] + '" aria-hidden="true">' + esc((n.trim()[0] || (i + 1) + '').toUpperCase()) + '</div>' +
+    var act = activeRoster();
+    var rows = s.roster.map(function (r, i) {
+      var n = r.name;
+      return '<div class="name-row' + (r.on ? '' : ' off') + '">' +
+        '<button class="toggle-row switch-btn" role="switch" aria-checked="' + r.on + '" data-act="pon" data-i="' + i + '" aria-label="' + esc(n || 'Speler') + ' doet mee"><span class="switch" aria-hidden="true"></span></button>' +
+        '<div class="avatar sm" style="background:' + r.color + '" aria-hidden="true">' + esc((n.trim()[0] || (i + 1) + '').toUpperCase()) + '</div>' +
         '<input id="name-' + i + '" data-i="' + i + '" value="' + esc(n) + '" aria-label="Naam speler ' + (i + 1) + '" maxlength="18" autocomplete="off">' +
         '<button class="icon-btn" data-act="up" data-i="' + i + '" aria-label="Omhoog"' + (i === 0 ? ' disabled' : '') + '>↑</button>' +
-        '<button class="icon-btn" data-act="remove" data-i="' + i + '" aria-label="Verwijder speler ' + (i + 1) + '"' + (s.names.length <= 2 ? ' disabled' : '') + '>×</button>' +
+        '<button class="icon-btn" data-act="remove" data-i="' + i + '" aria-label="Verwijder ' + esc(n || 'speler') + ' uit de lijst"' + (s.roster.length <= 2 ? ' disabled' : '') + '>×</button>' +
         '</div>';
     }).join('');
     var limits = [10, 15, 21].map(function (l) {
       return '<button data-act="limit" data-v="' + l + '" aria-pressed="' + (s.limit === l) + '">' + l + '</button>';
     }).join('');
-    var dealers = s.names.map(function (n, i) {
-      return '<button data-act="firstdealer" data-v="' + i + '" aria-pressed="' + ((s.firstDealer || 0) === i) + '">' + esc(n.trim() || 'Speler ' + (i + 1)) + '</button>';
-    }).join('');
+    var dealers = dealersHtml();
 
     var winsHtml = '';
     var wk = Object.keys(state.wins).filter(function (k) { return state.wins[k] > 0; });
@@ -630,19 +657,20 @@
 
     app.innerHTML =
       '<div class="stack" style="gap:16px">' +
-        '<div class="stack" style="gap:4px;padding-top:8px"><h1>Toepen</h1><p class="muted">Vul de spelers in op volgorde van de tafel en kies je huisregels.</p></div>' +
-        '<div class="panel"><div class="label">Spelers (' + s.names.length + ')</div>' + rows +
-          (s.names.length < 8 ? '<button class="btn ghost" data-act="add">+ Speler toevoegen</button>' : '') +
+        '<div class="stack" style="gap:4px;padding-top:8px"><h1>Toepen</h1><p class="muted">Zet aan wie er meespeelt, zet ze op volgorde van de tafel en kies je huisregels.</p></div>' +
+        '<div class="panel"><div class="label">Spelers · ' + act.length + ' van ' + s.roster.length + ' doen mee</div>' + rows +
+          (s.roster.length < 20 ? '<button class="btn ghost" data-act="add">+ Nieuwe speler</button>' : '') +
+          '<p class="small muted">Namen blijven bewaard. Zet iemand uit als die er een keer niet bij is.</p>' +
         '</div>' +
         '<div class="panel"><div class="label">Af bij</div><div class="seg">' + limits + '</div>' +
           '<p class="small muted">Wie dit aantal strafpunten haalt, ligt eruit. De laatste die overblijft, wint het potje.</p></div>' +
-        '<div class="panel"><div class="label">Eerste deler</div><div class="seg">' + dealers + '</div>' +
+        '<div class="panel"><div class="label">Eerste deler</div><div class="seg" id="dealers">' + dealers + '</div>' +
           '<p class="small muted">Daarna schuift de deler automatisch door naar links.</p></div>' +
         '<div class="panel"><div class="label">Huisregels</div>' +
           rulesPanel(s.rules, 'setup') +
         '</div>' +
         winsHtml +
-        '<button class="btn primary big" data-act="start">Start spel</button>' +
+        '<button class="btn primary big" data-act="start"' + (act.length < 2 ? ' disabled' : '') + '>' + (act.length < 2 ? 'Zet minstens 2 spelers aan' : 'Start spel met ' + act.length + ' spelers') + '</button>' +
       '</div>';
   }
 
@@ -898,11 +926,18 @@
   document.addEventListener('input', function (e) {
     var t = e.target;
     if (t.matches && t.matches('input[data-i]')) {
-      state.setup.names[+t.dataset.i] = t.value;
+      var rr = state.setup.roster[+t.dataset.i], wasDealer = state.setup.firstDealerName === rr.name;
+      rr.name = t.value;
+      if (wasDealer) state.setup.firstDealerName = t.value;
       save();
       var av = t.previousElementSibling;
       if (av) av.textContent = (t.value.trim()[0] || (+t.dataset.i + 1) + '').toUpperCase();
     }
+  });
+
+  document.addEventListener('change', function (e) {
+    var d = document.getElementById('dealers');
+    if (d && e.target.matches && e.target.matches('input[data-i]')) d.innerHTML = dealersHtml();
   });
 
   document.addEventListener('click', function (e) {
@@ -912,22 +947,30 @@
     var act = el.dataset.act, id = el.dataset.id, v = el.dataset.v, s = state.setup;
     switch (act) {
       case 'add':
-        s.names.push('Speler ' + (s.names.length + 1)); commit();
-        var last = document.getElementById('name-' + (s.names.length - 1));
+        var on = activeRoster().length < 8;
+        s.roster.push({ name: 'Speler ' + (s.roster.length + 1), on: on, color: freeColor() }); commit();
+        if (!on) toast('Er doen al 8 spelers mee. Zet eerst iemand uit.');
+        var last = document.getElementById('name-' + (s.roster.length - 1));
         if (last) { last.focus(); last.select(); }
         break;
-      case 'remove': s.names.splice(+el.dataset.i, 1); if ((s.firstDealer || 0) >= s.names.length) s.firstDealer = 0; commit(); break;
+      case 'remove': s.roster.splice(+el.dataset.i, 1); commit(); break;
+      case 'pon':
+        var pr = s.roster[+el.dataset.i];
+        if (!pr.on && activeRoster().length >= 8) { toast('Maximaal 8 spelers. Zet eerst iemand anders uit.'); renderLayer(); break; }
+        pr.on = !pr.on; commit(); break;
       case 'up':
-        var i = +el.dataset.i, tmp = s.names[i - 1]; s.names[i - 1] = s.names[i]; s.names[i] = tmp; commit(); break;
+        var i = +el.dataset.i, tmp = s.roster[i - 1]; s.roster[i - 1] = s.roster[i]; s.roster[i] = tmp; commit(); break;
       case 'limit': s.limit = +v; commit(); break;
-      case 'firstdealer': s.firstDealer = +v; commit(); break;
+      case 'firstdealer': s.firstDealerName = v; commit(); break;
       case 'rule':
         var R1 = el.dataset.scope === 'game' ? G().rules : s.rules; R1[el.dataset.k] = !R1[el.dataset.k]; commit(); break;
       case 'rulev':
         var R2 = el.dataset.scope === 'game' ? G().rules : s.rules; R2[el.dataset.k] = +v; commit(); break;
       case 'start':
-        s.names = s.names.map(function (n, i) { return n.trim() || ('Speler ' + (i + 1)); });
-        startGame(s.names, s.limit, s.rules, s.firstDealer || 0);
+        s.roster.forEach(function (r, i) { r.name = r.name.trim() || ('Speler ' + (i + 1)); });
+        var act2 = activeRoster();
+        if (act2.length < 2) break;
+        startGame(act2.map(function (r) { return r.name; }), s.limit, s.rules, dealerIndex(), act2.map(function (r) { return r.color; }));
         sound('round');
         commit(); break;
       case 'tab': ui.tab = v; ui.confirmReset = false; render(); window.scrollTo(0, 0); break;
@@ -951,14 +994,14 @@
         var g = G();
         var names = g.players.map(function (p) { return p.name; });
         var nd = (g.dealer + 1) % names.length;
-        startGame(names, g.limit, g.rules, nd);
+        startGame(names, g.limit, g.rules, nd, g.players.map(function (p) { return p.color; }));
         toast('Nieuw potje. ' + names[nd] + ' deelt.');
         commit(); break;
       case 'tosetup':
         if (state.game) {
-          s.names = G().players.map(function (p) { return p.name; });
           s.limit = G().limit; s.rules = JSON.parse(JSON.stringify(G().rules));
         }
+        s.firstDealerName = G() ? G().players[G().dealer].name : s.firstDealerName;
         state.screen = 'setup'; ui.tab = 'spel'; commit(); window.scrollTo(0, 0); break;
       case 'theme': state.settings.theme = v; applyTheme.touched = true; commit(); break;
       case 'sound': state.settings.sound = !state.settings.sound; commit(); if (state.settings.sound) sound('tick'); break;
