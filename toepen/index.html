@@ -139,7 +139,10 @@
   .stake .txt .label { color: inherit; opacity: 0.7; }
   .stake .txt div:last-child { font-size: 0.85rem; opacity: 0.85; }
   .stake .btn.toep { background: var(--accent); color: var(--accent-fg); font-size: 1.1rem; padding: 0 16px; }
-  .stake .btn.finish { background: transparent; color: inherit; border: 1.5px solid currentColor; width: 100%; min-height: 44px; }
+  .stake-row { display: flex; gap: 8px; }
+  .stake .btn.finish { background: transparent; color: inherit; border: 1.5px solid currentColor; flex: 2; min-height: 44px; padding: 0 10px; }
+  .stake .btn.wit { background: transparent; color: inherit; border: 1.5px dashed currentColor; flex: 1; min-height: 44px; padding: 0 10px; opacity: 0.9; }
+  .sub-opt { display: grid; gap: 8px; padding: 0 0 6px 12px; border-left: 2px solid var(--line); margin-left: 4px; }
   .toeplog { font-size: 0.8rem; opacity: 0.8; }
 
   /* Players */
@@ -265,7 +268,18 @@
   var layer = document.getElementById('layer');
 
   // ---------- State ----------
+  var RULES = { inkopen: true, inkopenMax: 1, wittewas: true, wasStraf: 1, dubbelToep: false, scherpPassen: true };
+  function rulesOf(o) {
+    var r = o.rules || {};
+    if (o.inkopen !== undefined && r.inkopen === undefined) r.inkopen = o.inkopen;
+    Object.keys(RULES).forEach(function (k) { if (r[k] === undefined) r[k] = RULES[k]; });
+    delete o.inkopen;
+    o.rules = r;
+    return r;
+  }
   var state = load() || fresh();
+  rulesOf(state.setup);
+  if (state.game) rulesOf(state.game);
   var ui = { tab: 'spel', sheet: null, toast: '', confirmReset: false, bump: false };
   var toastTimer = null;
 
@@ -273,7 +287,7 @@
     return {
       v: 2,
       screen: 'setup',
-      setup: { names: ['Speler 1', 'Speler 2', 'Speler 3', 'Speler 4'], limit: 10, inkopen: true, autoDealer: true },
+      setup: { names: ['Speler 1', 'Speler 2', 'Speler 3', 'Speler 4'], limit: 10, rules: JSON.parse(JSON.stringify(RULES)) },
       settings: { theme: 'system', sound: true, vibrate: true, wake: true },
       game: null,
       undo: [],
@@ -307,10 +321,10 @@
 
   function newRound(n) { return { n: n, stake: 1, toeps: [], passed: {} }; }
 
-  function startGame(names, limit, inkopen, dealerIdx) {
+  function startGame(names, limit, rules, dealerIdx) {
     state.game = {
       limit: limit,
-      inkopen: inkopen,
+      rules: JSON.parse(JSON.stringify(rules)),
       players: names.map(function (n, i) {
         return { id: 'p' + i, name: n, color: COLORS[i % COLORS.length], score: 0, out: false, bought: 0 };
       }),
@@ -445,9 +459,30 @@
     commit();
   }
 
+  function doWas(id, by, ok) {
+    snapshot();
+    var g = G(), pts = g.rules.wasStraf, melder = byId(id);
+    var target = by ? byId(ok ? by : id) : null;
+    var msg = melder.name + ' heeft witte was';
+    if (target) {
+      target.score += pts;
+      var out = checkOut(target);
+      msg = ok ? 'Echte witte was. ' + target.name + ' +' + pts : 'Vuile was! ' + target.name + ' +' + pts;
+      if (out) msg += ' en ligt eruit';
+    } else {
+      msg += ': nieuwe kaarten';
+    }
+    g.log.push({ t: 'was', id: id, by: by || null, ok: by ? ok : null, pts: target ? pts : 0, round: g.round.n, at: Date.now() });
+    toast(msg);
+    sound(target ? 'tick' : 'round'); buzz(30);
+    checkWinner();
+    commit();
+  }
+
   function canBuyIn(p) {
     var g = G();
-    return g.inkopen && p.out && !g.done && p.bought < 1 && alive().length >= 2 &&
+    var R = g.rules;
+    return R.inkopen && p.out && !g.done && (R.inkopenMax === 0 || p.bought < R.inkopenMax) && alive().length >= 2 &&
       Math.max.apply(null, alive().map(function (o) { return o.score; })) < g.limit - 1;
   }
 
@@ -546,9 +581,26 @@
     meer: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>'
   };
 
-  function toggleRow(act, on, title, sub) {
-    return '<button class="toggle-row" role="switch" aria-checked="' + !!on + '" data-act="' + act + '">' +
+  function toggleRow(act, on, title, sub, extra) {
+    return '<button class="toggle-row" role="switch" aria-checked="' + !!on + '" data-act="' + act + '"' + (extra || '') + '>' +
       '<div class="txt"><div><b>' + title + '</b></div>' + (sub ? '<div>' + sub + '</div>' : '') + '</div><span class="switch" aria-hidden="true"></span></button>';
+  }
+
+  function rulesPanel(R, scope) {
+    var a = ' data-scope="' + scope + '" data-k="';
+    function seg(k, opts) {
+      return '<div class="seg">' + opts.map(function (o) {
+        return '<button data-act="rulev" data-scope="' + scope + '" data-k="' + k + '" data-v="' + o[0] + '" aria-pressed="' + (R[k] === o[0]) + '">' + o[1] + '</button>';
+      }).join('') + '</div>';
+    }
+    return toggleRow('rule', R.wittewas, 'Witte was', 'Wie alleen boeren, vrouwen, heren en azen heeft, mag die laten zien en nieuwe kaarten vragen. Je krijgt een knop om het te melden en te controleren.', a + 'wittewas"') +
+      (R.wittewas ? '<div class="sub-opt"><div class="small muted">Straf bij een vuile was (gebluft), of voor wie onterecht controleert:</div>' +
+        seg('wasStraf', [[1, '1 punt'], [2, '2 punten']]) + '</div>' : '') +
+      toggleRow('rule', R.dubbelToep, 'Twee keer achter elkaar toepen', 'Uit: na jouw toep moet eerst iemand anders toepen.', a + 'dubbelToep"') +
+      toggleRow('rule', R.scherpPassen, 'Passen als je op scherp staat', 'Uit: wie op scherp staat, moet altijd mee.', a + 'scherpPassen"') +
+      toggleRow('rule', R.inkopen, 'Inkopen', 'Wie eruit ligt, mag terugkomen op de stand van de hoogste speler die nog meedoet.', a + 'inkopen"') +
+      (R.inkopen ? '<div class="sub-opt"><div class="small muted">Hoe vaak per speler?</div>' +
+        seg('inkopenMax', [[1, '1 keer'], [2, '2 keer'], [0, 'Onbeperkt']]) + '</div>' : '');
   }
 
   function renderSetup() {
@@ -587,7 +639,7 @@
         '<div class="panel"><div class="label">Eerste deler</div><div class="seg">' + dealers + '</div>' +
           '<p class="small muted">Daarna schuift de deler automatisch door naar links.</p></div>' +
         '<div class="panel"><div class="label">Huisregels</div>' +
-          toggleRow('inkopen', s.inkopen, 'Inkopen toestaan', 'Wie eruit ligt, mag één keer terugkomen op de stand van de hoogste speler.') +
+          rulesPanel(s.rules, 'setup') +
         '</div>' +
         winsHtml +
         '<button class="btn primary big" data-act="start">Start spel</button>' +
@@ -616,7 +668,8 @@
         '<div class="txt"><div class="label">Inzet</div><div>Verliezers krijgen ' + plural(r.stake, 'strafpunt', 'strafpunten') + '</div></div>' +
         '<button class="btn toep" data-act="sheet-toep">Toep!</button></div>' +
         (toepNames ? '<div class="toeplog">Getoept: ' + toepNames + '</div>' : '') +
-        '<button class="btn finish" data-act="sheet-finish">Wie wint de ronde?</button></div>';
+        '<div class="stake-row"><button class="btn finish" data-act="sheet-finish">Wie wint de ronde?</button>' +
+        (g.rules.wittewas ? '<button class="btn wit" data-act="sheet-was">Witte was</button>' : '') + '</div></div>';
     }
     ui.bump = false;
 
@@ -627,7 +680,7 @@
       var pct = Math.min(100, (p.score / g.limit) * 100);
       var chips = '';
       if (i === g.dealer && !w) chips += '<span class="chip deler">Deler</span>';
-      if (scherp) chips += '<span class="chip scherp">Op scherp</span>';
+      if (scherp) chips += '<span class="chip scherp">Op scherp' + (g.rules.scherpPassen ? '' : ' · moet mee') + '</span>';
       if (af) chips += '<span class="chip af">Af</span>';
       if (passed) chips += '<span class="chip">Gepast +' + r.passed[p.id] + '</span>';
       if (p.bought) chips += '<span class="chip">Ingekocht</span>';
@@ -639,7 +692,8 @@
         '<div class="bar"><span style="width:' + pct + '%"></span></div>';
       var acts = '';
       var lastToep = r.toeps.length ? r.toeps[r.toeps.length - 1].by : null;
-      if (!w && !af && !passed && r.stake > 1 && p.id !== lastToep && inRoundPlayers().length > 1) {
+      var mustPlay = scherp && !g.rules.scherpPassen;
+      if (!w && !af && !passed && !mustPlay && r.stake > 1 && p.id !== lastToep && inRoundPlayers().length > 1) {
         acts += '<button class="btn warn" data-act="pass" data-id="' + p.id + '">Gaat niet mee (+' + (r.stake - 1) + ')</button>';
       }
       if (canBuyIn(p)) acts += '<button class="btn" data-act="buyin" data-id="' + p.id + '">Inkopen</button>';
@@ -673,6 +727,12 @@
       } else if (e.t === 'adj') {
         html += '<div class="log-item"><div class="log-head"><span>Correctie</span><span class="muted small">ronde ' + e.round + '</span></div>' +
           '<div class="small">' + nameOf(e.id) + ' ' + (e.d > 0 ? '+' : '−') + Math.abs(e.d) + '</div></div>';
+      } else if (e.t === 'was') {
+        var wtxt = !e.by ? nameOf(e.id) + ' heeft witte was en ruilt' :
+          (e.ok ? nameOf(e.by) + ' controleert ' + nameOf(e.id) + ': echte witte was, ' + nameOf(e.by) + ' +' + e.pts :
+                  nameOf(e.by) + ' controleert ' + nameOf(e.id) + ': vuile was, ' + nameOf(e.id) + ' +' + e.pts);
+        html += '<div class="log-item"><div class="log-head"><span>Witte was</span><span class="muted small">ronde ' + e.round + '</span></div>' +
+          '<div class="small">' + wtxt + '</div></div>';
       } else if (e.t === 'buy') {
         html += '<div class="log-item"><div class="log-head"><span>Inkoop</span><span class="muted small">ronde ' + e.round + '</span></div>' +
           '<div class="small">' + nameOf(e.id) + ' koopt zich in op ' + e.to + '</div></div>';
@@ -738,7 +798,7 @@
       toggleRow('wake', st.wake, 'Scherm aan houden', 'Je telefoon gaat niet op slot tijdens het spel.') +
       '</div>';
     html += '<div class="panel"><div class="label">Dit potje</div>' +
-      toggleRow('ginkopen', g.inkopen, 'Inkopen toestaan', 'Eén keer terugkomen op de stand van de hoogste speler.') +
+      '<div class="label" style="margin-top:4px">Huisregels</div>' + rulesPanel(g.rules, 'game') +
       '<div class="row"><button class="btn ghost" style="flex:1" data-act="again">Potje opnieuw beginnen</button>' +
       '<button class="btn ghost" style="flex:1" data-act="tosetup">Spelers wijzigen</button></div></div>';
     html += '<div class="panel"><div class="label">Spelregels in het kort</div>' +
@@ -746,8 +806,10 @@
       rule('Toepen', 'Een ronde begint met inzet 1. Wie toept, verhoogt de inzet met 1. De anderen kiezen: meegaan of passen. Wie past, krijgt de inzet van vóór die toep en doet niet meer mee aan de ronde.') +
       rule('Strafpunten', 'Iedereen die aan het eind nog meedoet en de laatste slag niet haalt, krijgt de inzet als strafpunten. Gaat niemand mee met een toep, dan wint de toeper de ronde.') +
       rule('Op scherp', 'Nog één strafpunt en je ligt eruit. Speel dus voorzichtig.') +
-      rule('Witte was en armoede', 'Heb je alleen plaatjes en azen (witte was), dan mag je dat laten zien en nieuwe kaarten vragen. Huisregels verschillen per tafel; spreek ze vooraf af.') +
-      rule('Inkopen', 'Met deze huisregel mag wie eruit ligt één keer terugkomen op de stand van de hoogste speler die nog meedoet.') +
+      (g.rules.wittewas ? rule('Witte was', 'Heb je alleen boeren, vrouwen, heren en azen, dan mag je dat melden en nieuwe kaarten vragen. Een ander mag controleren: klopt het, dan krijgt de controleur ' + plural(g.rules.wasStraf, 'strafpunt', 'strafpunten') + '; was het gebluft (vuile was), dan krijgt de melder ze.') : '') +
+      rule('Opnieuw toepen', g.rules.dubbelToep ? 'Je mag meerdere keren achter elkaar toepen.' : 'Na jouw toep moet eerst iemand anders toepen voordat jij weer mag.') +
+      (g.rules.scherpPassen ? '' : rule('Op scherp moet je mee', 'Wie op scherp staat, mag niet passen na een toep.')) +
+      (g.rules.inkopen ? rule('Inkopen', 'Wie eruit ligt, mag ' + (g.rules.inkopenMax === 0 ? 'zo vaak als nodig' : g.rules.inkopenMax === 1 ? 'één keer' : 'twee keer') + ' terugkomen op de stand van de hoogste speler die nog meedoet.') : '') +
       '</div>';
     html += '<div class="panel"><div class="label">Gegevens</div>';
     if (ui.confirmReset) {
@@ -776,8 +838,11 @@
     if (sh && state.game) {
       var inner = '';
       if (sh.type === 'toep') {
-        inner = '<h2>Wie toept?</h2><p class="muted small">De inzet gaat van ' + G().round.stake + ' naar ' + (G().round.stake + 1) + '.</p>' +
-          '<div class="pick">' + inRoundPlayers().map(function (p) {
+        var rt = G().round.toeps, lastT = rt.length ? rt[rt.length - 1].by : null;
+        var canToep = inRoundPlayers().filter(function (p) { return G().rules.dubbelToep || p.id !== lastT; });
+        inner = '<h2>Wie toept?</h2><p class="muted small">De inzet gaat van ' + G().round.stake + ' naar ' + (G().round.stake + 1) + '.' +
+          (lastT && !G().rules.dubbelToep ? ' ' + esc(byId(lastT).name) + ' toepte als laatste en mag nu niet.' : '') + '</p>' +
+          '<div class="pick">' + canToep.map(function (p) {
             return '<button data-act="toep" data-id="' + p.id + '">' + avatar(p, true) + '<span>' + esc(p.name) + '</span></button>';
           }).join('') + '</div>';
       } else if (sh.type === 'finish') {
@@ -787,6 +852,26 @@
           '<div class="pick">' + inRoundPlayers().map(function (p) {
             return '<button data-act="finish" data-id="' + p.id + '">' + avatar(p, true) + '<span>' + esc(p.name) + '</span></button>';
           }).join('') + '</div>';
+      } else if (sh.type === 'was1') {
+        inner = '<h2>Wie heeft witte was?</h2><p class="muted small">Alleen boeren, vrouwen, heren en azen in de hand.</p>' +
+          '<div class="pick">' + inRoundPlayers().map(function (p) {
+            return '<button data-act="was-who" data-id="' + p.id + '">' + avatar(p, true) + '<span>' + esc(p.name) + '</span></button>';
+          }).join('') + '</div>';
+      } else if (sh.type === 'was2') {
+        var m = byId(sh.id), straf = G().rules.wasStraf;
+        inner = '<h2>' + esc(m.name) + ' meldt witte was</h2>' +
+          '<p class="muted small">Wil iemand de kaarten zien? Klopt het, dan krijgt de controleur ' + plural(straf, 'strafpunt', 'strafpunten') +
+          '. Is het een vuile was, dan krijgt ' + esc(m.name) + ' ' + plural(straf, 'strafpunt', 'strafpunten') + '.</p>' +
+          '<button class="btn primary" data-act="was-none" data-id="' + m.id + '">Niemand controleert, gewoon ruilen</button>' +
+          '<div class="label">Of: wie controleert?</div>' +
+          '<div class="pick">' + inRoundPlayers().filter(function (p) { return p.id !== m.id; }).map(function (p) {
+            return '<button data-act="was-check" data-id="' + m.id + '" data-by="' + p.id + '">' + avatar(p, true) + '<span>' + esc(p.name) + '</span></button>';
+          }).join('') + '</div>';
+      } else if (sh.type === 'was3') {
+        var m3 = byId(sh.id), c3 = byId(sh.by), st3 = G().rules.wasStraf;
+        inner = '<h2>Klopte het?</h2><p class="muted small">' + esc(c3.name) + ' bekijkt de kaarten van ' + esc(m3.name) + '.</p>' +
+          '<button class="btn big" data-act="was-ok" data-id="' + m3.id + '" data-by="' + c3.id + '">Ja, echte witte was · ' + esc(c3.name) + ' +' + st3 + '</button>' +
+          '<button class="btn warn big" data-act="was-fake" data-id="' + m3.id + '" data-by="' + c3.id + '">Nee, vuile was · ' + esc(m3.name) + ' +' + st3 + '</button>';
       } else if (sh.type === 'adjust') {
         var p = byId(sh.id);
         inner = '<div class="row">' + avatar(p) + '<div><h2>' + esc(p.name) + '</h2><div class="muted small">Nu ' + plural(p.score, 'strafpunt', 'strafpunten') + '</div></div></div>' +
@@ -836,16 +921,25 @@
         var i = +el.dataset.i, tmp = s.names[i - 1]; s.names[i - 1] = s.names[i]; s.names[i] = tmp; commit(); break;
       case 'limit': s.limit = +v; commit(); break;
       case 'firstdealer': s.firstDealer = +v; commit(); break;
-      case 'inkopen': s.inkopen = !s.inkopen; commit(); break;
+      case 'rule':
+        var R1 = el.dataset.scope === 'game' ? G().rules : s.rules; R1[el.dataset.k] = !R1[el.dataset.k]; commit(); break;
+      case 'rulev':
+        var R2 = el.dataset.scope === 'game' ? G().rules : s.rules; R2[el.dataset.k] = +v; commit(); break;
       case 'start':
         s.names = s.names.map(function (n, i) { return n.trim() || ('Speler ' + (i + 1)); });
-        startGame(s.names, s.limit, s.inkopen, s.firstDealer || 0);
+        startGame(s.names, s.limit, s.rules, s.firstDealer || 0);
         sound('round');
         commit(); break;
       case 'tab': ui.tab = v; ui.confirmReset = false; render(); window.scrollTo(0, 0); break;
       case 'undo': undo(); break;
       case 'sheet-toep': ui.sheet = { type: 'toep' }; renderLayer(); break;
       case 'sheet-finish': ui.sheet = { type: 'finish' }; renderLayer(); break;
+      case 'sheet-was': ui.sheet = { type: 'was1' }; renderLayer(); break;
+      case 'was-who': ui.sheet = { type: 'was2', id: id }; renderLayer(); break;
+      case 'was-check': ui.sheet = { type: 'was3', id: id, by: el.dataset.by }; renderLayer(); break;
+      case 'was-none': ui.sheet = null; doWas(id, null, null); break;
+      case 'was-ok': ui.sheet = null; doWas(id, el.dataset.by, true); break;
+      case 'was-fake': ui.sheet = null; doWas(id, el.dataset.by, false); break;
       case 'sheet-adjust': ui.sheet = { type: 'adjust', id: id }; renderLayer(); break;
       case 'close': ui.sheet = null; renderLayer(); break;
       case 'toep': ui.sheet = null; doToep(id); break;
@@ -857,20 +951,19 @@
         var g = G();
         var names = g.players.map(function (p) { return p.name; });
         var nd = (g.dealer + 1) % names.length;
-        startGame(names, g.limit, g.inkopen, nd);
+        startGame(names, g.limit, g.rules, nd);
         toast('Nieuw potje. ' + names[nd] + ' deelt.');
         commit(); break;
       case 'tosetup':
         if (state.game) {
           s.names = G().players.map(function (p) { return p.name; });
-          s.limit = G().limit; s.inkopen = G().inkopen;
+          s.limit = G().limit; s.rules = JSON.parse(JSON.stringify(G().rules));
         }
         state.screen = 'setup'; ui.tab = 'spel'; commit(); window.scrollTo(0, 0); break;
       case 'theme': state.settings.theme = v; applyTheme.touched = true; commit(); break;
       case 'sound': state.settings.sound = !state.settings.sound; commit(); if (state.settings.sound) sound('tick'); break;
       case 'vibrate': state.settings.vibrate = !state.settings.vibrate; commit(); buzz(30); break;
       case 'wake': state.settings.wake = !state.settings.wake; commit(); break;
-      case 'ginkopen': G().inkopen = !G().inkopen; commit(); break;
       case 'reset-ask': ui.confirmReset = true; render(); break;
       case 'reset-no': ui.confirmReset = false; render(); break;
       case 'reset-yes':
