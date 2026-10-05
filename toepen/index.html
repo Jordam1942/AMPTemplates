@@ -252,6 +252,9 @@
   .guide-step li b { color: var(--fg); }
   .history-bar { display: flex; gap: 8px; margin: -4px 0 12px; }
   .history-bar .btn { flex: 1; min-width: 0; min-height: 40px; font-size: 0.85rem; padding: 0 6px; white-space: nowrap; }
+  .topbar.game h1 { font-size: clamp(1.3rem, 5.6vw, 1.6rem); overflow: hidden; text-overflow: ellipsis; }
+  .btn .sub { display: block; font-weight: 500; font-size: 0.8rem; opacity: 0.8; }
+  .btn.stacked { flex-direction: column; gap: 0; padding-block: 8px; }
   .icon-round { width: 40px; min-height: 40px; padding: 0; font-weight: 800; font-size: 1.15rem; }
   .topbar h1 { white-space: nowrap; }
   details.rule { border-bottom: 1px solid var(--line); padding: 10px 0; }
@@ -317,7 +320,7 @@
 (function () {
   'use strict';
   var KEY = 'toepen-scorebord-v2';
-  var VERSION = '14 (spelers toevoegen tijdens het spel)';
+  var VERSION = '15 (knop nieuw spel)';
   var COLORS = ['#2f7d5b', '#c2571a', '#3b6fb6', '#a63d6b', '#7a5bb5', '#a67c12', '#1f8a8f', '#5d6b1f'];
   var app = document.getElementById('app');
   var layer = document.getElementById('layer');
@@ -406,6 +409,12 @@
     state.redo = [];
     state.screen = 'game';
     ui.tab = 'spel';
+  }
+
+  function startFresh(names, limit, rules, dealer, colors, label) {
+    var prev = state.game ? JSON.stringify(state.game) : null;
+    startGame(names, limit, rules, dealer, colors);
+    if (prev) state.undo = [{ g: prev, label: label }];
   }
 
   function snapshot(label) {
@@ -838,10 +847,11 @@
     var g = G(), r = g.round, w = winner(), html = '';
     var dealer = g.players[g.dealer];
 
-    html += '<div class="topbar"><div class="meta"><h1>Ronde ' + r.n + '</h1>' +
+    html += '<div class="topbar game"><div class="meta"><h1>Ronde ' + r.n + '</h1>' +
       '<div class="small muted">Deler: <b>' + esc(dealer.name) + '</b> · af bij ' + g.limit + '</div></div>' +
       '<div class="tools"><button class="btn ghost sm icon-round" data-act="sheet-rules" aria-label="Spelregels">?</button>' +
-      '<button class="btn ghost sm" data-act="sheet-share" data-v="stand" aria-label="Stand delen">Delen</button></div></div>';
+      '<button class="btn ghost sm" data-act="sheet-share" data-v="stand" aria-label="Stand delen">Delen</button>' +
+      '<button class="btn ghost sm" data-act="sheet-new">Nieuw</button></div></div>';
     var lastU = state.undo.length ? entryOf(state.undo[state.undo.length - 1]).label : '';
     var lastR = state.redo.length ? state.redo[state.redo.length - 1].label : '';
     html += '<div class="history-bar">' +
@@ -1280,7 +1290,8 @@
       ]) +
       step(5, 'Winnaar en nieuw potje', [
         'Blijft er één speler over, dan is die de winnaar en komt het potje op de ranglijst.',
-        k('Nog een potje') + ' begint opnieuw met dezelfde spelers; ' + k('Andere spelers of regels') + ' brengt je terug naar het begin.'
+        k('Nog een potje') + ' begint opnieuw met dezelfde spelers; ' + k('Andere spelers of regels') + ' brengt je terug naar het begin.',
+        'Midden in een potje opnieuw beginnen? Tik rechtsboven op ' + k('Nieuw') + ' en kies zelfde of andere spelers. Met ' + k('↶ Ongedaan maken') + ' krijg je het oude potje terug.'
       ]) +
       step(6, 'De tabbladen onderin', [
         '<b>Spel</b>: het scorebord. <b>Verloop</b>: elke ronde terug te lezen.',
@@ -1325,7 +1336,7 @@
       (canAddPlayer() ? '<button class="btn ghost" data-act="sheet-addp">+ Speler toevoegen</button>' : '') +
       '<div class="label" style="margin-top:4px">Huisregels</div>' + rulesPanel(g.rules, 'game') +
       '<div class="row"><button class="btn ghost" style="flex:1" data-act="ask" data-v="potje">Stand op 0 zetten</button>' +
-      '<button class="btn ghost" style="flex:1" data-act="tosetup">Spelers wijzigen</button></div></div>';
+      '<button class="btn ghost" style="flex:1" data-act="sheet-new">Nieuw spel</button></div></div>';
     html += '<div class="panel"><div class="label">Spelregels en uitleg</div>' +
       '<p class="small muted">Alle regels, jullie huisregels en eigen afspraken, en hoe de app werkt.</p>' +
       '<div class="row"><button class="btn" style="flex:1" data-act="sheet-rules">Spelregels</button>' +
@@ -1427,6 +1438,15 @@
           (G().done ? '' : p.left
             ? '<button class="btn" data-act="rejoin" data-id="' + p.id + '">' + esc(p.name) + ' doet weer mee</button>'
             : '<button class="btn ghost" data-act="ask-quit" data-id="' + p.id + '">' + esc(p.name) + ' stopt met spelen…</button>');
+      } else if (sh.type === 'newgame') {
+        var gg = G(), stay = gg.players.filter(function (p) { return !p.left; });
+        var busy = !gg.done && (gg.log.length || gg.round.toeps.length || gg.players.some(function (p) { return p.score > 0; }));
+        inner = '<h2>Nieuw spel</h2>' +
+          (busy ? '<p class="muted">Het potje van nu is nog niet uitgespeeld en telt niet mee voor de ranglijst. Vergist? Tik daarna op <b>↶ Ongedaan maken</b>, dan krijg je het terug.</p>'
+                : '<p class="muted">Hoe wil je verder?</p>') +
+          '<button class="btn primary big stacked" data-act="again">Zelfde spelers en regels<span class="sub">' +
+            esc(stay.map(function (p) { return p.name; }).join(', ')) + ' · af bij ' + gg.limit + '</span></button>' +
+          '<button class="btn big stacked" data-act="tosetup">Andere spelers of regels<span class="sub">Terug naar het beginscherm</span></button>';
       } else if (sh.type === 'addp') {
         var gn = G().players.map(function (p) { return p.name.toLowerCase(); });
         var bench = state.setup.roster.filter(function (r) { return gn.indexOf(r.name.toLowerCase()) < 0; });
@@ -1514,7 +1534,7 @@
         s.roster.forEach(function (r, i) { r.name = r.name.trim() || ('Speler ' + (i + 1)); });
         var act2 = activeRoster();
         if (act2.length < 2) break;
-        startGame(act2.map(function (r) { return r.name; }), s.limit, s.rules, dealerIndex(), act2.map(function (r) { return r.color; }));
+        startFresh(act2.map(function (r) { return r.name; }), s.limit, s.rules, dealerIndex(), act2.map(function (r) { return r.color; }), 'nieuw spel');
         sound('round');
         commit(); break;
       case 'tab': ui.tab = v; render(); window.scrollTo(0, 0); break;
@@ -1551,14 +1571,19 @@
         if (!addPlayer(nm, st1)) { ui.sheet = { type: 'addp', start: st1 }; renderLayer(); var i2 = document.getElementById('addname'); if (i2) { i2.value = nm; i2.focus(); } }
         break;
       case 'buyin': buyIn(id); break;
+      case 'sheet-new': ui.sheet = { type: 'newgame' }; renderLayer(); break;
       case 'again':
+        ui.sheet = null;
         var g = G();
-        var names = g.players.map(function (p) { return p.name; });
-        var nd = (g.dealer + 1) % names.length;
-        startGame(names, g.limit, g.rules, nd, g.players.map(function (p) { return p.color; }));
+        var stayP = g.players.filter(function (p) { return !p.left; });
+        var names = stayP.map(function (p) { return p.name; });
+        var nextName = g.players[nextDealer()].name, nd = Math.max(0, names.indexOf(nextName));
+        if (g.done) nd = Math.max(0, names.indexOf(g.players[g.dealer].name) + 1) % names.length;
+        startFresh(names, g.limit, g.rules, nd, stayP.map(function (p) { return p.color; }), 'nieuw spel');
         toast('Nieuw potje. ' + names[nd] + ' deelt.');
-        commit(); break;
+        ui.tab = 'spel'; commit(); window.scrollTo(0, 0); break;
       case 'tosetup':
+        ui.sheet = null;
         if (state.game) {
           s.limit = G().limit; s.rules = JSON.parse(JSON.stringify(G().rules));
         }
