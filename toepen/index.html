@@ -236,6 +236,16 @@
   .table-rules { background: var(--accent-soft); border-radius: 12px; padding: 12px; display: grid; gap: 4px; }
   .table-rules li { color: var(--fg); }
   textarea#notes { width: 100%; min-height: 110px; border-radius: 10px; border: 1.5px solid var(--line); background: var(--bg); color: var(--fg); padding: 10px 12px; font: inherit; resize: vertical; }
+  .key { display: inline-block; padding: 1px 8px; border-radius: 8px; background: var(--accent-soft); color: var(--accent); font-weight: 700; font-size: 0.85em; white-space: nowrap; }
+  .key.dark { background: var(--ink); color: var(--ink-fg); }
+  .key.warn { background: var(--warn-soft); color: var(--warn); }
+  .guide-step { display: grid; grid-template-columns: 30px 1fr; gap: 10px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+  .guide-step:last-child { border-bottom: 0; }
+  .guide-step .n { width: 30px; height: 30px; border-radius: 50%; background: var(--accent); color: var(--accent-fg); display: grid; place-items: center; font-weight: 800; font-family: var(--font-display); }
+  .guide-step > div { min-width: 0; }
+  .guide-step h3 { margin-bottom: 4px; }
+  .guide-step ul { margin: 4px 0 0; padding-left: 18px; display: grid; gap: 4px; color: var(--muted); }
+  .guide-step li b { color: var(--fg); }
   .icon-round { width: 40px; min-height: 40px; padding: 0; font-weight: 800; font-size: 1.15rem; }
   .topbar h1 { white-space: nowrap; }
   details.rule { border-bottom: 1px solid var(--line); padding: 10px 0; }
@@ -715,7 +725,7 @@
 
     app.innerHTML =
       '<div class="stack" style="gap:16px">' +
-        '<div class="topbar" style="padding-top:8px;margin-bottom:0"><div class="meta"><h1>Toepen</h1></div><button class="btn ghost sm" data-act="sheet-rules">Spelregels</button></div>' +
+        '<div class="topbar" style="padding-top:8px;margin-bottom:0"><div class="meta"><h1>Toepen</h1></div><div class="tools"><button class="btn ghost sm" data-act="sheet-rules" data-v="uitleg">Uitleg</button><button class="btn ghost sm" data-act="sheet-rules">Spelregels</button></div></div>' +
         '<p class="muted" style="margin-top:-8px">Zet aan wie er meespeelt, zet ze op volgorde van de tafel en kies je huisregels.</p>' +
         '<div class="panel"><div class="label">Spelers · ' + act.length + ' van ' + s.roster.length + ' doen mee</div>' + rows +
           (s.roster.length < 20 ? '<button class="btn ghost" data-act="add">+ Nieuwe speler</button>' : '') +
@@ -800,7 +810,8 @@
     if (!w && r.n === 1 && !r.toeps.length && !g.log.length) {
       html += '<div class="panel small muted" style="margin-top:14px"><div><b style="color:var(--fg)">Zo werkt het:</b> tik op <b>Toep!</b> als iemand toept. ' +
         'Gaat iemand niet mee, tik dan bij die speler op <b>Gaat niet mee</b>. Aan het eind tik je op <b>Wie wint de ronde?</b>; de rest krijgt de inzet. ' +
-        'Tik op een score om die met de hand aan te passen.</div></div>';
+        'Tik op een score om die met de hand aan te passen.</div>' +
+        '<button class="btn ghost sm" style="margin-top:10px" data-act="sheet-rules" data-v="uitleg">Volledige uitleg</button></div>';
     }
     return html;
   }
@@ -1126,6 +1137,61 @@
       '<p class="small muted">Wordt automatisch bewaard en staat hier elke keer weer.</p></div>';
   }
 
+  function guideHtml() {
+    var k = function (t, c) { return '<span class="key' + (c ? ' ' + c : '') + '">' + t + '</span>'; };
+    var step = function (n, title, items) {
+      return '<div class="guide-step"><span class="n">' + n + '</span><div><h3>' + title + '</h3><ul>' +
+        items.map(function (i) { return '<li>' + i + '</li>'; }).join('') + '</ul></div></div>';
+    };
+    return '<p class="muted small">Zo gebruik je het scorebord, van begin tot eind.</p><div>' +
+      step(1, 'Spelers kiezen', [
+        'Zet met het <b>schuifje</b> aan wie er meespeelt. Uit = deze keer niet, de naam blijft bewaard.',
+        k('+ Nieuwe speler') + ' voegt iemand toe; ' + k('↑') + ' zet iemand een plek hoger, zodat de volgorde klopt met de tafel.',
+        'Kies bij <b>Af bij</b> tot hoeveel strafpunten je speelt, en wie als <b>eerste deelt</b>.',
+        'Zet de <b>huisregels</b> aan of uit en tik op ' + k('Start spel') + '.'
+      ]) +
+      step(2, 'Een ronde bijhouden', [
+        'Iemand toept? Tik op ' + k('Toep!', 'dark') + ' en kies wie. De inzet gaat 1 omhoog.',
+        'Gaat iemand niet mee? Tik bij die speler op ' + k('Gaat niet mee', 'warn') + '. Die krijgt meteen zijn punten.',
+        'Iemand meldt witte was? Tik op ' + k('Witte was', 'dark') + ' en volg de vragen.',
+        'Ronde voorbij? Tik op ' + k('Wie wint de ronde?', 'dark') + ' en kies wie de laatste slag haalde. De rest krijgt de inzet.',
+        'De volgende ronde begint vanzelf, met de volgende deler.'
+      ]) +
+      step(3, 'Vergissing herstellen', [
+        'Tik rechtsboven op ' + k('↶') + ' om de laatste actie terug te draaien. Dat kan meerdere keren.',
+        'Of tik op iemands <b>score</b> om er met de hand 1 bij te doen of af te halen.'
+      ]) +
+      step(4, 'Wat de labels betekenen', [
+        k('Deler') + ' deelt deze ronde.',
+        k('Op scherp', 'warn') + ' nog één strafpunt en je ligt eruit.',
+        '<b>Af</b>: ligt eruit. ' + k('Inkopen') + ' verschijnt als terugkomen mag.',
+        '<b>Gepast</b>: doet deze ronde niet meer mee.'
+      ]) +
+      step(5, 'Winnaar en nieuw potje', [
+        'Blijft er één speler over, dan is die de winnaar en komt het potje op de ranglijst.',
+        k('Nog een potje') + ' begint opnieuw met dezelfde spelers; ' + k('Andere spelers of regels') + ' brengt je terug naar het begin.'
+      ]) +
+      step(6, 'De tabbladen onderin', [
+        '<b>Spel</b>: het scorebord. <b>Verloop</b>: elke ronde terug te lezen.',
+        '<b>Stats</b>: cijfers van ' + k('Dit potje') + ' en de ' + k('Ranglijst') + ' van alle potjes, met records.',
+        '<b>Meer</b>: thema, geluid, trillen, scherm aan houden, huisregels en opnieuw beginnen.'
+      ]) +
+      step(7, 'Delen in WhatsApp', [
+        'Tik op ' + k('Delen') + ' (rechtsboven, bij de winnaar of in de ranglijst).',
+        k('Delen via WhatsApp') + ' opent WhatsApp met het bericht al klaar. ' + k('Als plaatje') + ' maakt een plaatje van het scorebord.'
+      ]) +
+      step(8, 'Opnieuw beginnen', [
+        k('Stand op 0 zetten') + ' wist alleen dit potje; met ' + k('↶') + ' kun je het terugzetten.',
+        'Onder <b>Meer</b> kun je ook de <b>ranglijst</b> of <b>alles</b> wissen. De app vraagt altijd eerst of je het zeker weet.'
+      ]) +
+      step(9, 'Goed om te weten', [
+        'Alles wordt bewaard op <b>deze telefoon</b>. Sluit je de app, dan staat het spel er de volgende keer nog.',
+        'Installeer de app via Chrome: ' + k('⋮') + ' → <b>App installeren</b>. Daarna werkt hij ook zonder internet.',
+        'Elke telefoon heeft zijn eigen stand en ranglijst.'
+      ]) +
+      '</div>';
+  }
+
   function renderMeer() {
     var st = state.settings, g = G(), html = '<div class="topbar"><h1>Meer</h1></div><div class="stack">';
     html += '<div class="panel"><div class="label">Weergave</div><div class="seg">' +
@@ -1140,9 +1206,10 @@
       '<div class="label" style="margin-top:4px">Huisregels</div>' + rulesPanel(g.rules, 'game') +
       '<div class="row"><button class="btn ghost" style="flex:1" data-act="ask" data-v="potje">Stand op 0 zetten</button>' +
       '<button class="btn ghost" style="flex:1" data-act="tosetup">Spelers wijzigen</button></div></div>';
-    html += '<div class="panel"><div class="label">Spelregels</div>' +
-      '<p class="small muted">Alle regels, jullie huisregels en eigen afspraken op één plek.</p>' +
-      '<button class="btn" data-act="sheet-rules">Spelregels openen</button></div>';
+    html += '<div class="panel"><div class="label">Spelregels en uitleg</div>' +
+      '<p class="small muted">Alle regels, jullie huisregels en eigen afspraken, en hoe de app werkt.</p>' +
+      '<div class="row"><button class="btn" style="flex:1" data-act="sheet-rules">Spelregels</button>' +
+      '<button class="btn" style="flex:1" data-act="sheet-rules" data-v="uitleg">Uitleg app</button></div></div>';
     html += '<div class="panel"><div class="label">Opnieuw beginnen</div>';
     html += '<button class="btn ghost" data-act="ask" data-v="potje">Stand op 0 zetten</button>' +
       '<p class="small muted">Alleen de strafpunten van dit potje. Spelers en ranglijst blijven.</p>' +
@@ -1185,7 +1252,12 @@
             return '<button data-act="finish" data-id="' + p.id + '">' + avatar(p, true) + '<span>' + esc(p.name) + '</span></button>';
           }).join('') + '</div>';
       } else if (sh.type === 'rules') {
-        inner = '<h2>Spelregels Toepen</h2>' + rulebookHtml();
+        var rv = sh.view || 'regels';
+        inner = '<h2>' + (rv === 'uitleg' ? 'Uitleg van de app' : 'Spelregels Toepen') + '</h2>' +
+          '<div class="seg">' + [['regels', 'Spelregels'], ['uitleg', 'Uitleg app']].map(function (o) {
+            return '<button data-act="rulesview" data-v="' + o[0] + '" aria-pressed="' + (rv === o[0]) + '">' + o[1] + '</button>';
+          }).join('') + '</div>' +
+          (rv === 'uitleg' ? guideHtml() : rulebookHtml());
       } else if (sh.type === 'confirm') {
         var games = Math.max(state.archive.length, Object.keys(state.wins).reduce(function (n, k) { return n + state.wins[k]; }, 0));
         var C = {
@@ -1339,7 +1411,10 @@
       case 'vibrate': state.settings.vibrate = !state.settings.vibrate; commit(); buzz(30); break;
       case 'wake': state.settings.wake = !state.settings.wake; commit(); break;
       case 'ask': ui.sheet = { type: 'confirm', what: v }; renderLayer(); break;
-      case 'sheet-rules': ui.sheet = { type: 'rules' }; renderLayer(); break;
+      case 'sheet-rules': ui.sheet = { type: 'rules', view: v || 'regels' }; renderLayer(); break;
+      case 'rulesview':
+        ui.sheet.view = v; renderLayer();
+        var sht = layer.querySelector('.sheet'); if (sht) sht.scrollTop = 0; break;
       case 'do-reset':
         ui.sheet = null;
         if (v === 'potje') { resetPotje(); break; }
