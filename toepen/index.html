@@ -176,6 +176,10 @@
   .bar span { display: block; height: 100%; background: var(--accent); border-radius: 3px; transition: width 0.3s ease; }
   .player.scherp .bar span { background: var(--warn); }
   .player.af .bar span { background: var(--danger); }
+  .player.left .bar span { background: var(--muted); }
+  .chip.left { background: var(--sunken); color: var(--fg); border: 1px dashed var(--muted); }
+  .quit-row { display: flex; align-items: center; gap: 10px; min-height: 48px; }
+  .quit-row b { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .p-actions { display: flex; gap: 8px; }
   .p-actions .btn { flex: 1; min-height: 44px; }
 
@@ -436,7 +440,7 @@
       state.archive.push({
         at: Date.now(), limit: g.limit, rounds: st.rounds, maxStake: st.maxStake, winner: w.name,
         players: g.players.map(function (p) {
-          return { name: p.name, color: p.color, score: p.score, won: st.per[p.id].won, toeps: st.per[p.id].toeps };
+          return { name: p.name, color: p.color, score: p.score, won: st.per[p.id].won, toeps: st.per[p.id].toeps, left: !!p.left };
         })
       });
       if (state.archive.length > 500) state.archive.shift();
@@ -486,7 +490,7 @@
       if (checkOut(p)) outs.push(p.name);
     });
     g.log.push({
-      t: 'round', n: r.n, stake: r.stake, toeps: r.toeps.slice(), passed: Object.assign({}, r.passed),
+      t: 'round', n: r.n, stake: r.stake, toeps: r.toeps.slice(), passed: Object.keys(r.passed).reduce(function (o, k) { if (r.passed[k] > 0) o[k] = r.passed[k]; return o; }, {}),
       winner: winId, losers: losers.map(function (p) { return p.id; }), dealer: g.players[g.dealer].id, at: Date.now()
     });
     g.dealer = nextDealer();
@@ -506,7 +510,7 @@
     if (d < 0 && p.score <= 0) return;
     snapshot();
     p.score += d;
-    if (p.score < G().limit && p.out && d < 0) p.out = false;
+    if (p.score < G().limit && p.out && !p.left && d < 0) p.out = false;
     checkOut(p);
     G().log.push({ t: 'adj', id: id, d: d, round: G().round.n, at: Date.now() });
     checkWinner();
@@ -560,10 +564,41 @@
     window.scrollTo(0, 0);
   }
 
+  function quitPlayer(id) {
+    var g = G(), p = byId(id);
+    if (p.left) return;
+    snapshot();
+    var wasDealer = g.players[g.dealer].id === id;
+    p.left = true; p.out = true;
+    if (wasDealer) g.dealer = nextDealer();
+    g.log.push({ t: 'left', id: id, score: p.score, round: g.round.n, at: Date.now() });
+    toast(p.name + ' stopt met spelen');
+    buzz(30);
+    var r = g.round, left = inRoundPlayers();
+    if (!winner() && left.length === 1 && (r.toeps.length || Object.keys(r.passed).length)) {
+      finishRound(left[0].id, true);
+      return;
+    }
+    checkWinner();
+    commit();
+  }
+
+  function rejoinPlayer(id) {
+    var g = G(), p = byId(id);
+    if (!p.left || g.done) return;
+    snapshot();
+    p.left = false; p.out = p.score >= g.limit;
+    g.round.passed[id] = 0;
+    g.log.push({ t: 'back', id: id, round: g.round.n, at: Date.now() });
+    toast(p.name + ' doet weer mee vanaf de volgende ronde');
+    buzz(30);
+    commit();
+  }
+
   function canBuyIn(p) {
     var g = G();
     var R = g.rules;
-    return R.inkopen && p.out && !g.done && (R.inkopenMax === 0 || p.bought < R.inkopenMax) && alive().length >= 2 &&
+    return R.inkopen && p.out && !p.left && !g.done && (R.inkopenMax === 0 || p.bought < R.inkopenMax) && alive().length >= 2 &&
       Math.max.apply(null, alive().map(function (o) { return o.score; })) < g.limit - 1;
   }
 
@@ -775,16 +810,18 @@
 
     html += '<div class="players">';
     g.players.forEach(function (p, i) {
-      var af = p.out, passed = p.id in r.passed;
+      var af = p.out, passed = (p.id in r.passed) && !p.left && r.passed[p.id] > 0, waiting = (p.id in r.passed) && r.passed[p.id] === 0;
       var scherp = !af && p.score === g.limit - 1;
       var pct = Math.min(100, (p.score / g.limit) * 100);
       var chips = '';
       if (i === g.dealer && !w) chips += '<span class="chip deler">Deler</span>';
       if (scherp) chips += '<span class="chip scherp">Op scherp' + (g.rules.scherpPassen ? '' : ' · moet mee') + '</span>';
-      if (af) chips += '<span class="chip af">Af</span>';
+      if (p.left) chips += '<span class="chip left">Gestopt</span>';
+      else if (af) chips += '<span class="chip af">Af</span>';
       if (passed) chips += '<span class="chip">Gepast +' + r.passed[p.id] + '</span>';
+      if (waiting) chips += '<span class="chip">Volgende ronde weer mee</span>';
       if (p.bought) chips += '<span class="chip">Ingekocht</span>';
-      html += '<div class="player' + (af ? ' af' : '') + (scherp ? ' scherp' : '') + (passed ? ' passed' : '') + '">' +
+      html += '<div class="player' + (af ? ' af' : '') + (p.left ? ' left' : '') + (scherp ? ' scherp' : '') + (passed ? ' passed' : '') + '">' +
         '<div class="p-head">' + avatar(p) +
           '<div class="p-who"><div class="p-name">' + esc(p.name) + '</div>' + (chips ? '<div class="chips">' + chips + '</div>' : '') + '</div>' +
           '<button class="p-score" data-act="sheet-adjust" data-id="' + p.id + '" aria-label="Score van ' + esc(p.name) + ' aanpassen">' + p.score + '<small> / ' + g.limit + '</small></button></div>' +
@@ -839,6 +876,9 @@
                   nameOf(e.by) + ' controleert ' + nameOf(e.id) + ': vuile was, ' + nameOf(e.id) + ' +' + e.pts);
         html += '<div class="log-item"><div class="log-head"><span>Witte was</span><span class="muted small">ronde ' + e.round + '</span></div>' +
           '<div class="small">' + wtxt + '</div></div>';
+      } else if (e.t === 'left' || e.t === 'back') {
+        html += '<div class="log-item"><div class="log-head"><span>' + (e.t === 'left' ? 'Gestopt' : 'Doet weer mee') + '</span><span class="muted small">ronde ' + e.round + '</span></div>' +
+          '<div class="small">' + nameOf(e.id) + (e.t === 'left' ? ' stopt met spelen, met ' + plural(e.score, 'strafpunt', 'strafpunten') : ' doet weer mee') + '</div></div>';
       } else if (e.t === 'buy') {
         html += '<div class="log-item"><div class="log-head"><span>Inkoop</span><span class="muted small">ronde ' + e.round + '</span></div>' +
           '<div class="small">' + nameOf(e.id) + ' koopt zich in op ' + e.to + '</div></div>';
@@ -869,6 +909,7 @@
     state.archive.forEach(function (g) {
       get(g.winner).aw++;
       g.players.forEach(function (p) {
+        if (p.left) return;
         var x = get(p.name);
         x.ap++; x.pts += p.score; x.toeps += p.toeps; x.rounds += p.won; x.color = p.color;
       });
@@ -943,7 +984,7 @@
     var g = G();
     var ps = g.players.slice().sort(function (a, b) { return (a.out - b.out) || (a.score - b.score); });
     return ps.map(function (p, i) {
-      var sub = p.out ? 'af' : (p.score === g.limit - 1 ? 'op scherp' : '');
+      var sub = p.left ? 'gestopt' : p.out ? 'af' : (p.score === g.limit - 1 ? 'op scherp' : '');
       return { rank: i + 1, name: p.name, color: p.color, value: p.score + '', sub: sub, out: p.out };
     });
   }
@@ -1165,7 +1206,8 @@
         k('Deler') + ' deelt deze ronde.',
         k('Op scherp', 'warn') + ' nog één strafpunt en je ligt eruit.',
         '<b>Af</b>: ligt eruit. ' + k('Inkopen') + ' verschijnt als terugkomen mag.',
-        '<b>Gepast</b>: doet deze ronde niet meer mee.'
+        '<b>Gepast</b>: doet deze ronde niet meer mee.',
+        '<b>Gestopt</b>: wil iemand stoppen? Tik op de <b>score</b> van die speler en kies <b>stopt met spelen</b>, of ga naar <b>Meer</b> → Spelers. Daar kan diegene ook weer meedoen.'
       ]) +
       step(5, 'Winnaar en nieuw potje', [
         'Blijft er één speler over, dan is die de winnaar en komt het potje op de ranglijst.',
@@ -1203,6 +1245,14 @@
       toggleRow('wake', st.wake, 'Scherm aan houden', 'Je telefoon gaat niet op slot tijdens het spel.') +
       '</div>';
     html += '<div class="panel"><div class="label">Dit potje</div>' +
+      '<div class="label" style="margin-top:4px">Spelers</div>' +
+      g.players.map(function (p) {
+        var btn = g.done ? '' : p.left
+          ? '<button class="btn sm" data-act="rejoin" data-id="' + p.id + '">Doet weer mee</button>'
+          : '<button class="btn ghost sm" data-act="ask-quit" data-id="' + p.id + '">Stopt</button>';
+        return '<div class="quit-row">' + avatar(p, true) + '<b>' + esc(p.name) + '</b><span class="small muted num">' +
+          (p.left ? 'gestopt' : p.out ? 'af' : p.score + ' / ' + g.limit) + '</span>' + btn + '</div>';
+      }).join('') +
       '<div class="label" style="margin-top:4px">Huisregels</div>' + rulesPanel(g.rules, 'game') +
       '<div class="row"><button class="btn ghost" style="flex:1" data-act="ask" data-v="potje">Stand op 0 zetten</button>' +
       '<button class="btn ghost" style="flex:1" data-act="tosetup">Spelers wijzigen</button></div></div>';
@@ -1302,7 +1352,17 @@
         inner = '<div class="row">' + avatar(p) + '<div><h2>' + esc(p.name) + '</h2><div class="muted small">Nu ' + plural(p.score, 'strafpunt', 'strafpunten') + '</div></div></div>' +
           '<p class="small muted">Corrigeer een vergissing. Dit komt in het verloop te staan.</p>' +
           '<div class="row"><button class="btn ghost big" style="flex:1" data-act="adj" data-id="' + p.id + '" data-v="-1"' + (p.score > 0 ? '' : ' disabled') + '>− 1</button>' +
-          '<button class="btn big" style="flex:1" data-act="adj" data-id="' + p.id + '" data-v="1">+ 1</button></div>';
+          '<button class="btn big" style="flex:1" data-act="adj" data-id="' + p.id + '" data-v="1">+ 1</button></div>' +
+          (G().done ? '' : p.left
+            ? '<button class="btn" data-act="rejoin" data-id="' + p.id + '">' + esc(p.name) + ' doet weer mee</button>'
+            : '<button class="btn ghost" data-act="ask-quit" data-id="' + p.id + '">' + esc(p.name) + ' stopt met spelen…</button>');
+      } else if (sh.type === 'quit') {
+        var q = byId(sh.id), others = alive().filter(function (o) { return o.id !== q.id; }).length;
+        inner = '<div class="row">' + avatar(q) + '<h2>' + esc(q.name) + ' stopt met spelen?</h2></div>' +
+          '<p class="muted">' + esc(q.name) + ' doet niet meer mee in dit potje. De ' + plural(q.score, 'strafpunt', 'strafpunten') + ' blijven staan in het verloop' +
+          (G().players[G().dealer].id === q.id ? ' en de deler schuift door' : '') + '. Wil ' + esc(q.name) + ' later toch weer meedoen? Tik dan op de score.</p>' +
+          (others === 1 ? '<p class="small" style="color:var(--warn)"><b>Let op:</b> er blijft dan één speler over. Die wint het potje.</p>' : '') +
+          '<button class="btn warn big" data-act="do-quit" data-id="' + q.id + '">Ja, ' + esc(q.name) + ' stopt</button>';
       }
       html += '<div class="scrim" data-act="close"><div class="sheet" role="dialog" aria-modal="true"><div class="grip"></div>' + inner +
         '<button class="btn ghost" data-act="close">Annuleren</button></div></div>';
@@ -1392,6 +1452,9 @@
       case 'finish': ui.sheet = null; finishRound(id); break;
       case 'pass': doPass(id); break;
       case 'adj': adjust(id, +v); break;
+      case 'ask-quit': ui.sheet = { type: 'quit', id: id }; renderLayer(); break;
+      case 'do-quit': ui.sheet = null; quitPlayer(id); break;
+      case 'rejoin': ui.sheet = null; rejoinPlayer(id); break;
       case 'buyin': buyIn(id); break;
       case 'again':
         var g = G();
