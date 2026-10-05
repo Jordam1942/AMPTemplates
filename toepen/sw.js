@@ -1,6 +1,6 @@
 // Offline support: app files are cached on install, everything else
 // (including Google Fonts) is cached the first time it loads.
-var CACHE = 'toepen-v1';
+var CACHE = 'toepen-v2';
 var FILES = ['./', 'index.html', 'manifest.webmanifest', 'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png'];
 
 self.addEventListener('install', function (e) {
