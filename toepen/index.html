@@ -201,9 +201,9 @@
   .pill.win { background: var(--accent-soft); color: var(--accent); }
 
   table.stats { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; font-size: 0.88rem; }
-  table.stats th, table.stats td { padding: 8px 4px; text-align: right; border-bottom: 1px solid var(--line); }
+  table.stats th, table.stats td { padding: 8px 3px; text-align: right; border-bottom: 1px solid var(--line); }
   table.stats th:first-child, table.stats td:first-child { text-align: left; }
-  table.stats th { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); font-weight: 700; }
+  table.stats th { font-size: 0.72rem; letter-spacing: 0.02em; color: var(--muted); font-weight: 700; line-height: 1.2; vertical-align: bottom; }
   .table-wrap { overflow-x: auto; }
   .tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
   .tile { background: var(--sunken); border-radius: 12px; padding: 10px; display: grid; gap: 2px; }
@@ -220,7 +220,8 @@
   .rank.r2, .rank.r3 { background: var(--accent-soft); color: var(--accent); }
   .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: middle; flex: none; }
   table.stats td.who, table.stats th.who { text-align: left; }
-  table.stats td.who span { overflow-wrap: anywhere; }
+  table.stats td.who span { white-space: nowrap; }
+  table.stats td:first-child, table.stats td.who { white-space: nowrap; max-width: 30vw; overflow: hidden; text-overflow: ellipsis; }
   table.stats tr.top td { font-weight: 700; }
   .top3 { display: grid; gap: 8px; }
   .top3 .line { display: flex; align-items: center; gap: 10px; }
@@ -323,7 +324,7 @@
 (function () {
   'use strict';
   var KEY = 'toepen-scorebord-v2';
-  var VERSION = '20 (vuile was)';
+  var VERSION = '21 (duidelijke kopjes)';
   var COLORS = ['#2f7d5b', '#c2571a', '#3b6fb6', '#a63d6b', '#7a5bb5', '#a67c12', '#1f8a8f', '#5d6b1f'];
   var app = document.getElementById('app');
   var layer = document.getElementById('layer');
@@ -1045,12 +1046,12 @@
     html += '<div class="tiles"><div class="tile"><b>' + totalGames + '</b><span>Potjes</span></div>' +
       '<div class="tile"><b>' + totalRounds + '</b><span>Rondes</span></div>' +
       '<div class="tile"><b>' + (maxStake || '–') + '</b><span>Hoogste inzet</span></div></div>';
-    html += '<div class="panel"><div class="label">Ranglijst · meeste potjes gewonnen</div><div class="table-wrap"><table class="stats"><thead><tr><th></th><th class="who">Speler</th><th>Gew.</th><th>Gesp.</th><th>Winst</th></tr></thead><tbody>';
+    html += '<div class="panel"><div class="label">Ranglijst · potjes</div><div class="table-wrap"><table class="stats"><thead><tr><th></th><th class="who">Speler</th><th>Ge-<br>wonnen</th><th>Ge-<br>speeld</th><th>Winst<br>%</th></tr></thead><tbody>';
     rows.forEach(function (x, i) {
       html += '<tr' + (i === 0 ? ' class="top"' : '') + '><td>' + rankBadge(i) + '</td><td class="who">' + dot(x.color) + '<span>' + esc(x.name) + '</span></td>' +
         '<td>' + x.won + '</td><td>' + x.played + '</td><td>' + Math.round(x.won / x.played * 100) + '%</td></tr>';
     });
-    html += '</tbody></table></div><p class="small muted">Bij gelijk aantal gewonnen telt het winstpercentage.</p></div>';
+    html += '</tbody></table></div><p class="small muted">Wie de meeste potjes <b>gewonnen</b> heeft, staat bovenaan. Bij gelijke stand telt het <b>winstpercentage</b>: gewonnen gedeeld door gespeeld.</p></div>';
 
     if (A.length) {
       var fastest = null, cleanest = null, toepKing = null, bigStake = null;
@@ -1230,12 +1231,12 @@
       html += '<div class="hbar"><span class="name">' + esc(p.name) + '</span><div class="track"><span style="width:' + (v / maxWon * 100) + '%;background:' + p.color + '"></span></div><span class="val">' + v + '</span></div>';
     });
     html += '</div>';
-    html += '<div class="panel"><div class="label">Per speler</div><div class="table-wrap"><table class="stats"><thead><tr><th>Speler</th><th>Toeps</th><th>Gepast</th><th>Verl.</th><th>Straf</th></tr></thead><tbody>';
+    html += '<div class="panel"><div class="label">Per speler</div><div class="table-wrap"><table class="stats"><thead><tr><th>Speler</th><th>Keer<br>getoept</th><th>Keer<br>gepast</th><th>Rondes<br>verloren</th><th>Straf-<br>punten</th></tr></thead><tbody>';
     g.players.forEach(function (p) {
       var x = st.per[p.id];
       html += '<tr><td>' + esc(p.name) + '</td><td>' + x.toeps + '</td><td>' + x.passed + '</td><td>' + x.lost + '</td><td>' + p.score + '</td></tr>';
     });
-    html += '</tbody></table></div></div>';
+    html += '</tbody></table></div><p class="small muted"><b>Rondes verloren</b>: aan het eind nog meedoen en de laatste slag niet halen. Gepast telt daar niet bij.</p></div>';
     return html + '</div>';
   }
 
