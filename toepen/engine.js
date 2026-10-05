@@ -41,7 +41,7 @@
     return arr;
   }
 
-  var DEFAULT_RULES = { dubbelToep: false, scherpPassen: true, wittewas: true };
+  var DEFAULT_RULES = { dubbelToep: false, scherpPassen: true, wittewas: true, hoogsteDeelt: false };
 
   /* ---------- Game setup ---------- */
 
@@ -278,7 +278,9 @@
   function nextRound(G) {
     if (G.phase !== 'roundEnd') return false;
     var cur = G.seats[G.dealer];
-    var nd = nextFrom(G, cur, function (id) { return !G.players[id].out; });
+    // House rule: the player with the most points deals (ties: next at the table).
+    var top = G.rules.hoogsteDeelt ? Math.max.apply(null, activeSeats(G).map(function (id) { return G.players[id].score; })) : null;
+    var nd = nextFrom(G, cur, function (id) { return !G.players[id].out && (top === null || G.players[id].score === top); });
     G.dealer = G.seats.indexOf(nd);
     startRound(G);
     return true;

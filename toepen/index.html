@@ -323,13 +323,13 @@
 (function () {
   'use strict';
   var KEY = 'toepen-scorebord-v2';
-  var VERSION = '18 (firebase koppelen)';
+  var VERSION = '19 (hoogste stand deelt)';
   var COLORS = ['#2f7d5b', '#c2571a', '#3b6fb6', '#a63d6b', '#7a5bb5', '#a67c12', '#1f8a8f', '#5d6b1f'];
   var app = document.getElementById('app');
   var layer = document.getElementById('layer');
 
   // ---------- State ----------
-  var RULES = { inkopen: true, inkopenMax: 1, wittewas: true, wasStraf: 1, dubbelToep: false, scherpPassen: true };
+  var RULES = { inkopen: true, inkopenMax: 1, wittewas: true, wasStraf: 1, dubbelToep: false, scherpPassen: true, hoogsteDeelt: false };
   function rulesOf(o) {
     var r = o.rules || {};
     if (o.inkopen !== undefined && r.inkopen === undefined) r.inkopen = o.inkopen;
@@ -465,11 +465,15 @@
     commit();
   }
 
+  // Normally the deal passes to the next player still in. With the house rule
+  // "hoogste stand deelt", the player with the most points deals; ties go to
+  // whoever comes first after the current dealer.
   function nextDealer() {
     var ps = G().players, n = ps.length, i = G().dealer;
+    var top = G().rules.hoogsteDeelt ? Math.max.apply(null, ps.filter(function (p) { return !p.out; }).map(function (p) { return p.score; }).concat([0])) : null;
     for (var k = 1; k <= n; k++) {
       var j = (i + k) % n;
-      if (!ps[j].out) return j;
+      if (!ps[j].out && (top === null || ps[j].score === top)) return j;
     }
     return i;
   }
@@ -795,6 +799,7 @@
         seg('wasStraf', [[1, '1 punt'], [2, '2 punten']]) + '</div>' : '') +
       toggleRow('rule', R.dubbelToep, 'Twee keer achter elkaar toepen', 'Uit: na jouw toep moet eerst iemand anders toepen.', a + 'dubbelToep"') +
       toggleRow('rule', R.scherpPassen, 'Passen als je op scherp staat', 'Uit: wie op scherp staat, moet altijd mee.', a + 'scherpPassen"') +
+      toggleRow('rule', R.hoogsteDeelt, 'Hoogste stand deelt', 'Wie de meeste strafpunten heeft, deelt de volgende ronde. Bij gelijke stand: op volgorde van de tafel. Uit: de deler schuift door.', a + 'hoogsteDeelt"') +
       toggleRow('rule', R.inkopen, 'Inkopen', 'Wie eruit ligt, mag terugkomen op de stand van de hoogste speler die nog meedoet.', a + 'inkopen"') +
       (R.inkopen ? '<div class="sub-opt"><div class="small muted">Hoe vaak per speler?</div>' +
         seg('inkopenMax', [[1, '1 keer'], [2, '2 keer'], [0, 'Onbeperkt']]) + '</div>' : '');
@@ -857,7 +862,7 @@
         '<div class="panel"><div class="label">Af bij</div><div class="seg">' + limits + '</div>' +
           '<p class="small muted">Wie dit aantal strafpunten haalt, ligt eruit. De laatste die overblijft, wint het potje.</p></div>' +
         '<div class="panel"><div class="label">Eerste deler</div><div class="seg" id="dealers">' + dealers + '</div>' +
-          '<p class="small muted">Daarna schuift de deler automatisch door naar links.</p></div>' +
+          '<p class="small muted">' + (s.rules && s.rules.hoogsteDeelt ? 'Daarna deelt steeds wie de meeste strafpunten heeft.' : 'Daarna schuift de deler automatisch door naar links.') + '</p></div>' +
         '<div class="panel"><div class="label">Huisregels</div>' +
           rulesPanel(s.rules, 'setup') +
         '</div>' +
@@ -1245,6 +1250,7 @@
     mine.push(R.dubbelToep ? 'Je mag <b>meerdere keren achter elkaar</b> toepen.' : 'Na jouw toep moet <b>eerst iemand anders</b> toepen.');
     mine.push(R.scherpPassen ? 'Op scherp mag je <b>gewoon passen</b>.' : 'Op scherp <b>moet je mee</b>; passen mag niet.');
     mine.push(R.wittewas ? 'Witte was <b>telt</b>. Straf bij vuile was of onterecht controleren: <b>' + straf(R.wasStraf) + '</b>.' : 'Witte was <b>telt niet</b>.');
+    mine.push(R.hoogsteDeelt ? 'De speler met de <b>meeste strafpunten deelt</b>.' : 'De deler <b>schuift door</b> naar links.');
     mine.push(R.inkopen ? 'Inkopen mag, <b>' + (R.inkopenMax === 0 ? 'onbeperkt' : R.inkopenMax === 1 ? '1 keer' : '2 keer') + '</b> per speler.' : 'Inkopen <b>mag niet</b>.');
     var notes = state.setup.notes || '';
     var sec = function (title, body, open) { return '<details class="rule"' + (open ? ' open' : '') + '><summary>' + title + '</summary><div class="rulebook">' + body + '</div></details>'; };
@@ -1255,7 +1261,7 @@
       sec('Kaarten en volgorde', '<p>Je speelt met <b>32 kaarten</b>: van elke kleur de 7, 8, 9, 10, boer, vrouw, heer en aas. Van laag naar hoog:</p>' +
         '<div class="cards">' + cards + '</div><div class="cards-cap"><span>← laagste</span><span>hoogste →</span></div>' +
         '<p style="margin-top:8px">De <b>10 is de hoogste</b> kaart en de <b>boer de laagste</b>. Er is geen troef.</p>', true) +
-      sec('Delen en uitkomen', '<ul><li>De deler geeft iedereen <b>4 kaarten</b>.</li><li>De speler links van de deler komt uit (legt de eerste kaart).</li><li>Na elke ronde schuift de deler één plek door. De app houdt bij wie er deelt.</li></ul>') +
+      sec('Delen en uitkomen', '<ul><li>De deler geeft iedereen <b>4 kaarten</b>.</li><li>De speler links van de deler komt uit (legt de eerste kaart).</li><li>' + (R.hoogsteDeelt ? 'Na elke ronde deelt wie de <b>meeste strafpunten</b> heeft; bij gelijke stand de eerstvolgende aan tafel.' : 'Na elke ronde schuift de deler één plek door.') + ' De app houdt bij wie er deelt.</li></ul>') +
       sec('Slagen spelen', '<ul><li>Je moet <b>kleur bekennen</b>: speel dezelfde kleur als de eerste kaart als je die hebt.</li><li>Heb je die kleur niet, dan mag je elke kaart opgooien, maar daarmee kun je de slag niet winnen.</li><li>De hoogste kaart van de gevraagde kleur wint de slag. Die speler komt de volgende slag uit.</li><li>Er zijn 4 slagen per ronde. Alleen <b>de laatste slag telt</b>: wie die haalt, wint de ronde.</li></ul>') +
       sec('Toepen', '<ul><li>Een ronde begint met een inzet van <b>1</b>.</li><li>Iedereen die nog meedoet, mag op elk moment <b>toepen</b> (op tafel kloppen). De inzet gaat dan 1 omhoog.</li>' +
         '<li>De anderen kiezen meteen: <b>meegaan</b> of <b>passen</b>.</li><li>Wie past, krijgt de inzet van <b>vóór</b> die toep als strafpunten en doet niet meer mee aan de ronde.</li>' +
@@ -1296,7 +1302,7 @@
         'Gaat iemand niet mee? Tik bij die speler op ' + k('Gaat niet mee', 'warn') + '. Die krijgt meteen zijn punten.',
         'Iemand meldt witte was? Tik op ' + k('Witte was', 'dark') + ' en volg de vragen.',
         'Ronde voorbij? Tik op ' + k('Wie wint de ronde?', 'dark') + ' en kies wie de laatste slag haalde. De rest krijgt de inzet.',
-        'De volgende ronde begint vanzelf, met de volgende deler.'
+        'De volgende ronde begint vanzelf. De app wijst de nieuwe deler aan: de volgende speler, of met de huisregel <b>Hoogste stand deelt</b> de speler met de meeste strafpunten.'
       ]) +
       step(3, 'Vergissing herstellen', [
         'Tik op ' + k('↶ Ongedaan maken') + ' om de laatste actie terug te draaien. Dat kan meerdere keren achter elkaar.',

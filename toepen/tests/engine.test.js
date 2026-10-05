@@ -21,7 +21,14 @@ function runGame(n, rules, botsOnly) {
   let guard = 0, roundStartCheck = true;
   while (G.phase !== 'done') {
     assert(++guard < 20000, 'game does not end');
-    if (G.phase === 'roundEnd') { E.nextRound(G); roundStartCheck = true; continue; }
+    if (G.phase === 'roundEnd') {
+      E.nextRound(G); roundStartCheck = true;
+      const d = G.seats[G.dealer], act = E.activeSeats(G);
+      assert(!G.players[d].out, 'dealer must still be in');
+      if (G.rules.hoogsteDeelt) assert.strictEqual(G.players[d].score, Math.max(...act.map(id => G.players[id].score)), 'highest score deals');
+      stats.dealerChecks = (stats.dealerChecks || 0) + 1;
+      continue;
+    }
     if (roundStartCheck) {
       const cards = checkDeal(G);
       assert.strictEqual(cards.length, 32, 'deck size ' + cards.length);
@@ -89,7 +96,7 @@ function runGame(n, rules, botsOnly) {
 const t0 = Date.now();
 for (let i = 0; i < 6000; i++) {
   const n = 2 + (i % 7);
-  const rules = { dubbelToep: Math.random() < 0.5, scherpPassen: Math.random() < 0.5, wittewas: Math.random() < 0.7 };
+  const rules = { dubbelToep: Math.random() < 0.5, scherpPassen: Math.random() < 0.5, wittewas: Math.random() < 0.7, hoogsteDeelt: Math.random() < 0.5 };
   runGame(n, rules, i % 3 === 0);
 }
 // specific: witte was must be impossible with 8 players (no stock)

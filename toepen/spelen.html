@@ -219,7 +219,8 @@
       rules: {
         wittewas: sbRules.rules ? sbRules.rules.wittewas !== false : true,
         dubbelToep: sbRules.rules ? !!sbRules.rules.dubbelToep : false,
-        scherpPassen: sbRules.rules ? sbRules.rules.scherpPassen !== false : true
+        scherpPassen: sbRules.rules ? sbRules.rules.scherpPassen !== false : true,
+        hoogsteDeelt: sbRules.rules ? !!sbRules.rules.hoogsteDeelt : false
       }
     }
   };
@@ -686,7 +687,8 @@
     html += '<div class="panel"><div class="label">Huisregels</div>' +
       toggleRow('rule-wittewas', c.rules.wittewas, 'Witte was', 'Wie alleen boeren, vrouwen, heren en azen heeft, mag 4 nieuwe kaarten nemen. De app controleert het.') +
       toggleRow('rule-dubbelToep', c.rules.dubbelToep, 'Twee keer achter elkaar toepen', 'Uit: na jouw toep moet eerst iemand anders toepen.') +
-      toggleRow('rule-scherpPassen', c.rules.scherpPassen, 'Passen als je op scherp staat', 'Uit: wie op scherp staat, moet mee.') + '</div>';
+      toggleRow('rule-scherpPassen', c.rules.scherpPassen, 'Passen als je op scherp staat', 'Uit: wie op scherp staat, moet mee.') +
+      toggleRow('rule-hoogsteDeelt', c.rules.hoogsteDeelt, 'Hoogste stand deelt', 'Wie de meeste strafpunten heeft, deelt. Bij gelijke stand: op volgorde van de tafel. Uit: de deler schuift door.') + '</div>';
     var minB = practice ? 1 : 0;
     html += '<div class="panel"><div class="label">Computerspelers</div><div class="stepper">' +
       '<button class="btn ghost sm icon-round" data-act="bots" data-v="-1"' + (c.bots <= minB ? ' disabled' : '') + ' aria-label="Minder">−</button><b class="num">' + c.bots + '</b>' +
@@ -847,7 +849,7 @@
     return '<div>' +
       sec('Doel', '<p>Zo min mogelijk strafpunten. Bij <b>' + limit + '</b> lig je eruit. Wie overblijft, wint.</p>', true) +
       sec('Kaarten', '<p>32 kaarten. Van laag naar hoog:</p><div class="minis" style="margin-top:8px">' + cards + '</div><p style="margin-top:8px">De <b>10</b> is het hoogst, de <b>boer</b> het laagst. Er is geen troef.</p>', true) +
-      sec('Een ronde', '<ul><li>Iedereen krijgt <b>4 kaarten</b>. Links van de deler komt uit.</li><li>Je moet <b>kleur bekennen</b>. De app laat alleen kaarten oplichten die mogen.</li><li>Hoogste kaart van de gevraagde kleur wint de slag en komt daarna uit.</li><li>Alleen de <b>laatste (4e) slag</b> telt: die wint de ronde.</li></ul>') +
+      sec('Een ronde', '<ul><li>Iedereen krijgt <b>4 kaarten</b>. Links van de deler komt uit.</li><li>' + (R.hoogsteDeelt ? 'Wie de <b>meeste strafpunten</b> heeft, deelt de volgende ronde.' : 'De deler schuift elke ronde één plek door.') + '</li><li>Je moet <b>kleur bekennen</b>. De app laat alleen kaarten oplichten die mogen.</li><li>Hoogste kaart van de gevraagde kleur wint de slag en komt daarna uit.</li><li>Alleen de <b>laatste (4e) slag</b> telt: die wint de ronde.</li></ul>') +
       sec('Toepen', '<ul><li>Ben je aan de beurt, dan mag je <b>toepen</b>: de inzet gaat 1 omhoog.</li><li>De anderen kiezen <b>Meegaan</b> of <b>Passen</b>. Wie past, krijgt de inzet van vóór de toep en doet niet meer mee.</li>' +
         (R.dubbelToep ? '<li>Je mag meerdere keren achter elkaar toepen.</li>' : '<li>Na jouw toep moet eerst een ander toepen.</li>') +
         (R.scherpPassen ? '' : '<li>Sta je <b>op scherp</b>, dan moet je mee.</li>') + '<li>Gaat niemand mee, dan wint de toeper de ronde.</li></ul>') +
@@ -973,7 +975,7 @@
       case 'mode': c.mode = v; render(); break;
       case 'limit': c.limit = +v; render(); break;
       case 'bots': c.bots = Math.max(0, Math.min(7, c.bots + +v)); render(); break;
-      case 'rule-wittewas': case 'rule-dubbelToep': case 'rule-scherpPassen':
+      case 'rule-wittewas': case 'rule-dubbelToep': case 'rule-scherpPassen': case 'rule-hoogsteDeelt':
         var k = a.slice(5); c.rules[k] = !c.rules[k]; render(); break;
       case 'create': createTable(false); break;
       case 'start-practice':
