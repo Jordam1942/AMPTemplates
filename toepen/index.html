@@ -323,7 +323,7 @@
 (function () {
   'use strict';
   var KEY = 'toepen-scorebord-v2';
-  var VERSION = '19 (hoogste stand deelt)';
+  var VERSION = '20 (vuile was)';
   var COLORS = ['#2f7d5b', '#c2571a', '#3b6fb6', '#a63d6b', '#7a5bb5', '#a67c12', '#1f8a8f', '#5d6b1f'];
   var app = document.getElementById('app');
   var layer = document.getElementById('layer');
@@ -587,14 +587,14 @@
   }
 
   function doWas(id, by, ok) {
-    snapshot('witte was van ' + byId(id).name);
+    snapshot('vuile was van ' + byId(id).name);
     var g = G(), pts = g.rules.wasStraf, melder = byId(id);
     var target = by ? byId(ok ? by : id) : null;
-    var msg = melder.name + ' heeft witte was';
+    var msg = melder.name + ' heeft vuile was';
     if (target) {
       target.score += pts;
       var out = checkOut(target);
-      msg = ok ? 'Echte witte was. ' + target.name + ' +' + pts : 'Vuile was! ' + target.name + ' +' + pts;
+      msg = ok ? 'Echte vuile was. ' + target.name + ' +' + pts : 'Gebluft! ' + target.name + ' +' + pts;
       if (out) msg += ' en ligt eruit';
     } else {
       msg += ': nieuwe kaarten';
@@ -794,8 +794,8 @@
         return '<button data-act="rulev" data-scope="' + scope + '" data-k="' + k + '" data-v="' + o[0] + '" aria-pressed="' + (R[k] === o[0]) + '">' + o[1] + '</button>';
       }).join('') + '</div>';
     }
-    return toggleRow('rule', R.wittewas, 'Witte was', 'Wie alleen boeren, vrouwen, heren en azen heeft, mag die laten zien en nieuwe kaarten vragen. Je krijgt een knop om het te melden en te controleren.', a + 'wittewas"') +
-      (R.wittewas ? '<div class="sub-opt"><div class="small muted">Straf bij een vuile was (gebluft), of voor wie onterecht controleert:</div>' +
+    return toggleRow('rule', R.wittewas, 'Vuile was', 'Wie alleen boeren, vrouwen, heren en azen heeft, mag die laten zien en nieuwe kaarten vragen. Je krijgt een knop om het te melden en te controleren.', a + 'wittewas"') +
+      (R.wittewas ? '<div class="sub-opt"><div class="small muted">Straf als iemand blufte, of voor wie onterecht controleert:</div>' +
         seg('wasStraf', [[1, '1 punt'], [2, '2 punten']]) + '</div>' : '') +
       toggleRow('rule', R.dubbelToep, 'Twee keer achter elkaar toepen', 'Uit: na jouw toep moet eerst iemand anders toepen.', a + 'dubbelToep"') +
       toggleRow('rule', R.scherpPassen, 'Passen als je op scherp staat', 'Uit: wie op scherp staat, moet altijd mee.', a + 'scherpPassen"') +
@@ -902,7 +902,7 @@
         '<button class="btn toep" data-act="sheet-toep">Toep!</button></div>' +
         (toepNames ? '<div class="toeplog">Getoept: ' + toepNames + '</div>' : '') +
         '<div class="stake-row"><button class="btn finish" data-act="sheet-finish">Wie wint de ronde?</button>' +
-        (g.rules.wittewas ? '<button class="btn wit" data-act="sheet-was">Witte was</button>' : '') + '</div></div>';
+        (g.rules.wittewas ? '<button class="btn wit" data-act="sheet-was">Vuile was</button>' : '') + '</div></div>';
     }
     ui.bump = false;
 
@@ -973,10 +973,10 @@
         html += '<div class="log-item"><div class="log-head"><span>Correctie</span><span class="muted small">ronde ' + e.round + '</span></div>' +
           '<div class="small">' + nameOf(e.id) + ' ' + (e.d > 0 ? '+' : '−') + Math.abs(e.d) + '</div></div>';
       } else if (e.t === 'was') {
-        var wtxt = !e.by ? nameOf(e.id) + ' heeft witte was en ruilt' :
-          (e.ok ? nameOf(e.by) + ' controleert ' + nameOf(e.id) + ': echte witte was, ' + nameOf(e.by) + ' +' + e.pts :
-                  nameOf(e.by) + ' controleert ' + nameOf(e.id) + ': vuile was, ' + nameOf(e.id) + ' +' + e.pts);
-        html += '<div class="log-item"><div class="log-head"><span>Witte was</span><span class="muted small">ronde ' + e.round + '</span></div>' +
+        var wtxt = !e.by ? nameOf(e.id) + ' heeft vuile was en ruilt' :
+          (e.ok ? nameOf(e.by) + ' controleert ' + nameOf(e.id) + ': echte vuile was, ' + nameOf(e.by) + ' +' + e.pts :
+                  nameOf(e.by) + ' controleert ' + nameOf(e.id) + ': gebluft, ' + nameOf(e.id) + ' +' + e.pts);
+        html += '<div class="log-item"><div class="log-head"><span>Vuile was</span><span class="muted small">ronde ' + e.round + '</span></div>' +
           '<div class="small">' + wtxt + '</div></div>';
       } else if (e.t === 'join') {
         html += '<div class="log-item"><div class="log-head"><span>Nieuwe speler</span><span class="muted small">ronde ' + e.round + '</span></div>' +
@@ -1249,7 +1249,7 @@
     mine.push('Af bij <b>' + limit + '</b> ' + 'strafpunten.');
     mine.push(R.dubbelToep ? 'Je mag <b>meerdere keren achter elkaar</b> toepen.' : 'Na jouw toep moet <b>eerst iemand anders</b> toepen.');
     mine.push(R.scherpPassen ? 'Op scherp mag je <b>gewoon passen</b>.' : 'Op scherp <b>moet je mee</b>; passen mag niet.');
-    mine.push(R.wittewas ? 'Witte was <b>telt</b>. Straf bij vuile was of onterecht controleren: <b>' + straf(R.wasStraf) + '</b>.' : 'Witte was <b>telt niet</b>.');
+    mine.push(R.wittewas ? 'Vuile was <b>telt</b>. Straf bij bluffen of onterecht controleren: <b>' + straf(R.wasStraf) + '</b>.' : 'Vuile was <b>telt niet</b>.');
     mine.push(R.hoogsteDeelt ? 'De speler met de <b>meeste strafpunten deelt</b>.' : 'De deler <b>schuift door</b> naar links.');
     mine.push(R.inkopen ? 'Inkopen mag, <b>' + (R.inkopenMax === 0 ? 'onbeperkt' : R.inkopenMax === 1 ? '1 keer' : '2 keer') + '</b> per speler.' : 'Inkopen <b>mag niet</b>.');
     var notes = state.setup.notes || '';
@@ -1272,9 +1272,9 @@
       sec('Op scherp en af', '<ul><li><b>Op scherp</b>: je hebt er ' + (limit - 1) + '; nog één strafpunt en je ligt eruit. ' +
         (R.scherpPassen ? 'Je mag gewoon passen.' : 'Bij jullie moet je dan altijd mee.') + '</li><li><b>Af</b>: ' + limit + ' of meer strafpunten. Je speelt niet meer mee' +
         (R.inkopen ? ', tenzij je je inkoopt.' : '.') + '</li></ul>') +
-      (R.wittewas ? sec('Witte was en vuile was', '<ul><li><b>Witte was</b>: je hebt alleen boeren, vrouwen, heren en azen. Leg ze open en vraag 4 nieuwe kaarten.</li>' +
+      (R.wittewas ? sec('Vuile was en bluffen', '<ul><li><b>Vuile was</b>: je hebt alleen boeren, vrouwen, heren en azen. Leg ze open en vraag 4 nieuwe kaarten.</li>' +
         '<li>Een ander mag controleren. <b>Klopt het</b>, dan krijgt de controleur ' + straf(R.wasStraf) + '.</li>' +
-        '<li>Was het <b>gebluft</b> (vuile was), dan krijgt de melder ' + straf(R.wasStraf) + '.</li><li>Tik in de app op <b>Witte was</b> om het bij te houden.</li></ul>') : '') +
+        '<li>Was het <b>gebluft</b>, dan krijgt de melder ' + straf(R.wasStraf) + '.</li><li>Tik in de app op <b>Vuile was</b> om het bij te houden.</li></ul>') : '') +
       (R.inkopen ? sec('Inkopen', '<p>Wie eruit ligt, mag ' + (R.inkopenMax === 0 ? 'zo vaak als nodig' : R.inkopenMax === 1 ? 'één keer' : 'twee keer') +
         ' terugkomen. Je krijgt dan net zoveel strafpunten als de hoogste speler die nog meedoet. Dat kan alleen als die niet zelf al op scherp staat.</p>') : '') +
       sec('Tips', '<ul><li>Bewaar je hoogste kaart van een kleur voor de <b>laatste slag</b>.</li><li>Toepen met een slechte hand is <b>bluffen</b>. Dat mag en hoort erbij.</li><li>Sta je op scherp? Kijk goed wie er toept voordat je meegaat.</li></ul>') +
@@ -1300,7 +1300,7 @@
       step(2, 'Een ronde bijhouden', [
         'Iemand toept? Tik op ' + k('Toep!', 'dark') + ' en kies wie. De inzet gaat 1 omhoog.',
         'Gaat iemand niet mee? Tik bij die speler op ' + k('Gaat niet mee', 'warn') + '. Die krijgt meteen zijn punten.',
-        'Iemand meldt witte was? Tik op ' + k('Witte was', 'dark') + ' en volg de vragen.',
+        'Iemand meldt vuile was? Tik op ' + k('Vuile was', 'dark') + ' en volg de vragen.',
         'Ronde voorbij? Tik op ' + k('Wie wint de ronde?', 'dark') + ' en kies wie de laatste slag haalde. De rest krijgt de inzet.',
         'De volgende ronde begint vanzelf. De app wijst de nieuwe deler aan: de volgende speler, of met de huisregel <b>Hoogste stand deelt</b> de speler met de meeste strafpunten.'
       ]) +
@@ -1440,15 +1440,15 @@
       } else if (sh.type === 'board') {
         inner = '<h2>Ranglijst</h2>' + allTimeHtml();
       } else if (sh.type === 'was1') {
-        inner = '<h2>Wie heeft witte was?</h2><p class="muted small">Alleen boeren, vrouwen, heren en azen in de hand.</p>' +
+        inner = '<h2>Wie heeft vuile was?</h2><p class="muted small">Alleen boeren, vrouwen, heren en azen in de hand.</p>' +
           '<div class="pick">' + inRoundPlayers().map(function (p) {
             return '<button data-act="was-who" data-id="' + p.id + '">' + avatar(p, true) + '<span>' + esc(p.name) + '</span></button>';
           }).join('') + '</div>';
       } else if (sh.type === 'was2') {
         var m = byId(sh.id), straf = G().rules.wasStraf;
-        inner = '<h2>' + esc(m.name) + ' meldt witte was</h2>' +
+        inner = '<h2>' + esc(m.name) + ' meldt vuile was</h2>' +
           '<p class="muted small">Wil iemand de kaarten zien? Klopt het, dan krijgt de controleur ' + plural(straf, 'strafpunt', 'strafpunten') +
-          '. Is het een vuile was, dan krijgt ' + esc(m.name) + ' ' + plural(straf, 'strafpunt', 'strafpunten') + '.</p>' +
+          '. Is het gebluft, dan krijgt ' + esc(m.name) + ' ' + plural(straf, 'strafpunt', 'strafpunten') + '.</p>' +
           '<button class="btn primary" data-act="was-none" data-id="' + m.id + '">Niemand controleert, gewoon ruilen</button>' +
           '<div class="label">Of: wie controleert?</div>' +
           '<div class="pick">' + inRoundPlayers().filter(function (p) { return p.id !== m.id; }).map(function (p) {
@@ -1457,8 +1457,8 @@
       } else if (sh.type === 'was3') {
         var m3 = byId(sh.id), c3 = byId(sh.by), st3 = G().rules.wasStraf;
         inner = '<h2>Klopte het?</h2><p class="muted small">' + esc(c3.name) + ' bekijkt de kaarten van ' + esc(m3.name) + '.</p>' +
-          '<button class="btn big" data-act="was-ok" data-id="' + m3.id + '" data-by="' + c3.id + '">Ja, echte witte was · ' + esc(c3.name) + ' +' + st3 + '</button>' +
-          '<button class="btn warn big" data-act="was-fake" data-id="' + m3.id + '" data-by="' + c3.id + '">Nee, vuile was · ' + esc(m3.name) + ' +' + st3 + '</button>';
+          '<button class="btn big" data-act="was-ok" data-id="' + m3.id + '" data-by="' + c3.id + '">Ja, echte vuile was · ' + esc(c3.name) + ' +' + st3 + '</button>' +
+          '<button class="btn warn big" data-act="was-fake" data-id="' + m3.id + '" data-by="' + c3.id + '">Nee, gebluft · ' + esc(m3.name) + ' +' + st3 + '</button>';
       } else if (sh.type === 'adjust') {
         var p = byId(sh.id);
         inner = '<div class="row">' + avatar(p) + '<div><h2>' + esc(p.name) + '</h2><div class="muted small">Nu ' + plural(p.score, 'strafpunt', 'strafpunten') + '</div></div></div>' +

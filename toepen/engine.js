@@ -177,7 +177,7 @@
         break;
 
       case 'was':
-        if (!canWas(G, id)) return fail('Witte was kan nu niet.');
+        if (!canWas(G, id)) return fail('Vuile was kan nu niet.');
         var old = r.hands[id];
         r.hands[id] = r.stock.splice(r.stock.length - 4, 4);
         r.stock = shuffle(r.stock.concat(old));

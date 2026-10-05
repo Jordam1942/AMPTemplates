@@ -685,7 +685,7 @@
       return '<button data-act="limit" data-v="' + l + '" aria-pressed="' + (c.limit === l) + '">' + l + '</button>';
     }).join('') + '</div></div>';
     html += '<div class="panel"><div class="label">Huisregels</div>' +
-      toggleRow('rule-wittewas', c.rules.wittewas, 'Witte was', 'Wie alleen boeren, vrouwen, heren en azen heeft, mag 4 nieuwe kaarten nemen. De app controleert het.') +
+      toggleRow('rule-wittewas', c.rules.wittewas, 'Vuile was', 'Wie alleen boeren, vrouwen, heren en azen heeft, mag 4 nieuwe kaarten nemen. De app controleert het.') +
       toggleRow('rule-dubbelToep', c.rules.dubbelToep, 'Twee keer achter elkaar toepen', 'Uit: na jouw toep moet eerst iemand anders toepen.') +
       toggleRow('rule-scherpPassen', c.rules.scherpPassen, 'Passen als je op scherp staat', 'Uit: wie op scherp staat, moet mee.') +
       toggleRow('rule-hoogsteDeelt', c.rules.hoogsteDeelt, 'Hoogste stand deelt', 'Wie de meeste strafpunten heeft, deelt. Bij gelijke stand: op volgorde van de tafel. Uit: de deler schuift door.') + '</div>';
@@ -832,7 +832,7 @@
     if (folded) html += '<div class="small muted" style="text-align:center">Je hebt gepast en doet deze ronde niet meer mee.</div>';
     var acts = '';
     if (E.canToep(G, S.uid)) acts += '<button class="btn toep" data-act="toep">Toep! → ' + (r.stake + 1) + '</button>';
-    if (E.canWas(G, S.uid)) acts += '<button class="btn warn" data-act="was">Witte was</button>';
+    if (E.canWas(G, S.uid)) acts += '<button class="btn warn" data-act="was">Vuile was</button>';
     if (acts) html += '<div class="acts">' + acts + '</div>';
     html += '<div class="cards">' + (hand.length ? hand.map(function (c) {
       var ok = legal.indexOf(c) >= 0;
@@ -854,7 +854,7 @@
         (R.dubbelToep ? '<li>Je mag meerdere keren achter elkaar toepen.</li>' : '<li>Na jouw toep moet eerst een ander toepen.</li>') +
         (R.scherpPassen ? '' : '<li>Sta je <b>op scherp</b>, dan moet je mee.</li>') + '<li>Gaat niemand mee, dan wint de toeper de ronde.</li></ul>') +
       sec('Strafpunten', '<p>Wie aan het eind nog meedoet en de laatste slag niet haalt, krijgt de inzet.</p>') +
-      (R.wittewas ? sec('Witte was', '<p>Heb je alleen boeren, vrouwen, heren en azen, dan verschijnt de knop <b>Witte was</b> voordat er een kaart is gespeeld. Je krijgt 4 nieuwe kaarten van de stapel. Bluffen kan niet: de app controleert het. Bij 8 spelers is er geen stapel, dan kan het niet.</p>') : '') +
+      (R.wittewas ? sec('Vuile was', '<p>Heb je alleen boeren, vrouwen, heren en azen, dan verschijnt de knop <b>Vuile was</b> voordat er een kaart is gespeeld. Je krijgt 4 nieuwe kaarten van de stapel. Bluffen kan niet: de app controleert het. Bij 8 spelers is er geen stapel, dan kan het niet.</p>') : '') +
       '</div>';
   }
   function guideHtml() {
