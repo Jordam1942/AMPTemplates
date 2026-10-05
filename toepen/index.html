@@ -314,7 +314,7 @@
     return COLORS.filter(function (c) { return used.indexOf(c) < 0; })[0] || COLORS[state.setup.roster.length % COLORS.length];
   }
   if (state.game) rulesOf(state.game);
-  var ui = { tab: 'spel', sheet: null, toast: '', confirmReset: false, bump: false };
+  var ui = { tab: 'spel', sheet: null, toast: '', bump: false };
   var toastTimer = null;
 
   function fresh() {
@@ -520,6 +520,20 @@
     sound(target ? 'tick' : 'round'); buzz(30);
     checkWinner();
     commit();
+  }
+
+  function resetPotje() {
+    snapshot();
+    var g = G();
+    g.players.forEach(function (p) { p.score = 0; p.out = false; p.bought = 0; });
+    g.round = newRound(1);
+    g.log = [];
+    g.done = false;
+    toast('Stand op 0 gezet. Vergissing? Tik op Ongedaan.');
+    buzz(40);
+    ui.tab = 'spel';
+    commit();
+    window.scrollTo(0, 0);
   }
 
   function canBuyIn(p) {
@@ -761,6 +775,11 @@
       html += '</div>';
     });
     html += '</div>';
+
+    var dirty = g.log.length || r.toeps.length || g.players.some(function (p) { return p.score > 0; });
+    if (!w && dirty) {
+      html += '<button class="btn ghost wide" style="margin-top:14px" data-act="ask" data-v="potje">Stand op 0 zetten</button>';
+    }
 
     if (!w && r.n === 1 && !r.toeps.length && !g.log.length) {
       html += '<div class="panel small muted" style="margin-top:14px"><div><b style="color:var(--fg)">Zo werkt het:</b> tik op <b>Toep!</b> als iemand toept. ' +
@@ -1059,7 +1078,7 @@
       '</div>';
     html += '<div class="panel"><div class="label">Dit potje</div>' +
       '<div class="label" style="margin-top:4px">Huisregels</div>' + rulesPanel(g.rules, 'game') +
-      '<div class="row"><button class="btn ghost" style="flex:1" data-act="again">Potje opnieuw beginnen</button>' +
+      '<div class="row"><button class="btn ghost" style="flex:1" data-act="ask" data-v="potje">Stand op 0 zetten</button>' +
       '<button class="btn ghost" style="flex:1" data-act="tosetup">Spelers wijzigen</button></div></div>';
     html += '<div class="panel"><div class="label">Spelregels in het kort</div>' +
       rule('Kaarten en volgorde', 'Je speelt met 32 kaarten (7 tot en met aas). Iedereen krijgt er vier. Van laag naar hoog: boer, vrouw, heer, aas, 7, 8, 9, 10. Je moet kleur bekennen; wie de laatste slag haalt, wint de ronde.') +
@@ -1071,13 +1090,13 @@
       (g.rules.scherpPassen ? '' : rule('Op scherp moet je mee', 'Wie op scherp staat, mag niet passen na een toep.')) +
       (g.rules.inkopen ? rule('Inkopen', 'Wie eruit ligt, mag ' + (g.rules.inkopenMax === 0 ? 'zo vaak als nodig' : g.rules.inkopenMax === 1 ? 'één keer' : 'twee keer') + ' terugkomen op de stand van de hoogste speler die nog meedoet.') : '') +
       '</div>';
-    html += '<div class="panel"><div class="label">Gegevens</div>';
-    if (ui.confirmReset) {
-      html += '<div class="confirm"><b>Alles wissen? Spelers, stand, ranglijst en eerdere potjes gaan verloren.</b>' +
-        '<div class="row"><button class="btn ghost" data-act="reset-no">Nee</button><button class="btn danger" data-act="reset-yes">Ja, alles wissen</button></div></div>';
-    } else {
-      html += '<button class="btn danger" data-act="reset-ask">Alles wissen</button>';
-    }
+    html += '<div class="panel"><div class="label">Opnieuw beginnen</div>';
+    html += '<button class="btn ghost" data-act="ask" data-v="potje">Stand op 0 zetten</button>' +
+      '<p class="small muted">Alleen de strafpunten van dit potje. Spelers en ranglijst blijven.</p>' +
+      '<button class="btn warn" data-act="ask" data-v="ranglijst">Ranglijst wissen</button>' +
+      '<p class="small muted">Gewonnen potjes, records en eerdere potjes. Spelers blijven.</p>' +
+      '<button class="btn danger" data-act="ask" data-v="alles">Alles wissen</button>' +
+      '<p class="small muted">Ook je spelerslijst. Alleen je instellingen blijven.</p>';
     html += '<p class="small muted">De stand wordt alleen op dit toestel bewaard.</p></div>';
     return html + '</div>';
   }
@@ -1112,6 +1131,15 @@
           '<div class="pick">' + inRoundPlayers().map(function (p) {
             return '<button data-act="finish" data-id="' + p.id + '">' + avatar(p, true) + '<span>' + esc(p.name) + '</span></button>';
           }).join('') + '</div>';
+      } else if (sh.type === 'confirm') {
+        var games = Math.max(state.archive.length, Object.keys(state.wins).reduce(function (n, k) { return n + state.wins[k]; }, 0));
+        var C = {
+          potje: ['Stand op 0 zetten?', 'Alle strafpunten van dit potje gaan naar 0 en je begint weer bij ronde 1. Spelers, huisregels en de ranglijst blijven staan. Vergist? Daarna kun je het nog terugdraaien met Ongedaan.', 'Ja, stand op 0', 'warn'],
+          ranglijst: ['Ranglijst wissen?', 'De ranglijst, records en ' + plural(games, 'eerder potje', 'eerdere potjes') + ' worden gewist. Je spelers en het potje van nu blijven staan. Dit kun je niet ongedaan maken.', 'Ja, ranglijst wissen', 'danger'],
+          alles: ['Alles wissen?', 'Je spelerslijst, het potje van nu, de ranglijst en alle eerdere potjes worden gewist. Alleen je instellingen blijven. Dit kun je niet ongedaan maken.', 'Ja, alles wissen', 'danger']
+        }[sh.what];
+        inner = '<h2>' + C[0] + '</h2><p class="muted">' + C[1] + '</p>' +
+          '<button class="btn big ' + C[3] + '" data-act="do-reset" data-v="' + sh.what + '">' + C[2] + '</button>';
       } else if (sh.type === 'share') {
         var stext = shareText(sh.kind);
         inner = '<h2>' + (sh.kind === 'board' ? 'Ranglijst delen' : 'Stand delen') + '</h2>' +
@@ -1215,7 +1243,7 @@
         startGame(act2.map(function (r) { return r.name; }), s.limit, s.rules, dealerIndex(), act2.map(function (r) { return r.color; }));
         sound('round');
         commit(); break;
-      case 'tab': ui.tab = v; ui.confirmReset = false; render(); window.scrollTo(0, 0); break;
+      case 'tab': ui.tab = v; render(); window.scrollTo(0, 0); break;
       case 'undo': undo(); break;
       case 'sheet-toep': ui.sheet = { type: 'toep' }; renderLayer(); break;
       case 'sheet-finish': ui.sheet = { type: 'finish' }; renderLayer(); break;
@@ -1254,11 +1282,13 @@
       case 'sound': state.settings.sound = !state.settings.sound; commit(); if (state.settings.sound) sound('tick'); break;
       case 'vibrate': state.settings.vibrate = !state.settings.vibrate; commit(); buzz(30); break;
       case 'wake': state.settings.wake = !state.settings.wake; commit(); break;
-      case 'reset-ask': ui.confirmReset = true; render(); break;
-      case 'reset-no': ui.confirmReset = false; render(); break;
-      case 'reset-yes':
+      case 'ask': ui.sheet = { type: 'confirm', what: v }; renderLayer(); break;
+      case 'do-reset':
+        ui.sheet = null;
+        if (v === 'potje') { resetPotje(); break; }
+        if (v === 'ranglijst') { state.wins = {}; state.archive = []; toast('Ranglijst gewist'); commit(); break; }
         var keepSettings = state.settings;
-        state = fresh(); state.settings = keepSettings; ui.confirmReset = false; ui.tab = 'spel';
+        state = fresh(); state.settings = keepSettings; ui.tab = 'spel';
         toast('Alles gewist'); commit(); window.scrollTo(0, 0); break;
     }
   });
