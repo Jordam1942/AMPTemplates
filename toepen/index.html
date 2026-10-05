@@ -259,6 +259,21 @@
   .mp-link b { display: block; font-size: 1.05rem; }
   .mp-link span { font-size: 0.85rem; opacity: 0.85; }
   .mp-link .go { margin-left: auto; font-weight: 800; font-size: 1.3rem; }
+  /* Compact player list: one line per player (default from 6 players) */
+  .players.compact { gap: 6px; }
+  .player.compact { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 12px; }
+  .player.compact .p-who { flex: 1; min-width: 0; display: grid; gap: 5px; }
+  .player.compact .p-line { display: flex; align-items: center; gap: 6px; min-width: 0; }
+  .player.compact .p-name { font-size: 1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 0 1 auto; }
+  .player.compact .chip { font-size: 0.66rem; padding: 1px 6px; flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+  .player.compact .bar { height: 4px; }
+  .player.compact .p-score { font-size: 1.45rem; padding: 2px 4px; flex: none; }
+  .player.compact .p-score small { font-size: 0.75rem; }
+  .player.compact .btn.sm { min-height: 36px; padding: 0 10px; font-size: 0.82rem; flex: none; }
+  .wrap.compact .stake { padding: 10px 12px; gap: 8px; margin-bottom: 10px; }
+  .wrap.compact .stake .big { font-size: 2.2rem; }
+  .wrap.compact .stake .btn.finish, .wrap.compact .stake .btn.wit { min-height: 40px; }
+  .wrap.compact .stake .btn.toep { min-height: 44px; }
   .icon-round { width: 40px; min-height: 40px; padding: 0; font-weight: 800; font-size: 1.15rem; }
   .topbar h1 { white-space: nowrap; }
   details.rule { border-bottom: 1px solid var(--line); padding: 10px 0; }
@@ -324,7 +339,7 @@
 (function () {
   'use strict';
   var KEY = 'toepen-scorebord-v2';
-  var VERSION = '21 (duidelijke kopjes)';
+  var VERSION = '22 (compacte spelerslijst)';
   var COLORS = ['#2f7d5b', '#c2571a', '#3b6fb6', '#a63d6b', '#7a5bb5', '#a67c12', '#1f8a8f', '#5d6b1f'];
   var app = document.getElementById('app');
   var layer = document.getElementById('layer');
@@ -872,6 +887,13 @@
       '</div>';
   }
 
+  function isCompact() {
+    var m = state.settings.compact || 'auto';
+    if (m === 'on') return true;
+    if (m === 'off') return false;
+    return G().players.filter(function (p) { return !p.left; }).length >= 6;
+  }
+
   function renderSpel() {
     var g = G(), r = g.round, w = winner(), html = '';
     var dealer = g.players[g.dealer];
@@ -907,7 +929,9 @@
     }
     ui.bump = false;
 
-    html += '<div class="players">';
+    var compact = isCompact();
+    app.classList.toggle('compact', compact);
+    html += '<div class="players' + (compact ? ' compact' : '') + '">';
     g.players.forEach(function (p, i) {
       var af = p.out, passed = (p.id in r.passed) && !p.left && r.passed[p.id] > 0, waiting = (p.id in r.passed) && r.passed[p.id] === 0;
       var scherp = !af && p.score === g.limit - 1;
@@ -920,7 +944,19 @@
       if (passed) chips += '<span class="chip">Gepast +' + r.passed[p.id] + '</span>';
       if (waiting) chips += '<span class="chip">Doet mee vanaf volgende ronde</span>';
       if (p.bought) chips += '<span class="chip">Ingekocht</span>';
-      html += '<div class="player' + (af ? ' af' : '') + (p.left ? ' left' : '') + (scherp ? ' scherp' : '') + (passed ? ' passed' : '') + '">' +
+      var cls = (af ? ' af' : '') + (p.left ? ' left' : '') + (scherp ? ' scherp' : '') + (passed ? ' passed' : '');
+      var lastT = r.toeps.length ? r.toeps[r.toeps.length - 1].by : null;
+      var canPass = !w && !af && !passed && !(scherp && !g.rules.scherpPassen) && r.stake > 1 && p.id !== lastT && inRoundPlayers().length > 1;
+      if (compact) {
+        html += '<div class="player compact' + cls + '">' + avatar(p, true) +
+          '<div class="p-who"><div class="p-line"><span class="p-name">' + esc(p.name) + '</span>' + chips + '</div>' +
+          '<div class="bar"><span style="width:' + pct + '%"></span></div></div>' +
+          (canPass ? '<button class="btn warn sm" data-act="pass" data-id="' + p.id + '" aria-label="' + esc(p.name) + ' gaat niet mee">Past +' + (r.stake - 1) + '</button>' : '') +
+          (canBuyIn(p) ? '<button class="btn sm" data-act="buyin" data-id="' + p.id + '">Inkopen</button>' : '') +
+          '<button class="p-score" data-act="sheet-adjust" data-id="' + p.id + '" aria-label="Score van ' + esc(p.name) + ' aanpassen">' + p.score + '<small>/' + g.limit + '</small></button></div>';
+        return;
+      }
+      html += '<div class="player' + cls + '">' +
         '<div class="p-head">' + avatar(p) +
           '<div class="p-who"><div class="p-name">' + esc(p.name) + '</div>' + (chips ? '<div class="chips">' + chips + '</div>' : '') + '</div>' +
           '<button class="p-score" data-act="sheet-adjust" data-id="' + p.id + '" aria-label="Score van ' + esc(p.name) + ' aanpassen">' + p.score + '<small> / ' + g.limit + '</small></button></div>' +
@@ -1350,6 +1386,10 @@
       [['system', 'Systeem'], ['light', 'Licht'], ['dark', 'Donker']].map(function (o) {
         return '<button data-act="theme" data-v="' + o[0] + '" aria-pressed="' + (st.theme === o[0]) + '">' + o[1] + '</button>';
       }).join('') + '</div>' +
+      '<div class="label" style="margin-top:4px">Spelerslijst</div><div class="seg">' +
+      [['auto', 'Automatisch'], ['on', 'Compact'], ['off', 'Groot']].map(function (o) {
+        return '<button data-act="compact" data-v="' + o[0] + '" aria-pressed="' + ((st.compact || 'auto') === o[0]) + '">' + o[1] + '</button>';
+      }).join('') + '</div><p class="small muted">Automatisch: één regel per speler vanaf 6 spelers.</p>' +
       toggleRow('sound', st.sound, 'Geluid', 'Korte tonen bij toepen, rondes en de winnaar.') +
       toggleRow('vibrate', st.vibrate, 'Trillen', 'Voelbare tik bij elke actie.') +
       toggleRow('wake', st.wake, 'Scherm aan houden', 'Je telefoon gaat niet op slot tijdens het spel.') +
@@ -1621,6 +1661,7 @@
         s.firstDealerName = G() ? G().players[G().dealer].name : s.firstDealerName;
         state.screen = 'setup'; ui.tab = 'spel'; commit(); window.scrollTo(0, 0); break;
       case 'theme': state.settings.theme = v; applyTheme.touched = true; commit(); break;
+      case 'compact': state.settings.compact = v; commit(); break;
       case 'sound': state.settings.sound = !state.settings.sound; commit(); if (state.settings.sound) sound('tick'); break;
       case 'vibrate': state.settings.vibrate = !state.settings.vibrate; commit(); buzz(30); break;
       case 'wake': state.settings.wake = !state.settings.wake; commit(); break;

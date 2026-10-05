@@ -140,6 +140,17 @@
   .pl .who { flex: 1; min-width: 0; } .pl .who b { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .pl .score { font-family: var(--font-display); font-weight: 800; font-size: 1.5rem; } .pl .score small { font-size: 0.8rem; color: var(--muted); }
   .chips { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 2px; }
+  /* Many players: tighter rows so the whole table fits with less scrolling */
+  .players.compact { gap: 5px; margin-top: 10px; }
+  .players.compact .pl { padding: 6px 10px; gap: 6px; border-radius: 12px; }
+  .players.compact .avatar { width: 28px; height: 28px; font-size: 0.85rem; }
+  .players.compact .pl .head { gap: 8px; }
+  .players.compact .pl .who { display: flex; align-items: center; gap: 6px; }
+  .players.compact .pl .who b { flex: 0 1 auto; min-width: 0; }
+  .players.compact .chips { margin-top: 0; flex-wrap: nowrap; overflow: hidden; }
+  .players.compact .chip { font-size: 0.66rem; padding: 1px 6px; }
+  .players.compact .score { font-size: 1.25rem; }
+  .players.compact .pc.sm { width: 34px; height: 48px; }
 
   .result { background: var(--warn-soft); color: var(--fg); border-radius: 14px; padding: 12px 14px; font-weight: 600; text-align: center; }
   .winner { background: var(--accent); color: var(--accent-fg); border-radius: 20px; padding: 22px 18px; display: grid; gap: 12px; text-align: center; }
@@ -786,7 +797,7 @@
     }
 
     // Players and scores
-    html += '<div class="players">';
+    html += '<div class="players' + (G.seats.length >= 6 ? ' compact' : '') + '">';
     G.seats.forEach(function (id) {
       var p = G.players[id], cls = 'pl';
       if (r.turn === id && G.phase === 'play') cls += ' turn';
