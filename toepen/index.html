@@ -250,6 +250,8 @@
   .guide-step h3 { margin-bottom: 4px; }
   .guide-step ul { margin: 4px 0 0; padding-left: 18px; display: grid; gap: 4px; color: var(--muted); }
   .guide-step li b { color: var(--fg); }
+  .history-bar { display: flex; gap: 8px; margin: -4px 0 12px; }
+  .history-bar .btn { flex: 1; min-width: 0; min-height: 40px; font-size: 0.85rem; padding: 0 6px; white-space: nowrap; }
   .icon-round { width: 40px; min-height: 40px; padding: 0; font-weight: 800; font-size: 1.15rem; }
   .topbar h1 { white-space: nowrap; }
   details.rule { border-bottom: 1px solid var(--line); padding: 10px 0; }
@@ -331,6 +333,7 @@
   }
   var state = load() || fresh();
   state.archive = state.archive || [];
+  state.redo = state.redo || [];
   rulesOf(state.setup);
   if (!state.setup.roster) {
     state.setup.roster = (state.setup.names || []).map(function (n, i) { return { name: n, on: true, color: COLORS[i % COLORS.length] }; });
@@ -353,6 +356,7 @@
       settings: { theme: 'system', sound: true, vibrate: true, wake: true },
       game: null,
       undo: [],
+      redo: [],
       wins: {},
       archive: []
     };
@@ -398,22 +402,40 @@
       startedAt: Date.now()
     };
     state.undo = [];
+    state.redo = [];
     state.screen = 'game';
     ui.tab = 'spel';
   }
 
-  function snapshot() {
-    state.undo.push(JSON.stringify(state.game));
+  function snapshot(label) {
+    state.undo.push({ g: JSON.stringify(state.game), label: label || 'laatste actie' });
     if (state.undo.length > 60) state.undo.shift();
+    state.redo = [];
   }
+  function entryOf(e) { return typeof e === 'string' ? { g: e, label: 'laatste actie' } : e; }
   function undo() {
-    var prev = state.undo.pop();
-    if (!prev) return;
+    var e = state.undo.pop();
+    if (!e) return;
+    e = entryOf(e);
     var wasDone = G().done, w = winner();
-    state.game = JSON.parse(prev);
+    state.redo.push({ g: JSON.stringify(state.game), label: e.label });
+    state.game = JSON.parse(e.g);
     confetti.run = (confetti.run || 0) + 1;
     if (wasDone && !G().done && w && state.wins[w.name]) { state.wins[w.name]--; state.archive.pop(); }
-    toast('Laatste actie ongedaan gemaakt');
+    toast('Ongedaan: ' + e.label);
+    buzz(20);
+    commit();
+  }
+  function redo() {
+    var e = state.redo.pop();
+    if (!e) return;
+    var wasDone = G().done;
+    state.undo.push({ g: JSON.stringify(state.game), label: e.label });
+    state.game = JSON.parse(e.g);
+    var w = winner();
+    if (!wasDone && G().done && w) recordWin(w);
+    toast('Opnieuw gedaan: ' + e.label);
+    buzz(20);
     commit();
   }
 
@@ -435,6 +457,13 @@
     var w = winner();
     if (w && !G().done) {
       G().done = true;
+      recordWin(w);
+      sound('win'); buzz([60, 40, 60, 40, 160]);
+      setTimeout(confetti, 50);
+    }
+  }
+
+  function recordWin(w) {
       state.wins[w.name] = (state.wins[w.name] || 0) + 1;
       var g = G(), st = computeStats();
       state.archive.push({
@@ -444,13 +473,10 @@
         })
       });
       if (state.archive.length > 500) state.archive.shift();
-      sound('win'); buzz([60, 40, 60, 40, 160]);
-      setTimeout(confetti, 50);
-    }
   }
 
   function doToep(id) {
-    snapshot();
+    snapshot(byId(id).name + ' toept');
     var r = G().round;
     r.stake++;
     r.toeps.push({ by: id, to: r.stake });
@@ -464,7 +490,7 @@
   function doPass(id) {
     var r = G().round;
     if (r.stake < 2) return;
-    snapshot();
+    snapshot(byId(id).name + ' gaat niet mee');
     var p = byId(id), pts = r.stake - 1;
     p.score += pts;
     r.passed[id] = pts;
@@ -481,7 +507,7 @@
   }
 
   function finishRound(winId, skipSnapshot) {
-    if (!skipSnapshot) snapshot();
+    if (!skipSnapshot) snapshot('ronde ' + G().round.n + ', ' + byId(winId).name + ' wint');
     var g = G(), r = g.round;
     var losers = inRoundPlayers().filter(function (p) { return p.id !== winId; });
     var outs = [];
@@ -508,7 +534,7 @@
   function adjust(id, d) {
     var p = byId(id);
     if (d < 0 && p.score <= 0) return;
-    snapshot();
+    snapshot('correctie bij ' + byId(id).name);
     p.score += d;
     if (p.score < G().limit && p.out && !p.left && d < 0) p.out = false;
     checkOut(p);
@@ -521,7 +547,7 @@
     var p = byId(id), g = G();
     var others = alive();
     if (!others.length) return;
-    snapshot();
+    snapshot(byId(id).name + ' koopt zich in');
     var top = Math.max.apply(null, others.map(function (o) { return o.score; }));
     p.score = top; p.out = false; p.bought++;
     g.log.push({ t: 'buy', id: id, to: top, round: g.round.n, at: Date.now() });
@@ -531,7 +557,7 @@
   }
 
   function doWas(id, by, ok) {
-    snapshot();
+    snapshot('witte was van ' + byId(id).name);
     var g = G(), pts = g.rules.wasStraf, melder = byId(id);
     var target = by ? byId(ok ? by : id) : null;
     var msg = melder.name + ' heeft witte was';
@@ -551,13 +577,13 @@
   }
 
   function resetPotje() {
-    snapshot();
+    snapshot('stand op 0');
     var g = G();
     g.players.forEach(function (p) { p.score = 0; p.out = false; p.bought = 0; });
     g.round = newRound(1);
     g.log = [];
     g.done = false;
-    toast('Stand op 0 gezet. Vergissing? Tik op Ongedaan.');
+    toast('Stand op 0 gezet. Vergissing? Tik op Ongedaan maken.');
     buzz(40);
     ui.tab = 'spel';
     commit();
@@ -567,7 +593,7 @@
   function quitPlayer(id) {
     var g = G(), p = byId(id);
     if (p.left) return;
-    snapshot();
+    snapshot(byId(id).name + ' stopt');
     var wasDealer = g.players[g.dealer].id === id;
     p.left = true; p.out = true;
     if (wasDealer) g.dealer = nextDealer();
@@ -586,7 +612,7 @@
   function rejoinPlayer(id) {
     var g = G(), p = byId(id);
     if (!p.left || g.done) return;
-    snapshot();
+    snapshot(byId(id).name + ' doet weer mee');
     p.left = false; p.out = p.score >= g.limit;
     g.round.passed[id] = 0;
     g.log.push({ t: 'back', id: id, round: g.round.n, at: Date.now() });
@@ -785,8 +811,12 @@
     html += '<div class="topbar"><div class="meta"><h1>Ronde ' + r.n + '</h1>' +
       '<div class="small muted">Deler: <b>' + esc(dealer.name) + '</b> · af bij ' + g.limit + '</div></div>' +
       '<div class="tools"><button class="btn ghost sm icon-round" data-act="sheet-rules" aria-label="Spelregels">?</button>' +
-      '<button class="btn ghost sm" data-act="sheet-share" data-v="stand" aria-label="Stand delen">Delen</button>' +
-      '<button class="btn ghost sm icon-round" data-act="undo" aria-label="Ongedaan maken" title="Ongedaan maken"' + (state.undo.length ? '' : ' disabled') + '>↶</button></div></div>';
+      '<button class="btn ghost sm" data-act="sheet-share" data-v="stand" aria-label="Stand delen">Delen</button></div></div>';
+    var lastU = state.undo.length ? entryOf(state.undo[state.undo.length - 1]).label : '';
+    var lastR = state.redo.length ? state.redo[state.redo.length - 1].label : '';
+    html += '<div class="history-bar">' +
+      '<button class="btn ghost" data-act="undo"' + (lastU ? ' aria-label="Ongedaan maken: ' + esc(lastU) + '"' : ' disabled') + '>↶ Ongedaan maken</button>' +
+      '<button class="btn ghost" data-act="redo"' + (lastR ? ' aria-label="Opnieuw doen: ' + esc(lastR) + '"' : ' disabled') + '>↷ Opnieuw doen</button></div>';
 
     if (w) {
       var rounds = g.log.filter(function (e) { return e.t === 'round'; }).length;
@@ -1199,7 +1229,8 @@
         'De volgende ronde begint vanzelf, met de volgende deler.'
       ]) +
       step(3, 'Vergissing herstellen', [
-        'Tik rechtsboven op ' + k('↶') + ' om de laatste actie terug te draaien. Dat kan meerdere keren.',
+        'Tik op ' + k('↶ Ongedaan maken') + ' om de laatste actie terug te draaien. Dat kan meerdere keren achter elkaar.',
+        'Toch goed? Tik op ' + k('↷ Opnieuw doen') + ' om het weer terug te zetten. Doe je eerst iets nieuws, dan vervalt Opnieuw doen.',
         'Of tik op iemands <b>score</b> om er met de hand 1 bij te doen of af te halen.'
       ]) +
       step(4, 'Wat de labels betekenen', [
@@ -1223,7 +1254,7 @@
         k('Delen via WhatsApp') + ' opent WhatsApp met het bericht al klaar. ' + k('Als plaatje') + ' maakt een plaatje van het scorebord.'
       ]) +
       step(8, 'Opnieuw beginnen', [
-        k('Stand op 0 zetten') + ' wist alleen dit potje; met ' + k('↶') + ' kun je het terugzetten.',
+        k('Stand op 0 zetten') + ' wist alleen dit potje; met ' + k('↶ Ongedaan maken') + ' kun je het terugzetten.',
         'Onder <b>Meer</b> kun je ook de <b>ranglijst</b> of <b>alles</b> wissen. De app vraagt altijd eerst of je het zeker weet.'
       ]) +
       step(9, 'Goed om te weten', [
@@ -1311,7 +1342,7 @@
       } else if (sh.type === 'confirm') {
         var games = Math.max(state.archive.length, Object.keys(state.wins).reduce(function (n, k) { return n + state.wins[k]; }, 0));
         var C = {
-          potje: ['Stand op 0 zetten?', 'Alle strafpunten van dit potje gaan naar 0 en je begint weer bij ronde 1. Spelers, huisregels en de ranglijst blijven staan. Vergist? Daarna kun je het nog terugdraaien met Ongedaan.', 'Ja, stand op 0', 'warn'],
+          potje: ['Stand op 0 zetten?', 'Alle strafpunten van dit potje gaan naar 0 en je begint weer bij ronde 1. Spelers, huisregels en de ranglijst blijven staan. Vergist? Daarna kun je het nog terugdraaien met Ongedaan maken.', 'Ja, stand op 0', 'warn'],
           ranglijst: ['Ranglijst wissen?', 'De ranglijst, records en ' + plural(games, 'eerder potje', 'eerdere potjes') + ' worden gewist. Je spelers en het potje van nu blijven staan. Dit kun je niet ongedaan maken.', 'Ja, ranglijst wissen', 'danger'],
           alles: ['Alles wissen?', 'Je spelerslijst, het potje van nu, de ranglijst en alle eerdere potjes worden gewist. Alleen je instellingen blijven. Dit kun je niet ongedaan maken.', 'Ja, alles wissen', 'danger']
         }[sh.what];
@@ -1433,6 +1464,7 @@
         commit(); break;
       case 'tab': ui.tab = v; render(); window.scrollTo(0, 0); break;
       case 'undo': undo(); break;
+      case 'redo': redo(); break;
       case 'sheet-toep': ui.sheet = { type: 'toep' }; renderLayer(); break;
       case 'sheet-finish': ui.sheet = { type: 'finish' }; renderLayer(); break;
       case 'sheet-was': ui.sheet = { type: 'was1' }; renderLayer(); break;
