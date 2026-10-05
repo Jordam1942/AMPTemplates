@@ -224,6 +224,20 @@
   .record { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 0.92rem; }
   .record:last-child { border-bottom: 0; }
   .record span:last-child { text-align: right; font-weight: 700; }
+  .cards { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; margin-top: 8px; }
+  .cards-cap { display: flex; justify-content: space-between; max-width: 268px; font-size: 0.75rem; color: var(--muted); font-weight: 700; margin-top: 4px; }
+  .card { width: 30px; height: 42px; border-radius: 6px; border: 1.5px solid var(--line); background: var(--surface); display: grid; place-items: center; font-family: var(--font-display); font-weight: 800; color: var(--fg); }
+  .card.hi { border-color: var(--accent); color: var(--accent); }
+  .cards .arrow { font-size: 0.8rem; color: var(--muted); font-weight: 700; }
+  .rulebook p, .rulebook li { color: var(--muted); }
+  .rulebook ul, .rulebook ol { margin: 6px 0 0; padding-left: 20px; display: grid; gap: 4px; }
+  .rulebook b { color: var(--fg); }
+  .rulebook .example { background: var(--sunken); border-radius: 10px; padding: 10px 12px; margin-top: 8px; font-size: 0.9rem; }
+  .table-rules { background: var(--accent-soft); border-radius: 12px; padding: 12px; display: grid; gap: 4px; }
+  .table-rules li { color: var(--fg); }
+  textarea#notes { width: 100%; min-height: 110px; border-radius: 10px; border: 1.5px solid var(--line); background: var(--bg); color: var(--fg); padding: 10px 12px; font: inherit; resize: vertical; }
+  .icon-round { width: 40px; min-height: 40px; padding: 0; font-weight: 800; font-size: 1.15rem; }
+  .topbar h1 { white-space: nowrap; }
   details.rule { border-bottom: 1px solid var(--line); padding: 10px 0; }
   details.rule:last-child { border-bottom: 0; }
   details.rule summary { font-weight: 700; cursor: pointer; min-height: 32px; display: flex; align-items: center; }
@@ -701,7 +715,8 @@
 
     app.innerHTML =
       '<div class="stack" style="gap:16px">' +
-        '<div class="stack" style="gap:4px;padding-top:8px"><h1>Toepen</h1><p class="muted">Zet aan wie er meespeelt, zet ze op volgorde van de tafel en kies je huisregels.</p></div>' +
+        '<div class="topbar" style="padding-top:8px;margin-bottom:0"><div class="meta"><h1>Toepen</h1></div><button class="btn ghost sm" data-act="sheet-rules">Spelregels</button></div>' +
+        '<p class="muted" style="margin-top:-8px">Zet aan wie er meespeelt, zet ze op volgorde van de tafel en kies je huisregels.</p>' +
         '<div class="panel"><div class="label">Spelers · ' + act.length + ' van ' + s.roster.length + ' doen mee</div>' + rows +
           (s.roster.length < 20 ? '<button class="btn ghost" data-act="add">+ Nieuwe speler</button>' : '') +
           '<p class="small muted">Namen blijven bewaard. Zet iemand uit als die er een keer niet bij is.</p>' +
@@ -724,8 +739,9 @@
 
     html += '<div class="topbar"><div class="meta"><h1>Ronde ' + r.n + '</h1>' +
       '<div class="small muted">Deler: <b>' + esc(dealer.name) + '</b> · af bij ' + g.limit + '</div></div>' +
-      '<div class="tools"><button class="btn ghost sm" data-act="sheet-share" data-v="stand" aria-label="Stand delen">Delen</button>' +
-      '<button class="btn ghost sm" data-act="undo"' + (state.undo.length ? '' : ' disabled') + '>↶ Ongedaan</button></div></div>';
+      '<div class="tools"><button class="btn ghost sm icon-round" data-act="sheet-rules" aria-label="Spelregels">?</button>' +
+      '<button class="btn ghost sm" data-act="sheet-share" data-v="stand" aria-label="Stand delen">Delen</button>' +
+      '<button class="btn ghost sm icon-round" data-act="undo" aria-label="Ongedaan maken" title="Ongedaan maken"' + (state.undo.length ? '' : ' disabled') + '>↶</button></div></div>';
 
     if (w) {
       var rounds = g.log.filter(function (e) { return e.t === 'round'; }).length;
@@ -1066,6 +1082,50 @@
     return html + '</div>';
   }
 
+  function rulebookHtml() {
+    var g = state.game, R = g ? g.rules : state.setup.rules, limit = g ? g.limit : state.setup.limit;
+    var straf = function (n) { return plural(n, 'strafpunt', 'strafpunten'); };
+    var cards = ['B', 'V', 'H', 'A', '7', '8', '9', '10'].map(function (c, i) {
+      return '<span class="card' + (i === 7 ? ' hi' : '') + '">' + c + '</span>';
+    }).join('');
+    var mine = [];
+    mine.push('Af bij <b>' + limit + '</b> ' + 'strafpunten.');
+    mine.push(R.dubbelToep ? 'Je mag <b>meerdere keren achter elkaar</b> toepen.' : 'Na jouw toep moet <b>eerst iemand anders</b> toepen.');
+    mine.push(R.scherpPassen ? 'Op scherp mag je <b>gewoon passen</b>.' : 'Op scherp <b>moet je mee</b>; passen mag niet.');
+    mine.push(R.wittewas ? 'Witte was <b>telt</b>. Straf bij vuile was of onterecht controleren: <b>' + straf(R.wasStraf) + '</b>.' : 'Witte was <b>telt niet</b>.');
+    mine.push(R.inkopen ? 'Inkopen mag, <b>' + (R.inkopenMax === 0 ? 'onbeperkt' : R.inkopenMax === 1 ? '1 keer' : '2 keer') + '</b> per speler.' : 'Inkopen <b>mag niet</b>.');
+    var notes = state.setup.notes || '';
+    var sec = function (title, body, open) { return '<details class="rule"' + (open ? ' open' : '') + '><summary>' + title + '</summary><div class="rulebook">' + body + '</div></details>'; };
+    return '<div class="table-rules"><div class="label" style="color:var(--accent)">Bij jullie aan tafel</div><ul>' +
+        mine.map(function (m) { return '<li>' + m + '</li>'; }).join('') + '</ul></div>' +
+      '<div>' +
+      sec('Doel van het spel', '<p>Zo min mogelijk strafpunten halen. Wie <b>' + limit + '</b> strafpunten heeft, ligt eruit. Wie als laatste overblijft, wint het potje.</p>', true) +
+      sec('Kaarten en volgorde', '<p>Je speelt met <b>32 kaarten</b>: van elke kleur de 7, 8, 9, 10, boer, vrouw, heer en aas. Van laag naar hoog:</p>' +
+        '<div class="cards">' + cards + '</div><div class="cards-cap"><span>← laagste</span><span>hoogste →</span></div>' +
+        '<p style="margin-top:8px">De <b>10 is de hoogste</b> kaart en de <b>boer de laagste</b>. Er is geen troef.</p>', true) +
+      sec('Delen en uitkomen', '<ul><li>De deler geeft iedereen <b>4 kaarten</b>.</li><li>De speler links van de deler komt uit (legt de eerste kaart).</li><li>Na elke ronde schuift de deler één plek door. De app houdt bij wie er deelt.</li></ul>') +
+      sec('Slagen spelen', '<ul><li>Je moet <b>kleur bekennen</b>: speel dezelfde kleur als de eerste kaart als je die hebt.</li><li>Heb je die kleur niet, dan mag je elke kaart opgooien, maar daarmee kun je de slag niet winnen.</li><li>De hoogste kaart van de gevraagde kleur wint de slag. Die speler komt de volgende slag uit.</li><li>Er zijn 4 slagen per ronde. Alleen <b>de laatste slag telt</b>: wie die haalt, wint de ronde.</li></ul>') +
+      sec('Toepen', '<ul><li>Een ronde begint met een inzet van <b>1</b>.</li><li>Iedereen die nog meedoet, mag op elk moment <b>toepen</b> (op tafel kloppen). De inzet gaat dan 1 omhoog.</li>' +
+        '<li>De anderen kiezen meteen: <b>meegaan</b> of <b>passen</b>.</li><li>Wie past, krijgt de inzet van <b>vóór</b> die toep als strafpunten en doet niet meer mee aan de ronde.</li>' +
+        '<li>' + (R.dubbelToep ? 'Je mag ook zelf nog een keer toepen.' : 'Na jouw toep moet eerst iemand anders toepen voordat jij weer mag.') + '</li>' +
+        '<li>Gaat niemand mee, dan wint de toeper de ronde meteen.</li></ul>') +
+      sec('Strafpunten tellen', '<p>Wie aan het eind nog meedoet en de laatste slag <b>niet</b> haalt, krijgt de inzet als strafpunten.</p>' +
+        '<div class="example"><b>Voorbeeld.</b> Anna toept: inzet 2. Bram past en krijgt 1. Cas toept: inzet 3. Anna gaat mee, Dirk past en krijgt 2. Anna haalt de laatste slag: Cas krijgt 3.</div>') +
+      sec('Op scherp en af', '<ul><li><b>Op scherp</b>: je hebt er ' + (limit - 1) + '; nog één strafpunt en je ligt eruit. ' +
+        (R.scherpPassen ? 'Je mag gewoon passen.' : 'Bij jullie moet je dan altijd mee.') + '</li><li><b>Af</b>: ' + limit + ' of meer strafpunten. Je speelt niet meer mee' +
+        (R.inkopen ? ', tenzij je je inkoopt.' : '.') + '</li></ul>') +
+      (R.wittewas ? sec('Witte was en vuile was', '<ul><li><b>Witte was</b>: je hebt alleen boeren, vrouwen, heren en azen. Leg ze open en vraag 4 nieuwe kaarten.</li>' +
+        '<li>Een ander mag controleren. <b>Klopt het</b>, dan krijgt de controleur ' + straf(R.wasStraf) + '.</li>' +
+        '<li>Was het <b>gebluft</b> (vuile was), dan krijgt de melder ' + straf(R.wasStraf) + '.</li><li>Tik in de app op <b>Witte was</b> om het bij te houden.</li></ul>') : '') +
+      (R.inkopen ? sec('Inkopen', '<p>Wie eruit ligt, mag ' + (R.inkopenMax === 0 ? 'zo vaak als nodig' : R.inkopenMax === 1 ? 'één keer' : 'twee keer') +
+        ' terugkomen. Je krijgt dan net zoveel strafpunten als de hoogste speler die nog meedoet. Dat kan alleen als die niet zelf al op scherp staat.</p>') : '') +
+      sec('Tips', '<ul><li>Bewaar je hoogste kaart van een kleur voor de <b>laatste slag</b>.</li><li>Toepen met een slechte hand is <b>bluffen</b>. Dat mag en hoort erbij.</li><li>Sta je op scherp? Kijk goed wie er toept voordat je meegaat.</li></ul>') +
+      '</div>' +
+      '<div class="stack" style="gap:8px"><label class="label" for="notes">Eigen afspraken</label>' +
+      '<textarea id="notes" placeholder="Bijvoorbeeld: armoede telt ook, bij 3 azen mag je ruilen…">' + esc(notes) + '</textarea>' +
+      '<p class="small muted">Wordt automatisch bewaard en staat hier elke keer weer.</p></div>';
+  }
+
   function renderMeer() {
     var st = state.settings, g = G(), html = '<div class="topbar"><h1>Meer</h1></div><div class="stack">';
     html += '<div class="panel"><div class="label">Weergave</div><div class="seg">' +
@@ -1080,16 +1140,9 @@
       '<div class="label" style="margin-top:4px">Huisregels</div>' + rulesPanel(g.rules, 'game') +
       '<div class="row"><button class="btn ghost" style="flex:1" data-act="ask" data-v="potje">Stand op 0 zetten</button>' +
       '<button class="btn ghost" style="flex:1" data-act="tosetup">Spelers wijzigen</button></div></div>';
-    html += '<div class="panel"><div class="label">Spelregels in het kort</div>' +
-      rule('Kaarten en volgorde', 'Je speelt met 32 kaarten (7 tot en met aas). Iedereen krijgt er vier. Van laag naar hoog: boer, vrouw, heer, aas, 7, 8, 9, 10. Je moet kleur bekennen; wie de laatste slag haalt, wint de ronde.') +
-      rule('Toepen', 'Een ronde begint met inzet 1. Wie toept, verhoogt de inzet met 1. De anderen kiezen: meegaan of passen. Wie past, krijgt de inzet van vóór die toep en doet niet meer mee aan de ronde.') +
-      rule('Strafpunten', 'Iedereen die aan het eind nog meedoet en de laatste slag niet haalt, krijgt de inzet als strafpunten. Gaat niemand mee met een toep, dan wint de toeper de ronde.') +
-      rule('Op scherp', 'Nog één strafpunt en je ligt eruit. Speel dus voorzichtig.') +
-      (g.rules.wittewas ? rule('Witte was', 'Heb je alleen boeren, vrouwen, heren en azen, dan mag je dat melden en nieuwe kaarten vragen. Een ander mag controleren: klopt het, dan krijgt de controleur ' + plural(g.rules.wasStraf, 'strafpunt', 'strafpunten') + '; was het gebluft (vuile was), dan krijgt de melder ze.') : '') +
-      rule('Opnieuw toepen', g.rules.dubbelToep ? 'Je mag meerdere keren achter elkaar toepen.' : 'Na jouw toep moet eerst iemand anders toepen voordat jij weer mag.') +
-      (g.rules.scherpPassen ? '' : rule('Op scherp moet je mee', 'Wie op scherp staat, mag niet passen na een toep.')) +
-      (g.rules.inkopen ? rule('Inkopen', 'Wie eruit ligt, mag ' + (g.rules.inkopenMax === 0 ? 'zo vaak als nodig' : g.rules.inkopenMax === 1 ? 'één keer' : 'twee keer') + ' terugkomen op de stand van de hoogste speler die nog meedoet.') : '') +
-      '</div>';
+    html += '<div class="panel"><div class="label">Spelregels</div>' +
+      '<p class="small muted">Alle regels, jullie huisregels en eigen afspraken op één plek.</p>' +
+      '<button class="btn" data-act="sheet-rules">Spelregels openen</button></div>';
     html += '<div class="panel"><div class="label">Opnieuw beginnen</div>';
     html += '<button class="btn ghost" data-act="ask" data-v="potje">Stand op 0 zetten</button>' +
       '<p class="small muted">Alleen de strafpunten van dit potje. Spelers en ranglijst blijven.</p>' +
@@ -1114,7 +1167,7 @@
   function renderLayer() {
     var html = '';
     var sh = ui.sheet;
-    if (sh && (state.game || sh.type === 'board' || (sh.type === 'share' && sh.kind === 'board'))) {
+    if (sh && (state.game || sh.type === 'board' || sh.type === 'rules' || (sh.type === 'share' && sh.kind === 'board'))) {
       var inner = '';
       if (sh.type === 'toep') {
         var rt = G().round.toeps, lastT = rt.length ? rt[rt.length - 1].by : null;
@@ -1131,6 +1184,8 @@
           '<div class="pick">' + inRoundPlayers().map(function (p) {
             return '<button data-act="finish" data-id="' + p.id + '">' + avatar(p, true) + '<span>' + esc(p.name) + '</span></button>';
           }).join('') + '</div>';
+      } else if (sh.type === 'rules') {
+        inner = '<h2>Spelregels Toepen</h2>' + rulebookHtml();
       } else if (sh.type === 'confirm') {
         var games = Math.max(state.archive.length, Object.keys(state.wins).reduce(function (n, k) { return n + state.wins[k]; }, 0));
         var C = {
@@ -1195,6 +1250,7 @@
   // ---------- Events ----------
   document.addEventListener('input', function (e) {
     var t = e.target;
+    if (t.id === 'notes') { state.setup.notes = t.value; save(); return; }
     if (t.matches && t.matches('input[data-i]')) {
       var rr = state.setup.roster[+t.dataset.i], wasDealer = state.setup.firstDealerName === rr.name;
       rr.name = t.value;
@@ -1283,6 +1339,7 @@
       case 'vibrate': state.settings.vibrate = !state.settings.vibrate; commit(); buzz(30); break;
       case 'wake': state.settings.wake = !state.settings.wake; commit(); break;
       case 'ask': ui.sheet = { type: 'confirm', what: v }; renderLayer(); break;
+      case 'sheet-rules': ui.sheet = { type: 'rules' }; renderLayer(); break;
       case 'do-reset':
         ui.sheet = null;
         if (v === 'potje') { resetPotje(); break; }
