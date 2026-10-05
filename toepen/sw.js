@@ -1,6 +1,6 @@
 // Offline support: app files are cached on install, everything else
 // (including Google Fonts) is cached the first time it loads.
-var CACHE = 'toepen-v2';
+var CACHE = 'toepen-v3';
 var FILES = ['./', 'index.html', 'manifest.webmanifest', 'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png'];
 
 self.addEventListener('install', function (e) {
@@ -19,7 +19,8 @@ self.addEventListener('activate', function (e) {
 self.addEventListener('fetch', function (e) {
   if (e.request.method !== 'GET') return;
   e.respondWith(
-    fetch(e.request).then(function (res) {
+    // Same-origin files skip the browser's HTTP cache, so a new version shows up right away.
+    (new URL(e.request.url).origin === self.location.origin ? fetch(e.request.url, { cache: 'no-cache' }) : fetch(e.request)).then(function (res) {
       var copy = res.clone();
       caches.open(CACHE).then(function (c) { c.put(e.request, copy); });
       return res;
