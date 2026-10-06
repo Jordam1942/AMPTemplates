@@ -1652,7 +1652,7 @@
     }
     var uq = S.role === 'host' && S.G && S.view === 'table' && !S.black && undoTarget();
     var qh = G && S.view === 'table' && G.phase === 'play' && G.seats.indexOf(S.uid) >= 0 && !(G.players[S.uid] || {}).out && !S.black;
-    if (qh && !(S.sheet && S.sheet.type === 'chat')) html += '<button class="handfab" data-act="hand-quick" aria-pressed="' + handHidden() + '" aria-label="' + (handHidden() ? 'Kaarten altijd tonen' : 'Kaarten verbergen') + '">' + (handHidden() ? '👁' : '🙈') + '</button>';
+    if (qh && !(S.sheet && S.sheet.type === 'chat')) html += '<button class="handfab" data-act="hand-quick" aria-pressed="' + (handHidden() && !S.peek) + '" aria-label="' + (handHidden() && !S.peek ? 'Kaarten even tonen' : 'Kaarten verbergen') + '">' + (handHidden() && !S.peek ? '👁' : '🙈') + '</button>';
     if (uq && !(S.sheet && S.sheet.type === 'chat')) html += '<button class="undofab" data-act="undo-ask" aria-label="Laatste actie ongedaan maken">↶</button>';
     if (chatAvailable() && !(S.sheet && S.sheet.type === 'chat')) html += '<button class="chatfab" data-act="chat-open" aria-label="Chat' + (S.chatUnread ? ', ' + S.chatUnread + ' nieuw' : '') + '">💬' + (S.chatUnread ? '<span class="badge">' + S.chatUnread + '</span>' : '') + '</button>';
     var nm = S.black ? needsMe(G) : '';
@@ -1867,7 +1867,11 @@
       case 'play': S.peek = false; act({ type: 'play', card: v }); break;
       case 'hand-opts': S.sheet = { type: 'hand' }; renderLayer(); break;
       case 'hand-mode': setHandMode(v); break;
-      case 'hand-quick': setHandMode(handHidden() ? 'zichtbaar' : 'verborgen'); break;
+      case 'hand-quick':
+        // one tap always does what the icon says: hide what is showing, show what is hidden
+        if (handHidden()) { S.peek = !S.peek; clearTimeout(S.peekTimer); if (S.peek) S.peekTimer = setTimeout(function () { S.peek = false; render(); }, 20000); render(); }
+        else setHandMode('verborgen');
+        break;
       case 'black-on':
         S.sheet = null;
         if (needsMe(viewGame())) { renderLayer(); toast('Je bent aan de beurt. Speel eerst, dan kan het scherm zwart.'); break; }
