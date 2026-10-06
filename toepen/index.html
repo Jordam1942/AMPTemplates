@@ -8,6 +8,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
+<script src="prefs.js"></script>
 <title>Toepen</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -21,17 +22,24 @@
     --font-body: "Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
   }
   @media (prefers-color-scheme: dark) {
-    :root {
+    :root:not([data-theme="light"]) {
       --bg: #121a15; --surface: #1b251f; --fg: #e8eee8; --muted: #9eaba1; --line: #2c3a31;
       --accent: #4fbf89; --accent-fg: #0d1a13; --accent-soft: #1f3a2b;
       --warn: #f0a160; --warn-soft: #3a2817; --danger: #f2b8b5; --danger-soft: #4a1f1c; --scrim: rgba(0, 0, 0, 0.65);
       color-scheme: dark;
     }
   }
+  :root[data-theme="dark"] {
+    --bg: #121a15; --surface: #1b251f; --fg: #e8eee8; --muted: #9eaba1; --line: #2c3a31;
+    --accent: #4fbf89; --accent-fg: #0d1a13; --accent-soft: #1f3a2b;
+    --warn: #f0a160; --warn-soft: #3a2817; --danger: #f2b8b5; --danger-soft: #4a1f1c; --scrim: rgba(0, 0, 0, 0.65);
+    color-scheme: dark;
+  }
   * { box-sizing: border-box; }
   html { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
   body { margin: 0; background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 16px; line-height: 1.4; -webkit-tap-highlight-color: transparent; }
-  .wrap { max-width: 560px; margin: 0 auto; padding: 14px 16px 24px; min-height: calc(100vh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)); min-height: calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; gap: 12px; }
+  html, body { height: 100%; }
+  .wrap { max-width: 560px; margin: 0 auto; padding: 14px 16px 24px; min-height: 100%; display: flex; flex-direction: column; gap: 12px; }
   .down { margin-top: auto; } /* choices sit at the bottom: in reach of the thumb */
   h1, h2 { font-family: var(--font-display); margin: 0; letter-spacing: -0.01em; }
   h1 { font-size: 1.9rem; font-weight: 800; } h2 { font-size: 1.25rem; font-weight: 700; }
@@ -60,10 +68,20 @@
   .pager { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
   .pager .btn { min-width: 112px; }
   .scrim { position: fixed; inset: 0; background: var(--scrim); z-index: 30; display: flex; align-items: flex-end; justify-content: center; }
-  .sheet { background: var(--surface); width: 100%; max-width: 560px; border-radius: 20px 20px 0 0; padding: 18px 16px calc(18px + env(safe-area-inset-bottom, 0px)); display: grid; gap: 12px; max-height: 92vh; }
+  .sheet { background: var(--surface); width: 100%; max-width: 560px; border-radius: 20px 20px 0 0; padding: 18px 16px calc(18px + env(safe-area-inset-bottom, 0px)); display: grid; gap: 12px; max-height: 92%; }
   .grip { width: 40px; height: 4px; border-radius: 2px; background: var(--line); justify-self: center; }
   input.text { width: 100%; height: 50px; border-radius: 12px; border: 1.5px solid var(--line); background: var(--bg); color: var(--fg); padding: 0 14px; font: inherit; font-size: 1.05rem; }
   .lines { display: grid; gap: 4px; font-size: 0.95rem; } .lines div { display: flex; justify-content: space-between; gap: 8px; }
+  .seg { display: flex; gap: 6px; flex-wrap: wrap; }
+  .seg button { flex: 1; min-height: 46px; padding: 0 14px; border-radius: 10px; font-weight: 700; border: 1.5px solid var(--line); text-align: center; }
+  .seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+  .panel { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 14px 16px; display: grid; gap: 10px; }
+  .toggle-row { display: flex; align-items: center; gap: 12px; min-height: 52px; width: 100%; }
+  .toggle-row .txt { flex: 1; min-width: 0; } .toggle-row .txt div:last-child { font-size: 0.85rem; color: var(--muted); }
+  .switch { width: 50px; height: 30px; border-radius: 15px; background: var(--line); position: relative; flex: none; transition: background 0.2s; }
+  .switch::after { content: ""; position: absolute; top: 3px; left: 3px; width: 24px; height: 24px; border-radius: 50%; background: var(--surface); transition: transform 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.25); }
+  .toggle-row[aria-checked="true"] .switch { background: var(--accent); }
+  .toggle-row[aria-checked="true"] .switch::after { transform: translateX(20px); }
   .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: var(--fg); color: var(--bg); padding: 10px 16px; border-radius: 12px; z-index: 40; pointer-events: none; font-weight: 600; }
   .compact .choice { padding: 12px 14px; } .compact .choice span { font-size: 0.85rem; }
   .tight .choice span { display: none; } .tight .choice { padding: 10px 14px; }
@@ -79,7 +97,7 @@
   var S = window.ToepenSaves;
   var app = document.getElementById('app'), layer = document.getElementById('layer');
   var ui = { view: new URLSearchParams(location.search).get('view') === 'saves' ? 'saves' : 'menu', page: 0, size: 4, sheet: null, toast: '' };
-  var toastTimer;
+  var toastTimer, VERSION = '34';
 
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
   function when(ts) { try { return new Date(ts).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' }); } catch (e) { return ''; } }
@@ -107,7 +125,23 @@
     h += '<a class="choice" href="spelen.html?start=multi"><b>Multiplayer</b><span>Met vrienden, ieder op de eigen telefoon.</span></a>';
     h += '<a class="choice" href="scorebord.html"><b>Scores bijhouden</b><span>Het scorebord voor aan tafel, met echte kaarten.</span></a>';
     var n = S.count();
-    h += '<button class="choice" data-act="saves"><b>Opgeslagen spellen en scores <span class="go">→</span></b><span>' + (n ? n + ' opgeslagen. Open er een, of bewaar je spel onder een naam.' : 'Bewaar een spel met de ranglijst onder een naam.') + '</span></button></div>';
+    h += '<button class="choice" data-act="saves"><b>Opgeslagen spellen en scores <span class="go">→</span></b><span>' + (n ? n + ' opgeslagen. Open er een, of bewaar je spel onder een naam.' : 'Bewaar een spel met de ranglijst onder een naam.') + '</span></button>' +
+      '<button class="btn ghost" data-act="settings">Instellingen</button></div>';
+    return h;
+  }
+  function toggle(act, on, title, sub) {
+    return '<button class="toggle-row" role="switch" aria-checked="' + !!on + '" data-act="' + act + '"><div class="txt"><div><b>' + title + '</b></div><div>' + sub + '</div></div><span class="switch" aria-hidden="true"></span></button>';
+  }
+  function renderSettings() {
+    var pr = window.ToepenPrefs.get(), h = '';
+    h += '<div class="topbar"><div class="meta"><h1>Instellingen</h1><div class="small muted">Geldt voor het hele spel</div></div><button class="btn ghost sm" data-act="menu">← Terug</button></div><div class="stack down">';
+    h += '<div class="panel"><div class="label">Thema</div><div class="seg">' + [['system', 'Systeem'], ['light', 'Licht'], ['dark', 'Donker']].map(function (o) {
+      return '<button data-act="pref-theme" data-v="' + o[0] + '" aria-pressed="' + (pr.theme === o[0]) + '">' + o[1] + '</button>'; }).join('') + '</div></div>';
+    h += '<div class="panel">' + toggle('pref-sound', pr.sound, 'Geluid', 'Korte tonen bij toepen, rondes en de winnaar.') +
+      toggle('pref-vibrate', pr.vibrate, 'Trillen', 'Voelbare tik bij elke actie.') +
+      toggle('pref-wake', pr.wake, 'Scherm aan houden', 'Je telefoon gaat niet op slot tijdens het spel.') + '</div>';
+    h += '<a class="btn ghost" href="spelen.html?start=firebase">Firebase koppelen (multiplayer)</a>';
+    h += '<p class="small muted" style="text-align:center">Toepen · versie ' + VERSION + '</p></div>';
     return h;
   }
   function renderSaves() {
@@ -167,7 +201,7 @@
     var cls = '';
     for (var lvl = 0; lvl < 3; lvl++) {
       app.className = 'wrap' + cls;
-      app.innerHTML = ui.view === 'saves' ? renderSaves() : renderMenu();
+      app.innerHTML = ui.view === 'saves' ? renderSaves() : ui.view === 'settings' ? renderSettings() : renderMenu();
       if (document.documentElement.scrollHeight <= window.innerHeight + 1) break;
       if (ui.view === 'saves') { if (ui.size > 1) { ui.size--; continue; } break; }
       cls = lvl === 0 ? ' compact' : ' compact tight';
@@ -208,6 +242,10 @@
     var a = el.dataset.act, id = el.dataset.id, rec;
     switch (a) {
       case 'saves': ui.view = 'saves'; ui.page = 0; draw(); break;
+      case 'settings': ui.view = 'settings'; draw(); break;
+      case 'pref-theme': window.ToepenPrefs.set('theme', el.dataset.v); window.ToepenPrefs.apply(); draw(); break;
+      case 'pref-sound': case 'pref-vibrate': case 'pref-wake':
+        var pk = a.slice(5); window.ToepenPrefs.set(pk, !window.ToepenPrefs.get()[pk]); if (pk === 'vibrate' && navigator.vibrate) { try { navigator.vibrate(30); } catch (er2) {} } draw(); break;
       case 'menu': ui.view = 'menu'; ui.sheet = null; draw(); break;
       case 'page': ui.page += +el.dataset.v; draw(); break;
       case 'close': ui.sheet = null; draw(); break;

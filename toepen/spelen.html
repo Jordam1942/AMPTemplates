@@ -8,6 +8,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
+<script src="prefs.js"></script>
 <title>Toepen Multiplayer</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -24,7 +25,7 @@
     --font-body: "Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
   }
   @media (prefers-color-scheme: dark) {
-    :root {
+    :root:not([data-theme="light"]) {
       --bg: #121a15; --surface: #1b251f; --sunken: #16201a; --fg: #e8eee8; --muted: #9eaba1; --line: #2c3a31;
       --accent: #4fbf89; --accent-fg: #0d1a13; --accent-soft: #1f3a2b;
       --warn: #f0a160; --warn-soft: #3a2817; --danger: #f2b8b5; --danger-soft: #4a1f1c;
@@ -32,13 +33,22 @@
       color-scheme: dark;
     }
   }
+  :root[data-theme="dark"] {
+    --bg: #121a15; --surface: #1b251f; --sunken: #16201a; --fg: #e8eee8; --muted: #9eaba1; --line: #2c3a31;
+    --accent: #4fbf89; --accent-fg: #0d1a13; --accent-soft: #1f3a2b;
+    --warn: #f0a160; --warn-soft: #3a2817; --danger: #f2b8b5; --danger-soft: #4a1f1c;
+    --ink: #dfe9e1; --ink-fg: #121a15; --felt: #17432f; --felt-line: #24573f; --scrim: rgba(0, 0, 0, 0.65);
+    color-scheme: dark;
+  }
   * { box-sizing: border-box; }
   html { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
   body { margin: 0; background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 16px; line-height: 1.4; -webkit-tap-highlight-color: transparent; }
   .wrap { max-width: 560px; margin: 0 auto; padding-inline: 16px; padding-block: 12px 40px; }
   .wrap.has-hand { padding-bottom: 210px; }
   /* Menu screens: title on top, the choices at the bottom where the thumb is */
-  .wrap.menuview > .stack { display: flex; flex-direction: column; gap: 12px; min-height: calc(100vh - 52px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)); min-height: calc(100dvh - 52px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)); }
+  html, body { height: 100%; }
+  .wrap.menuview { min-height: 100%; display: flex; flex-direction: column; }
+  .wrap.menuview > .stack { display: flex; flex-direction: column; gap: 12px; flex: 1; }
   .wrap.menuview > .stack > .topbar + * { margin-top: auto; }
   h1, h2, h3 { font-family: var(--font-display); margin: 0; text-wrap: balance; letter-spacing: -0.01em; }
   h1 { font-size: 1.7rem; font-weight: 800; }
@@ -50,7 +60,7 @@
   button:focus-visible, input:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
   .muted { color: var(--muted); } .small { font-size: 0.875rem; }
   .label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 700; }
-  .stack { display: grid; gap: 12px; } .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .stack { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; } .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
   .num { font-variant-numeric: tabular-nums; }
   .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 48px; padding: 0 18px; border-radius: 12px; font-weight: 700; background: var(--accent-soft); color: var(--accent); text-align: center; text-decoration: none; }
   .btn.primary { background: var(--accent); color: var(--accent-fg); }
@@ -194,7 +204,7 @@
 
   /* Sheets */
   .scrim { position: fixed; inset: 0; background: var(--scrim); z-index: 20; display: flex; align-items: flex-end; justify-content: center; }
-  .sheet { background: var(--surface); width: 100%; max-width: 560px; border-radius: 20px 20px 0 0; padding: 18px 16px calc(18px + env(safe-area-inset-bottom, 0px)); display: grid; gap: 14px; max-height: 88vh; overflow-y: auto; grid-template-columns: minmax(0, 1fr); }
+  .sheet { background: var(--surface); width: 100%; max-width: 560px; border-radius: 20px 20px 0 0; padding: 18px 16px calc(18px + env(safe-area-inset-bottom, 0px)); display: grid; gap: 14px; max-height: 88%; overflow-y: auto; grid-template-columns: minmax(0, 1fr); }
   .sheet .grip { width: 40px; height: 4px; border-radius: 2px; background: var(--line); justify-self: center; }
   .rulebook p, .rulebook li { color: var(--muted); }
   .rulebook ul { margin: 6px 0 0; padding-left: 20px; display: grid; gap: 4px; }
@@ -321,7 +331,7 @@
   };
   var toastTimer;
   function toast(m) { S.toast = m; renderLayer(); clearTimeout(toastTimer); toastTimer = setTimeout(function () { S.toast = ''; renderLayer(); }, 2600); }
-  function buzz(p) { if (navigator.vibrate) { try { navigator.vibrate(p); } catch (e) {} } }
+  function buzz(p) { if (navigator.vibrate && (!window.ToepenPrefs || ToepenPrefs.get().vibrate)) { try { navigator.vibrate(p); } catch (e) {} } }
 
   /* ---------- Connection ---------- */
   var fbLoading = null;
@@ -1364,7 +1374,7 @@
 
   var lock = null;
   function wake() {
-    var want = S.view === 'table' && document.visibilityState === 'visible';
+    var want = S.view === 'table' && document.visibilityState === 'visible' && (!window.ToepenPrefs || ToepenPrefs.get().wake);
     if (want && !lock && navigator.wakeLock) navigator.wakeLock.request('screen').then(function (l) { lock = l; l.addEventListener('release', function () { lock = null; }); }).catch(function () {});
     else if (!want && lock) { lock.release().catch(function () {}); lock = null; }
   }
@@ -1400,7 +1410,7 @@
     } else if (navHist) {
       navHist = 0;
       if (S.view === 'table') { if (pushMark('nav')) navHist = 1; S.sheet = { type: 'menu' }; renderLayer(); return; }
-      if (S.deep && (S.view === 'mp0' || S.view === 'practice')) { location.href = 'index.html'; return; }
+      if (S.deep && (S.view === 'mp0' || S.view === 'practice' || S.view === 'fb')) { location.href = 'index.html'; return; }
       var par = parentView(); S.err = ''; S.view = par;
       if (par === 'home') { S.method = null; S.rl = null; }
       render();
@@ -1480,7 +1490,9 @@
       case 'copy': try { navigator.clipboard.writeText(v).then(function () { toast('Gekopieerd'); }); } catch (e5) { toast(v); } break;
       case 'menu': S.sheet = { type: 'menu' }; renderLayer(); break;
       case 'sheet-close': S.sheet = null; renderLayer(); break;
-      case 'home': S.view = 'home'; S.method = null; S.rl = null; render(); break;
+      case 'home':
+        if (S.deep && S.view === 'fb') { location.href = 'index.html'; break; }
+        S.view = 'home'; S.method = null; S.rl = null; render(); break;
       case 'go-practice': S.err = ''; S.view = 'practice'; c.bots = Math.max(c.bots, 3); render(); break;
       case 'mode': c.mode = v; render(); break;
       case 'limit': c.limit = +v; render(); break;
@@ -1528,6 +1540,10 @@
   S.urlCode = qcode ? qcode.toUpperCase() : null;
   // Coming from the main menu: go straight to the right screen, and Terug goes back to the menu
   var START = Q.get('start');
+  if (!qcode && START === 'firebase') {
+    S.deep = true; S.view = 'fb'; S.fb = { text: '', parsed: null, cfg: null, checks: [], running: false, done: false };
+    if (CFG && CFG_SRC !== 'app') S.fb.cfg = compactCfg(CFG);
+  }
   if (!qcode && (START === 'oefenen' || START === 'multi')) {
     S.deep = true; S.view = START === 'oefenen' ? 'practice' : 'mp0';
     if (START === 'oefenen') S.create.bots = Math.max(S.create.bots, 3);
