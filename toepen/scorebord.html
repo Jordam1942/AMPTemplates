@@ -172,6 +172,9 @@
   .chip.deler { background: var(--accent-soft); color: var(--accent); }
   .chip.af { background: var(--danger-soft); color: var(--danger); }
   .p-score { font-family: var(--font-display); font-weight: 800; font-size: 2rem; line-height: 1; font-variant-numeric: tabular-nums; padding: 4px 6px; border-radius: 10px; }
+  .p-score { display: inline-flex; align-items: baseline; gap: 4px; background: var(--sunken, var(--accent-soft)); border: 1px solid var(--line); }
+  .p-score .pen { align-self: center; color: var(--muted); flex: none; }
+  .player.compact .p-score .pen { width: 11px; height: 11px; }
   .p-score small { font-size: 0.85rem; color: var(--muted); font-weight: 600; }
   .tally { display: flex; flex-wrap: wrap; gap: 8px; min-height: 26px; align-items: center; color: var(--ink); }
   .tally svg { width: 30px; height: 26px; flex: none; }
@@ -1082,7 +1085,7 @@
           '<div class="bar"><span style="width:' + pct + '%"></span></div></div>' +
           (canPass ? '<button class="btn warn sm" data-act="pass" data-id="' + p.id + '" aria-label="' + esc(p.name) + ' gaat niet mee">Past +' + (r.stake - 1) + '</button>' : '') +
           (canBuyIn(p) ? '<button class="btn sm" data-act="buyin" data-id="' + p.id + '">Inkopen</button>' : '') +
-          '<button class="p-score" data-act="sheet-adjust" data-id="' + p.id + '" aria-label="Score van ' + esc(p.name) + ' aanpassen">' + p.score + '<small>/' + g.limit + '</small></button></div>';
+          '<button class="p-score" data-act="sheet-adjust" data-id="' + p.id + '" aria-label="Score van ' + esc(p.name) + ' aanpassen">' + p.score + '<small>/' + g.limit + '</small><svg class="pen" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button></div>';
         return;
       }
       // Medium step: no tally marks, buttons on the name line.
@@ -1092,7 +1095,7 @@
       html += '<div class="player' + cls + '">' +
         '<div class="p-head">' + avatar(p) +
           '<div class="p-who"><div class="p-name">' + esc(p.name) + '</div>' + (chips ? '<div class="chips">' + chips + '</div>' : '') + '</div>' + inline +
-          '<button class="p-score" data-act="sheet-adjust" data-id="' + p.id + '" aria-label="Score van ' + esc(p.name) + ' aanpassen">' + p.score + '<small> / ' + g.limit + '</small></button></div>' +
+          '<button class="p-score" data-act="sheet-adjust" data-id="' + p.id + '" aria-label="Score van ' + esc(p.name) + ' aanpassen">' + p.score + '<small> / ' + g.limit + '</small><svg class="pen" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button></div>' +
         (medium ? '' : '<div class="tally" aria-label="' + p.score + ' strafpunten">' + tally(p.score) + '</div>') +
         '<div class="bar"><span style="width:' + pct + '%"></span></div>';
       if (medium) { html += '</div>'; return; }
