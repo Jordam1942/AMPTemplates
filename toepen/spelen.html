@@ -350,7 +350,8 @@
         dubbelToep: sbRules.rules ? !!sbRules.rules.dubbelToep : false,
         scherpPassen: sbRules.rules ? sbRules.rules.scherpPassen !== false : true,
         hoogsteDeelt: sbRules.rules ? !!sbRules.rules.hoogsteDeelt : false,
-        wasStraf: sbRules.rules && sbRules.rules.wasStraf === 2 ? 2 : 1
+        wasStraf: sbRules.rules && sbRules.rules.wasStraf === 2 ? 2 : 1,
+        maxInzet: sbRules.rules && sbRules.rules.maxInzet !== undefined ? sbRules.rules.maxInzet : 4
       }
     }
   };
@@ -1264,21 +1265,23 @@
     html += topbar(practice ? 'Oefenen' : 'Tafel maken', practice ? 'Tegen computerspelers, op deze telefoon' : (S.method ? METHODS[S.method].t : 'Kies hoe jij meedoet'), (practice && S.deep ? '<a class="btn ghost sm" href="index.html">← Terug</a>' : '<button class="btn ghost sm" data-act="' + (practice ? 'home' : 'mp1') + '">Terug</button>'));
     if (!practice) {
       html += '<div class="stack"><div class="label">Hoe doe jij mee?</div>' +
-        '<button class="choice" data-act="mode" data-v="play" aria-pressed="' + (c.mode === 'play') + '"><b>Ik speel mee</b><span>Je ziet je eigen kaarten en speelt mee. Je telefoon is ook de host.</span></button>' +
-        '<button class="choice" data-act="mode" data-v="lead" aria-pressed="' + (c.mode === 'lead') + '"><b>Tafelleider</b><span>Je speelt niet mee. Je ziet alle kaarten en het scorebord. Spelers zien dat er een tafelleider meekijkt.</span></button></div>';
+        '<button class="choice" data-act="mode" data-v="play" aria-pressed="' + (c.mode === 'play') + '"><b>Ik speel mee</b><span>Je speelt mee en bent ook de host.</span></button>' +
+        '<button class="choice" data-act="mode" data-v="lead" aria-pressed="' + (c.mode === 'lead') + '"><b>Tafelleider</b><span>Je speelt niet mee, maar ziet alle kaarten.</span></button></div>';
     }
-    html += '<div class="panel"><div class="label">Af bij</div><div class="seg">' + [10, 15, 21].map(function (l) {
-      return '<button data-act="limit" data-v="' + l + '" aria-pressed="' + (c.limit === l) + '">' + l + '</button>';
-    }).join('') + '</div></div>';
-    html += '<div class="panel"><div class="label">Huisregels</div>' +
-      toggleRow('rule-wittewas', c.rules.wittewas, 'Vuile was', 'Wie alleen boeren, vrouwen, heren en azen heeft, mag 4 nieuwe kaarten nemen. Je mag ook bluffen: de anderen kunnen controleren en het spel beslist.') +
+    html += '<div class="panel"><div class="label">Spelregels</div>' +
+      '<div class="row" style="padding:2px 2px 6px"><span class="small muted" style="flex:1">Af bij</span><div class="seg" style="flex:none">' + [10, 15, 21].map(function (l) {
+        return '<button data-act="limit" data-v="' + l + '" aria-pressed="' + (c.limit === l) + '">' + l + '</button>';
+      }).join('') + '</div></div>' +
+      toggleRow('rule-wittewas', c.rules.wittewas, 'Vuile was', 'Alleen plaatjes en azen? Neem 4 nieuwe kaarten. Bluffen mag, de anderen kunnen controleren.') +
       (c.rules.wittewas ? '<div class="row" style="padding:0 2px 6px"><span class="small muted" style="flex:1" title="Straf bij fout melden of onterecht controleren">Straf bij fout</span><div class="seg" style="flex:none">' + [1, 2].map(function (n) {
         return '<button data-act="was-straf" data-v="' + n + '" aria-pressed="' + ((c.rules.wasStraf || 1) === n) + '">' + n + ' ' + (n === 1 ? 'punt' : 'punten') + '</button>'; }).join('') + '</div></div>' : '') +
-      toggleRow('rule-dubbelToep', c.rules.dubbelToep, 'Twee keer achter elkaar toepen', 'Uit: na jouw toep moet eerst iemand anders toepen.') +
+      '<div class="row" style="padding:2px 2px 6px"><span class="small muted" style="flex:1;white-space:nowrap">Max. inzet</span><div class="seg" style="flex:none">' + [[0, 'Geen'], [3, '3'], [4, '4'], [6, '6']].map(function (o) {
+        return '<button data-act="max-inzet" data-v="' + o[0] + '" aria-pressed="' + ((c.rules.maxInzet === undefined ? 4 : c.rules.maxInzet) === o[0]) + '">' + o[1] + '</button>'; }).join('') + '</div></div>' +
+      toggleRow('rule-dubbelToep', c.rules.dubbelToep, 'Dubbel toepen', 'Twee keer achter elkaar toepen. Uit: na jouw toep moet eerst iemand anders toepen.') +
       toggleRow('rule-scherpPassen', c.rules.scherpPassen, 'Passen als je op scherp staat', 'Uit: wie op scherp staat, moet mee.') +
       toggleRow('rule-hoogsteDeelt', c.rules.hoogsteDeelt, 'Hoogste stand deelt', 'Wie de meeste strafpunten heeft, deelt. Bij gelijke stand: op volgorde van de tafel. Uit: de deler schuift door.') + '</div>';
     var minB = practice ? 1 : 0;
-    html += '<div class="panel"><div class="label">Computerspelers</div><div class="stepper">' +
+    html += '<div class="panel" style="padding-top:8px;padding-bottom:8px"><div class="label" style="margin-bottom:2px">Computerspelers</div><div class="stepper">' +
       '<button class="btn ghost sm icon-round" data-act="bots" data-v="-1"' + (c.bots <= minB ? ' disabled' : '') + ' aria-label="Minder">−</button><b class="num">' + c.bots + '</b>' +
       '<button class="btn ghost sm icon-round" data-act="bots" data-v="1"' + (c.bots >= 7 ? ' disabled' : '') + ' aria-label="Meer">+</button>' +
       '<span class="small muted">' + (practice ? 'Tegenstanders voor jou.' : 'Vullen lege plekken aan tafel.') + '</span></div></div>';
@@ -1476,6 +1479,7 @@
       '<p class="small muted" style="margin:0">Zwart scherm: niemand ziet iets, het spel blijft gewoon doorlopen en spaart accu. Tik twee keer om terug te komen. Is het jouw beurt, dan komt het scherm vanzelf terug en trilt je telefoon.</p>';
   }
 
+  function inRoundCount(G) { return G.seats.filter(function (id) { return !G.players[id].out && !((G.round.passed || {})[id] !== undefined); }).length; }
   function renderHand(G, seated) {
     if (!seated || G.phase !== 'play') return '';
     var p = G.players[S.uid]; if (!p || p.out) return '';
@@ -1487,6 +1491,7 @@
     var acts = '';
     if (E.canToep(G, S.uid)) acts += '<button class="btn toep" data-act="' + (window.ToepenPrefs && !ToepenPrefs.get().confirmToep ? 'toep' : 'toep-ask') + '">Toep! → ' + (r.stake + 1) + '</button>';
     var shown = !handHidden() || S.peek;
+    if (!E.canToep(G, S.uid) && G.rules.maxInzet && r.stake >= G.rules.maxInzet && r.turn === S.uid && !r.pending && !r.was && inRoundCount(G) > 1) acts += '<button class="btn toep" disabled>Hoogste inzet (' + r.stake + ')</button>';
     if (E.canWas(G, S.uid)) acts += '<button class="btn warn" data-act="was-ask">Vuile was</button>';
     if (acts) html += '<div class="acts">' + acts + '</div>';
     if (!shown && hand.length) {
@@ -1511,7 +1516,7 @@
       sec('Doel', '<p>Zo min mogelijk strafpunten. Bij <b>' + limit + '</b> lig je eruit. Wie overblijft, wint.</p>', true) +
       sec('Kaarten', '<p>32 kaarten. Van laag naar hoog:</p><div class="minis" style="margin-top:8px">' + cards + '</div><p style="margin-top:8px">De <b>10</b> is het hoogst, de <b>boer</b> het laagst. Er is geen troef.</p>', true) +
       sec('Een ronde', '<ul><li>Iedereen krijgt <b>4 kaarten</b>. Links van de deler komt uit.</li><li>' + (R.hoogsteDeelt ? 'Wie de <b>meeste strafpunten</b> heeft, deelt de volgende ronde.' : 'De deler schuift elke ronde één plek door.') + '</li><li>Je moet <b>kleur bekennen</b>. De app laat alleen kaarten oplichten die mogen.</li><li>Hoogste kaart van de gevraagde kleur wint de slag en komt daarna uit.</li><li>Alleen de <b>laatste (4e) slag</b> telt: die wint de ronde.</li></ul>') +
-      sec('Toepen', '<ul><li>Ben je aan de beurt, dan mag je <b>toepen</b>: de inzet gaat 1 omhoog.</li><li>De anderen kiezen <b>Meegaan</b> of <b>Passen</b>. Wie past, krijgt de inzet van vóór de toep en doet niet meer mee.</li>' +
+      sec('Toepen', '<ul><li>Ben je aan de beurt, dan mag je <b>toepen</b>: de inzet gaat 1 omhoog. Er is een <b>hoogste inzet</b> (standaard 4, in te stellen): daarboven kan niemand meer toepen.</li><li>De anderen kiezen <b>Meegaan</b> of <b>Passen</b>. Wie past, krijgt de inzet van vóór de toep en doet niet meer mee.</li>' +
         (R.dubbelToep ? '<li>Je mag meerdere keren achter elkaar toepen.</li>' : '<li>Na jouw toep moet eerst een ander toepen.</li>') +
         (R.scherpPassen ? '' : '<li>Sta je <b>op scherp</b>, dan moet je mee.</li>') + '<li>Gaat niemand mee, dan wint de toeper de ronde.</li></ul>') +
       sec('Strafpunten', '<p>Wie aan het eind nog meedoet en de laatste slag niet haalt, krijgt de inzet.</p>') +
@@ -1832,6 +1837,7 @@
       case 'mode': c.mode = v; render(); break;
       case 'limit': c.limit = +v; render(); break;
       case 'was-straf': c.rules.wasStraf = +v; render(); break;
+      case 'max-inzet': c.rules.maxInzet = +v; render(); break;
       case 'bots': c.bots = Math.max(0, Math.min(7, c.bots + +v)); render(); break;
       case 'rule-wittewas': case 'rule-dubbelToep': case 'rule-scherpPassen': case 'rule-hoogsteDeelt':
         var k = a.slice(5); c.rules[k] = !c.rules[k]; render(); break;

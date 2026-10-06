@@ -101,7 +101,7 @@ function runGame(n, rules, botsOnly) {
 const t0 = Date.now();
 for (let i = 0; i < 6000; i++) {
   const n = 2 + (i % 7);
-  const rules = { dubbelToep: Math.random() < 0.5, scherpPassen: Math.random() < 0.5, wittewas: Math.random() < 0.7, wasStraf: Math.random() < 0.5 ? 1 : 2, hoogsteDeelt: Math.random() < 0.5 };
+  const rules = { dubbelToep: Math.random() < 0.5, scherpPassen: Math.random() < 0.5, wittewas: Math.random() < 0.7, wasStraf: Math.random() < 0.5 ? 1 : 2, maxInzet: pick([0, 3, 4, 6]), hoogsteDeelt: Math.random() < 0.5 };
   runGame(n, rules, i % 3 === 0);
 }
 // ---- vuile was: claim, check, bluff ----
@@ -156,6 +156,16 @@ const CLEAN = ['Bh', 'Vh', 'Hs', 'Ak'], NORMAL = ['7h', '8s', '9k', '10r'];
   E.apply(g, 'a', { type: 'was' }); assert(E.apply(g, 'b', { type: 'wascheck', check: true }).ok);
   assert(g.players.a.out && g.phase === 'done' && g.winner === 'b', 'bluffer who hits the limit loses');
 }
+// ---- highest stake ----
+{ const g = E.newGame({ seats: [{ id: 'a', name: 'A' }, { id: 'b', name: 'B' }, { id: 'c', name: 'C' }], rules: { maxInzet: 3, dubbelToep: true }, dealer: 0 });
+  g.round.turn = 'a';
+  assert(E.canToep(g, 'a')); E.apply(g, 'a', { type: 'toep' }); E.apply(g, 'b', { type: 'answer', mee: true }); E.apply(g, 'c', { type: 'answer', mee: true });
+  assert.strictEqual(g.round.stake, 2); assert(E.canToep(g, 'a'), 'second toep allowed (dubbelToep, stake 2 < 3)');
+  E.apply(g, 'a', { type: 'toep' }); E.apply(g, 'b', { type: 'answer', mee: true }); E.apply(g, 'c', { type: 'answer', mee: true });
+  assert.strictEqual(g.round.stake, 3); assert(!E.canToep(g, 'a'), 'no toep above the highest stake'); assert(!E.apply(g, 'a', { type: 'toep' }).ok);
+  const g0 = E.newGame({ seats: [{ id: 'a', name: 'A' }, { id: 'b', name: 'B' }], rules: { maxInzet: 0, dubbelToep: true }, dealer: 0 }); g0.round.turn = 'a';
+  for (let i = 0; i < 8; i++) { assert(E.apply(g0, 'a', { type: 'toep' }).ok); E.apply(g0, 'b', { type: 'answer', mee: true }); }
+  assert.strictEqual(g0.round.stake, 9, 'no limit when maxInzet is 0'); }
 // specific: witte was must be impossible with 8 players (no stock)
 const G8 = E.newGame({ seats: Array.from({ length: 8 }, (_, i) => ({ id: 'p' + i, name: 'P' + i })), rules: { wittewas: true } });
 G8.round.hands.p1 = ['Bh', 'Vh', 'Hh', 'Ah'];

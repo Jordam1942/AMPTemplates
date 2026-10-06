@@ -41,7 +41,7 @@
     return arr;
   }
 
-  var DEFAULT_RULES = { dubbelToep: false, scherpPassen: true, wittewas: true, wasStraf: 1, hoogsteDeelt: false };
+  var DEFAULT_RULES = { dubbelToep: false, scherpPassen: true, wittewas: true, wasStraf: 1, maxInzet: 4, hoogsteDeelt: false };   // maxInzet: highest stake (0 = no limit)
 
   /* ---------- Game setup ---------- */
 
@@ -133,7 +133,7 @@
   function canToep(G, id) {
     var r = G.round;
     return G.phase === 'play' && !r.pending && !r.was && r.turn === id && inRound(G, id) &&
-      inRoundIds(G).length > 1 && (G.rules.dubbelToep || lastToeper(G) !== id);
+      (!G.rules.maxInzet || r.stake < G.rules.maxInzet) && inRoundIds(G).length > 1 && (G.rules.dubbelToep || lastToeper(G) !== id);
   }
 
   function isWitteWas(hand) {

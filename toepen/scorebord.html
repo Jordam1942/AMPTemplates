@@ -444,7 +444,7 @@
   var layer = document.getElementById('layer');
 
   // ---------- State ----------
-  var RULES = { inkopen: true, inkopenMax: 1, wittewas: true, wasStraf: 1, dubbelToep: false, scherpPassen: true, hoogsteDeelt: false };
+  var RULES = { inkopen: true, inkopenMax: 1, wittewas: true, wasStraf: 1, maxInzet: 4, dubbelToep: false, scherpPassen: true, hoogsteDeelt: false };
   function rulesOf(o) {
     var r = o.rules || {};
     if (o.inkopen !== undefined && r.inkopen === undefined) r.inkopen = o.inkopen;
@@ -919,6 +919,7 @@
     return toggleRow('rule', R.wittewas, 'Vuile was', 'Wie alleen boeren, vrouwen, heren en azen heeft, mag die laten zien en nieuwe kaarten vragen. Je krijgt een knop om het te melden en te controleren.', a + 'wittewas"') +
       (R.wittewas ? '<div class="sub-opt"><div class="small muted">Straf als iemand blufte, of voor wie onterecht controleert:</div>' +
         seg('wasStraf', [[1, '1 punt'], [2, '2 punten']]) + '</div>' : '') +
+      '<div class="sub-opt"><div class="small muted">Hoogste inzet (daarna kan niemand meer toepen):</div>' + seg('maxInzet', [[0, 'Geen limiet'], [3, '3'], [4, '4'], [6, '6']]) + '</div>' +
       toggleRow('rule', R.dubbelToep, 'Twee keer achter elkaar toepen', 'Uit: na jouw toep moet eerst iemand anders toepen.', a + 'dubbelToep"') +
       toggleRow('rule', R.scherpPassen, 'Passen als je op scherp staat', 'Uit: wie op scherp staat, moet altijd mee.', a + 'scherpPassen"') +
       toggleRow('rule', R.hoogsteDeelt, 'Hoogste stand deelt', 'Wie de meeste strafpunten heeft, deelt de volgende ronde. Bij gelijke stand: op volgorde van de tafel. Uit: de deler schuift door.', a + 'hoogsteDeelt"') +
@@ -942,6 +943,7 @@
   function rulesSummary(R) {
     var on = [];
     if (R.wittewas) on.push('Vuile was');
+    if (R.maxInzet) on.push('Max inzet ' + R.maxInzet);
     if (R.dubbelToep) on.push('Dubbel toepen');
     if (!R.scherpPassen) on.push('Op scherp mee');
     if (R.hoogsteDeelt) on.push('Hoogste deelt');
@@ -1042,7 +1044,7 @@
         '<div class="txt"><div class="label">Inzet</div><div>Verliezers krijgen ' + plural(r.stake, 'strafpunt', 'strafpunten') + '</div></div>' +
         '</div>' +
         (toepNames ? '<div class="toeplog">Getoept: ' + toepNames + '</div>' : '') + '</div>';
-      dock = '<div class="dock"><div class="in"><div class="dock-main"><button class="btn toep" data-act="sheet-toep">Toep!</button>' +
+      dock = '<div class="dock"><div class="in"><div class="dock-main"><button class="btn toep" data-act="sheet-toep"' + (g.rules.maxInzet && r.stake >= g.rules.maxInzet ? ' disabled' : '') + '>' + (g.rules.maxInzet && r.stake >= g.rules.maxInzet ? 'Max ' + r.stake : 'Toep!') + '</button>' +
         '<button class="btn finish" data-act="sheet-finish">Wie wint de ronde?</button></div>' +
         '<div class="dock-row">' + undoBtn + redoBtn + (g.rules.wittewas ? '<button class="btn wit" data-act="sheet-was">Vuile was</button>' : '') + '</div></div></div>';
     }
@@ -1404,6 +1406,7 @@
     }).join('');
     var mine = [];
     mine.push('Af bij <b>' + limit + '</b> ' + 'strafpunten.');
+    mine.push(R.maxInzet ? 'De inzet kan niet hoger dan <b>' + R.maxInzet + '</b>.' : 'Er is <b>geen hoogste inzet</b>.');
     mine.push(R.dubbelToep ? 'Je mag <b>meerdere keren achter elkaar</b> toepen.' : 'Na jouw toep moet <b>eerst iemand anders</b> toepen.');
     mine.push(R.scherpPassen ? 'Op scherp mag je <b>gewoon passen</b>.' : 'Op scherp <b>moet je mee</b>; passen mag niet.');
     mine.push(R.wittewas ? 'Vuile was <b>telt</b>. Straf bij bluffen of onterecht controleren: <b>' + straf(R.wasStraf) + '</b>.' : 'Vuile was <b>telt niet</b>.');
@@ -1940,7 +1943,7 @@
       case 'was-fake': ui.sheet = null; doWas(id, el.dataset.by, false); break;
       case 'sheet-adjust': ui.sheet = { type: 'adjust', id: id }; renderLayer(); break;
       case 'close': ui.sheet = null; renderLayer(); break;
-      case 'toep': ui.sheet = null; doToep(id); break;
+      case 'toep': ui.sheet = null; if (G().rules.maxInzet && G().round.stake >= G().rules.maxInzet) { toast('Hoogste inzet bereikt.'); render(); break; } doToep(id); break;
       case 'finish': ui.sheet = null; finishRound(id); break;
       case 'pass': doPass(id); break;
       case 'adj': adjust(id, +v); break;
