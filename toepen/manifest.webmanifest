@@ -1,7 +1,7 @@
 {
-  "name": "Toepen Scorebord",
+  "name": "Toepen",
   "short_name": "Toepen",
-  "description": "Houd strafpunten bij voor het kaartspel Toepen.",
+  "description": "Toepen: speel alleen, met vrienden, of houd de score bij.",
   "lang": "nl",
   "start_url": "./",
   "scope": "./",

@@ -1,0 +1,2035 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1f6b4a">
+<meta name="description" content="Houd strafpunten bij voor het kaartspel Toepen.">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<title>Toepen Scorebord</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Figtree:wght@400;500;600;700&display=swap">
+<style>
+  /* Layout: one-column card table. Sticky stake bar, player cards with tally marks, bottom tab bar, bottom sheets for choices */
+  :root {
+    --bg: #eef1ea;
+    --surface: #fbfcf8;
+    --sunken: #e3e8df;
+    --fg: #1d2620;
+    --muted: #5f6b62;
+    --line: #d5dbd0;
+    --accent: #1f6b4a;
+    --accent-fg: #ffffff;
+    --accent-soft: #dcebe2;
+    --warn: #b4540f;
+    --warn-soft: #fbe7d6;
+    --danger: #b3261e;
+    --danger-soft: #f9dedc;
+    --ink: #253a2e;
+    --ink-fg: #eef1ea;
+    --scrim: rgba(18, 26, 21, 0.45);
+    --font-display: "Bricolage Grotesque", "Arial Rounded MT Bold", system-ui, sans-serif;
+    --font-body: "Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #121a15; --surface: #1b251f; --sunken: #16201a; --fg: #e8eee8; --muted: #9eaba1; --line: #2c3a31;
+      --accent: #4fbf89; --accent-fg: #0d1a13; --accent-soft: #1f3a2b;
+      --warn: #f0a160; --warn-soft: #3a2817; --danger: #f2b8b5; --danger-soft: #4a1f1c;
+      --ink: #dfe9e1; --ink-fg: #121a15; --scrim: rgba(0, 0, 0, 0.6);
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #121a15; --surface: #1b251f; --sunken: #16201a; --fg: #e8eee8; --muted: #9eaba1; --line: #2c3a31;
+    --accent: #4fbf89; --accent-fg: #0d1a13; --accent-soft: #1f3a2b;
+    --warn: #f0a160; --warn-soft: #3a2817; --danger: #f2b8b5; --danger-soft: #4a1f1c;
+    --ink: #dfe9e1; --ink-fg: #121a15; --scrim: rgba(0, 0, 0, 0.6);
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  html { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+  body { margin: 0; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: var(--font-body); font-size: 16px; line-height: 1.4;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .wrap { max-width: 560px; margin: 0 auto; padding-inline: 16px; padding-block: 12px 110px; }
+  h1, h2, h3 { font-family: var(--font-display); margin: 0; text-wrap: balance; letter-spacing: -0.01em; }
+  h1 { font-size: 1.8rem; font-weight: 800; }
+  h2 { font-size: 1.25rem; font-weight: 700; }
+  h3 { font-size: 1.05rem; font-weight: 600; }
+  p { margin: 0; }
+  button { font: inherit; color: inherit; cursor: pointer; border: 0; background: none; }
+  button:focus-visible, input:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+  .muted { color: var(--muted); }
+  .small { font-size: 0.875rem; }
+  .label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 700; }
+  .stack { display: grid; gap: 12px; }
+  .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .num { font-variant-numeric: tabular-nums; }
+
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    min-height: 48px; padding: 0 18px; border-radius: 12px; font-weight: 700;
+    background: var(--accent-soft); color: var(--accent); text-align: center;
+  }
+  .btn.primary { background: var(--accent); color: var(--accent-fg); }
+  .btn.ghost { background: transparent; border: 1.5px solid var(--line); color: var(--fg); }
+  .btn.warn { background: var(--warn-soft); color: var(--warn); }
+  .btn.danger { background: var(--danger-soft); color: var(--danger); }
+  .btn.big { min-height: 56px; font-size: 1.1rem; }
+  .btn.wide { width: 100%; }
+  .btn.sm { min-height: 40px; padding: 0 12px; font-size: 0.9rem; }
+  .btn:disabled { opacity: 0.4; cursor: default; }
+  .btn:active:not(:disabled) { transform: scale(0.97); }
+
+  .panel { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 16px; display: grid; gap: 12px; }
+  .panel { grid-template-columns: minmax(0, 1fr); }
+  .name-row input { width: 100%; }
+
+  .avatar {
+    width: 40px; height: 40px; border-radius: 50%; flex: none;
+    display: grid; place-items: center; color: #fff; font-weight: 800; font-family: var(--font-display); font-size: 1.1rem;
+  }
+  .avatar.sm { width: 28px; height: 28px; font-size: 0.85rem; }
+
+  /* Setup */
+  .name-row { display: flex; gap: 8px; align-items: center; }
+  .name-row input {
+    flex: 1; min-width: 0; height: 48px; border-radius: 10px; border: 1.5px solid var(--line);
+    background: var(--bg); color: var(--fg); padding: 0 12px; font: inherit; font-size: 1rem;
+  }
+  .icon-btn { width: 44px; height: 44px; border-radius: 10px; font-size: 1.3rem; color: var(--muted); flex: none; display: grid; place-items: center; }
+  .icon-btn:disabled { opacity: 0.3; }
+  .name-row .switch-btn { flex: none; width: auto; min-height: 44px; padding: 0; }
+  .name-row.off input, .name-row.off .avatar { opacity: 0.45; }
+  .name-row.off input { text-decoration: line-through; }
+  .seg { display: flex; gap: 6px; flex-wrap: wrap; }
+  .seg button {
+    min-height: 44px; min-width: 56px; padding: 0 14px; border-radius: 10px; font-weight: 700;
+    border: 1.5px solid var(--line); font-variant-numeric: tabular-nums;
+  }
+  .seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+
+  .toggle-row { display: flex; align-items: center; gap: 12px; min-height: 48px; width: 100%; text-align: left; }
+  .toggle-row .txt { flex: 1; min-width: 0; }
+  .toggle-row .txt div:last-child { font-size: 0.85rem; color: var(--muted); }
+  .switch { width: 50px; height: 30px; border-radius: 15px; background: var(--line); position: relative; flex: none; transition: background 0.2s; }
+  .switch::after { content: ""; position: absolute; top: 3px; left: 3px; width: 24px; height: 24px; border-radius: 50%; background: var(--surface); transition: transform 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.25); }
+  .toggle-row[aria-checked="true"] .switch { background: var(--accent); }
+  .toggle-row[aria-checked="true"] .switch::after { transform: translateX(20px); }
+
+  /* Game header */
+  .topbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px; }
+  .topbar .meta { min-width: 0; }
+  .topbar .meta .small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  .stake {
+    position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5;
+    background: var(--ink); color: var(--ink-fg); border-radius: 18px;
+    padding: 12px 14px; display: grid; gap: 10px; margin-bottom: 14px;
+    box-shadow: 0 8px 24px -12px rgba(0,0,0,0.55);
+  }
+  .stake-main { display: flex; align-items: center; gap: 12px; }
+  .stake .big { font-family: var(--font-display); font-weight: 800; font-size: 2.8rem; line-height: 1; font-variant-numeric: tabular-nums; min-width: 1.3ch; text-align: center; }
+  .stake .big.bump { animation: bump 0.35s ease; }
+  @keyframes bump { 0% { transform: scale(1); } 40% { transform: scale(1.35); } 100% { transform: scale(1); } }
+  .stake .txt { flex: 1; min-width: 0; }
+  .stake .txt .label { color: inherit; opacity: 0.7; }
+  .stake .txt div:last-child { font-size: 0.85rem; opacity: 0.85; }
+  .stake .btn.toep { background: var(--accent); color: var(--accent-fg); font-size: 1.1rem; padding: 0 16px; }
+  .stake-row { display: flex; gap: 8px; }
+  .stake .btn.finish { background: transparent; color: inherit; border: 1.5px solid currentColor; flex: 2; min-height: 44px; padding: 0 10px; }
+  .stake .btn.wit { background: transparent; color: inherit; border: 1.5px dashed currentColor; flex: 1; min-height: 44px; padding: 0 10px; opacity: 0.9; }
+  .sub-opt { display: grid; gap: 8px; padding: 0 0 6px 12px; border-left: 2px solid var(--line); margin-left: 4px; }
+  .toeplog { font-size: 0.8rem; opacity: 0.8; }
+
+  /* Players */
+  .players { display: grid; gap: 10px; }
+  .player {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 16px;
+    padding: 12px 14px; display: grid; gap: 8px;
+  }
+  .player.scherp { border-color: var(--warn); box-shadow: inset 0 0 0 1px var(--warn); }
+  .player.af { opacity: 0.6; background: var(--sunken); }
+  .player.passed .p-name { text-decoration: line-through; text-decoration-color: var(--muted); }
+  .p-head { display: flex; align-items: center; gap: 10px; }
+  .p-who { flex: 1; min-width: 0; }
+  .p-name { font-weight: 700; font-size: 1.1rem; overflow-wrap: anywhere; }
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 2px; }
+  .chip { font-size: 0.72rem; font-weight: 700; padding: 2px 8px; border-radius: 999px; white-space: nowrap; background: var(--sunken); color: var(--muted); }
+  .chip.scherp { background: var(--warn-soft); color: var(--warn); }
+  .chip.deler { background: var(--accent-soft); color: var(--accent); }
+  .chip.af { background: var(--danger-soft); color: var(--danger); }
+  .p-score { font-family: var(--font-display); font-weight: 800; font-size: 2rem; line-height: 1; font-variant-numeric: tabular-nums; padding: 4px 6px; border-radius: 10px; }
+  .p-score small { font-size: 0.85rem; color: var(--muted); font-weight: 600; }
+  .tally { display: flex; flex-wrap: wrap; gap: 8px; min-height: 26px; align-items: center; color: var(--ink); }
+  .tally svg { width: 30px; height: 26px; flex: none; }
+  .tally .empty { font-size: 0.85rem; color: var(--muted); }
+  .bar { height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; }
+  .bar span { display: block; height: 100%; background: var(--accent); border-radius: 3px; transition: width 0.3s ease; }
+  .player.scherp .bar span { background: var(--warn); }
+  .player.af .bar span { background: var(--danger); }
+  .player.left .bar span { background: var(--muted); }
+  .chip.left { background: var(--sunken); color: var(--fg); border: 1px dashed var(--muted); }
+  .quit-row { display: flex; align-items: center; gap: 10px; min-height: 48px; }
+  .quit-row b { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .p-actions { display: flex; gap: 8px; }
+  .p-actions .btn { flex: 1; min-height: 44px; }
+
+  /* Winner */
+  .winner {
+    background: var(--accent); color: var(--accent-fg); border-radius: 20px; padding: 22px 18px;
+    display: grid; gap: 12px; text-align: center; margin-bottom: 14px;
+  }
+  .winner h2 { font-size: 2rem; font-weight: 800; }
+  .winner .btn { background: var(--accent-fg); color: var(--accent); }
+  .winner .btn.ghost { background: transparent; color: var(--accent-fg); border-color: var(--accent-fg); }
+
+  /* Lists */
+  .log-item { display: grid; gap: 4px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+  .log-item:last-child { border-bottom: 0; }
+  .log-head { display: flex; justify-content: space-between; gap: 8px; font-weight: 700; }
+  .pill { display: inline-flex; align-items: center; gap: 4px; font-size: 0.8rem; padding: 2px 8px; border-radius: 999px; background: var(--sunken); margin: 2px 4px 0 0; }
+  .pill.plus { background: var(--danger-soft); color: var(--danger); }
+  .pill.win { background: var(--accent-soft); color: var(--accent); }
+
+  table.stats { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; font-size: 0.88rem; }
+  table.stats th, table.stats td { padding: 8px 3px; text-align: right; border-bottom: 1px solid var(--line); }
+  table.stats th:first-child, table.stats td:first-child { text-align: left; }
+  table.stats th { font-size: 0.72rem; letter-spacing: 0.02em; color: var(--muted); font-weight: 700; line-height: 1.2; vertical-align: bottom; }
+  .table-wrap { overflow-x: auto; }
+  .tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .tile { background: var(--sunken); border-radius: 12px; padding: 10px; display: grid; gap: 2px; }
+  .tile b { font-family: var(--font-display); font-size: 1.5rem; font-variant-numeric: tabular-nums; }
+  .tile span { font-size: 0.75rem; color: var(--muted); }
+  .hbar { display: grid; grid-template-columns: 88px 1fr 32px; gap: 8px; align-items: center; font-size: 0.9rem; }
+  .hbar .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .hbar .track { height: 12px; background: var(--sunken); border-radius: 6px; overflow: hidden; }
+  .hbar .track span { display: block; height: 100%; border-radius: 6px; }
+  .hbar .val { text-align: right; font-variant-numeric: tabular-nums; font-weight: 700; }
+
+  .rank { display: inline-grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: var(--sunken); font-weight: 800; font-size: 0.8rem; font-variant-numeric: tabular-nums; }
+  .rank.r1 { background: var(--accent); color: var(--accent-fg); }
+  .rank.r2, .rank.r3 { background: var(--accent-soft); color: var(--accent); }
+  .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: middle; flex: none; }
+  table.stats td.who, table.stats th.who { text-align: left; }
+  table.stats td.who span { white-space: nowrap; }
+  table.stats td:first-child, table.stats td.who { white-space: nowrap; max-width: 30vw; overflow: hidden; text-overflow: ellipsis; }
+  table.stats tr.top td { font-weight: 700; }
+  .top3 { display: grid; gap: 8px; }
+  .top3 .line { display: flex; align-items: center; gap: 10px; }
+  .top3 .line b { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .record { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 0.92rem; }
+  .record:last-child { border-bottom: 0; }
+  .record span:last-child { text-align: right; font-weight: 700; }
+  .cards { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; margin-top: 8px; }
+  .cards-cap { display: flex; justify-content: space-between; max-width: 268px; font-size: 0.75rem; color: var(--muted); font-weight: 700; margin-top: 4px; }
+  .card { width: 30px; height: 42px; border-radius: 6px; border: 1.5px solid var(--line); background: var(--surface); display: grid; place-items: center; font-family: var(--font-display); font-weight: 800; color: var(--fg); }
+  .card.hi { border-color: var(--accent); color: var(--accent); }
+  .rulebook p, .rulebook li { color: var(--muted); }
+  .rulebook ul, .rulebook ol { margin: 6px 0 0; padding-left: 20px; display: grid; gap: 4px; }
+  .rulebook b { color: var(--fg); }
+  .rulebook .example { background: var(--sunken); border-radius: 10px; padding: 10px 12px; margin-top: 8px; font-size: 0.9rem; }
+  .table-rules { background: var(--accent-soft); border-radius: 12px; padding: 12px; display: grid; gap: 4px; }
+  .table-rules li { color: var(--fg); }
+  textarea#notes { width: 100%; min-height: 110px; border-radius: 10px; border: 1.5px solid var(--line); background: var(--bg); color: var(--fg); padding: 10px 12px; font: inherit; resize: vertical; }
+  .key { display: inline-block; padding: 1px 8px; border-radius: 8px; background: var(--accent-soft); color: var(--accent); font-weight: 700; font-size: 0.85em; white-space: nowrap; }
+  .key.dark { background: var(--ink); color: var(--ink-fg); }
+  .key.warn { background: var(--warn-soft); color: var(--warn); }
+  .guide-step { display: grid; grid-template-columns: 30px 1fr; gap: 10px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+  .guide-step:last-child { border-bottom: 0; }
+  .guide-step .n { width: 30px; height: 30px; border-radius: 50%; background: var(--accent); color: var(--accent-fg); display: grid; place-items: center; font-weight: 800; font-family: var(--font-display); }
+  .guide-step > div { min-width: 0; }
+  .guide-step h3 { margin-bottom: 4px; }
+  .guide-step ul { margin: 4px 0 0; padding-left: 18px; display: grid; gap: 4px; color: var(--muted); }
+  .guide-step li b { color: var(--fg); }
+  .history-bar { display: flex; gap: 8px; margin: -4px 0 12px; }
+  .history-bar .btn { flex: 1; min-width: 0; min-height: 40px; font-size: 0.85rem; padding: 0 6px; white-space: nowrap; }
+  .topbar.game h1 { font-size: clamp(1.3rem, 5.6vw, 1.6rem); overflow: hidden; text-overflow: ellipsis; }
+  .btn .sub { display: block; font-weight: 500; font-size: 0.8rem; opacity: 0.8; }
+  .btn.stacked { flex-direction: column; gap: 0; padding-block: 8px; }
+  .mp-link { display: flex; align-items: center; gap: 12px; text-decoration: none; color: inherit; padding: 14px 16px; border-radius: 16px; background: var(--ink); color: var(--ink-fg); }
+  .mp-link b { display: block; font-size: 1.05rem; }
+  .mp-link span { font-size: 0.85rem; opacity: 0.85; }
+  .mp-link .go { margin-left: auto; font-weight: 800; font-size: 1.3rem; }
+  /* Compact player list: one line per player (default from 6 players) */
+  .players.compact { gap: 6px; }
+  .player.compact { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 12px; }
+  .player.compact .p-who { flex: 1; min-width: 0; display: grid; gap: 5px; }
+  .player.compact .p-line { display: flex; align-items: center; gap: 6px; min-width: 0; }
+  .player.compact .p-name { font-size: 1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 0 1 auto; }
+  .player.compact .chip { font-size: 0.66rem; padding: 1px 6px; flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+  .player.compact .bar { height: 4px; }
+  .player.compact .p-score { font-size: 1.45rem; padding: 2px 4px; flex: none; }
+  .player.compact .p-score small { font-size: 0.75rem; }
+  .player.compact .btn.sm, .p-head .btn.sm { min-height: 36px; padding: 0 10px; font-size: 0.82rem; flex: none; }
+  .wrap.compact .stake { padding: 10px 12px; gap: 8px; margin-bottom: 10px; }
+  .wrap.compact .stake .big { font-size: 2.2rem; }
+  .wrap.compact .stake .btn.finish, .wrap.compact .stake .btn.wit { min-height: 40px; }
+  .wrap.compact .stake .btn.toep { min-height: 44px; }
+  /* Fit-to-screen helpers */
+  .set-row { display: flex; align-items: center; gap: 10px; min-height: 44px; }
+  .set-row > .label { flex: none; width: 92px; }
+  .seg.sm button { min-height: 40px; min-width: 48px; padding: 0 10px; }
+  select.sel { flex: 1; min-width: 0; height: 42px; border-radius: 10px; border: 1.5px solid var(--line); background: var(--bg); color: var(--fg); font: inherit; font-weight: 600; padding: 0 10px; }
+  .rules-btn { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 44px; text-align: left; }
+  .rules-btn .sum { flex: 1; min-width: 0; color: var(--muted); font-size: 0.9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .rules-btn .go { color: var(--accent); font-weight: 800; }
+  .panel.tight { padding: 12px 14px; gap: 8px; }
+  .panel-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .roster { display: grid; gap: 6px; }
+  .roster.scroll { max-height: 384px; overflow-y: auto; padding-right: 2px; }
+  .name-row input { height: 42px; }
+  .icon-btn { width: 40px; height: 40px; }
+  .menu-list { display: grid; gap: 8px; }
+  .menu-list .btn { justify-content: flex-start; }
+  details.msec { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; }
+  details.msec > summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 0 16px; font-weight: 700; }
+  details.msec > summary::-webkit-details-marker { display: none; }
+  details.msec { min-width: 0; max-width: 100%; }
+  table.stats.six th { font-size: 0.62rem; letter-spacing: 0; padding: 6px 2px; }
+  table.stats.six td { padding: 7px 2px; }
+  table.stats.six td:first-child { max-width: 24vw; }
+  table.stats.six .dot { margin-right: 4px; width: 8px; height: 8px; }
+  .stack > * { min-width: 0; }
+  details.msec > summary .t { flex: none; white-space: nowrap; }
+  details.msec > summary .sum { flex: 1; text-align: right; }
+  details.msec > summary::after { content: "›"; margin-left: auto; color: var(--muted); font-size: 1.4rem; transition: transform 0.15s; }
+  details.msec[open] > summary::after { transform: rotate(90deg); }
+  details.msec > summary .sum { color: var(--muted); font-weight: 500; font-size: 0.85rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+  details.msec > .body { padding: 0 16px 16px; display: grid; gap: 12px; }
+  .players.compact.tight { gap: 4px; }
+  .players.compact.tight .player.compact { padding: 5px 10px; }
+  .wrap.tight .history-bar { margin-bottom: 8px; }
+  .wrap.tight .topbar { margin-bottom: 8px; }
+  .wrap.tight .stake .toeplog { display: none; }
+  .wrap.setup-tight .roster { gap: 4px; }
+  .wrap.setup-tight .name-row input, .wrap.setup-tight .icon-btn { height: 38px; }
+  .wrap.setup-tight .name-row .switch-btn { min-height: 38px; }
+  .wrap.setup-tight .panel.tight { padding: 10px 12px; }
+  .wrap.setup-tight .set-row { min-height: 40px; }
+  /* Full-screen pages (rules and app guide) with a back button */
+  .fullpage { position: fixed; inset: 0; z-index: 25; background: var(--bg); overflow-y: auto; -webkit-overflow-scrolling: touch;
+    padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+  .fp-bar { position: sticky; top: 0; z-index: 2; background: var(--bg); border-bottom: 1px solid var(--line); }
+  .fp-bar .in { max-width: 560px; margin: 0 auto; display: flex; align-items: center; gap: 12px; padding: 10px 16px; }
+  .fp-bar h2 { font-size: 1.15rem; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .fp-bar .btn { flex: none; }
+  .fp-body { max-width: 560px; margin: 0 auto; padding: 14px 16px 40px; display: grid; gap: 14px; grid-template-columns: minmax(0, 1fr); }
+  /* Pages: full screen, back bar on top, optional pager at the bottom */
+  .fullpage { display: flex; flex-direction: column; }
+  #app[hidden] { display: none; }
+  .fp-body { flex: 1 0 auto; width: 100%; display: flex; flex-direction: column; }
+  .fp-body > .page-nav { margin-top: auto; }
+  .fp-body > p.small { margin-top: 4px; }
+  .navlist { display: grid; gap: 8px; }
+  .fp-tight .toggle-row .txt div:last-child, .fp-tight .small.muted { font-size: 0.78rem; }
+  .fp-tight .toggle-row { min-height: 40px; }
+  .fp-tight .fp-body { gap: 10px; padding-top: 10px; }
+  .fp-tight2 .toggle-row .txt div:last-child { display: none; }
+  .fp-tight2 .sub-opt .small { display: none; }
+  .navrow { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 54px; padding: 8px 14px; border-radius: 14px; background: var(--surface); border: 1px solid var(--line); text-align: left; }
+  .navrow b { flex: none; font-size: 1rem; }
+  .navrow .sub { flex: 1; min-width: 0; color: var(--muted); font-size: 0.85rem; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .navrow::after { content: "›"; color: var(--muted); font-size: 1.4rem; flex: none; }
+  .navrow .n { width: 28px; height: 28px; border-radius: 50%; background: var(--accent); color: var(--accent-fg); display: grid; place-items: center; font-weight: 800; font-size: 0.85rem; flex: none; }
+  .pager { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: auto; padding-top: 10px; }
+  /* a screen with a pager fills the height, so Vorige/Volgende never move between pages */
+  .wrap:has(.pager) { min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; }
+  .wrap:has(.pager) > :has(.pager) { flex: 1; display: flex; flex-direction: column; align-content: start; }
+  .wrap:has(.pager) > :has(.pager) > .paged { display: block; }
+  .pager .btn { min-width: 112px; }
+  .page-nav { display: flex; gap: 8px; margin-top: 4px; }
+  .page-nav .btn { flex: 1; }
+  .topic { display: grid; gap: 10px; }
+  .topic .rulebook ul { margin-top: 0; }
+  .share-img img { max-height: calc(100vh - 260px); width: auto; max-width: 100%; justify-self: center; object-fit: contain; }
+  .scrim { z-index: 30; }
+  .toast { z-index: 40; }
+  .winner.compact { padding: 14px; gap: 8px; }
+  .winner.compact h2 { font-size: 1.5rem; }
+  .winner.compact .row { display: flex; gap: 8px; }
+  .winner.compact .row .btn { flex: 1; min-height: 48px; }
+  .icon-round { width: 40px; min-height: 40px; padding: 0; font-weight: 800; font-size: 1.15rem; }
+  .topbar h1 { white-space: nowrap; }
+  details.rule { border-bottom: 1px solid var(--line); padding: 10px 0; }
+  details.rule:last-child { border-bottom: 0; }
+  details.rule summary { font-weight: 700; cursor: pointer; min-height: 32px; display: flex; align-items: center; }
+  details.rule p { margin-top: 6px; color: var(--muted); }
+
+  /* Tab bar */
+  .tabbar {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 10;
+    background: var(--surface); border-top: 1px solid var(--line);
+    padding: 6px 8px calc(6px + env(safe-area-inset-bottom, 0px));
+    display: flex; justify-content: center;
+  }
+  .tabbar .inner { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; width: 100%; max-width: 560px; }
+  .tabbar button { display: grid; justify-items: center; gap: 2px; padding: 6px 0; border-radius: 12px; font-size: 0.75rem; font-weight: 700; color: var(--muted); }
+  .tabbar button svg { width: 24px; height: 24px; }
+  .tabbar button[aria-current="page"] { color: var(--accent); background: var(--accent-soft); }
+
+  /* Sheet */
+  .scrim { position: fixed; inset: 0; background: var(--scrim); z-index: 30; display: flex; align-items: flex-end; justify-content: center; animation: fade 0.15s ease; }
+  .sheet {
+    background: var(--surface); width: 100%; max-width: 560px; border-radius: 20px 20px 0 0;
+    padding: 18px 16px calc(18px + env(safe-area-inset-bottom, 0px)); display: grid; gap: 14px;
+    max-height: 85vh; overflow-y: auto; animation: up 0.2s ease;
+  }
+  .sheet .grip { width: 40px; height: 4px; border-radius: 2px; background: var(--line); justify-self: center; }
+  .pick { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .pick button { display: flex; align-items: center; gap: 10px; padding: 10px; border-radius: 14px; border: 1.5px solid var(--line); min-height: 60px; text-align: left; font-weight: 700; }
+  .pick button span { min-width: 0; overflow-wrap: anywhere; }
+  .pick button:active { background: var(--accent-soft); }
+  @keyframes fade { from { opacity: 0; } }
+  @keyframes up { from { transform: translateY(40px); opacity: 0.5; } }
+
+  a.btn { text-decoration: none; }
+  .btn.wa { background: #1f8f4e; color: #ffffff; }
+  .share-preview { white-space: pre-wrap; font-family: var(--font-body); font-size: 0.85rem; background: var(--sunken); border-radius: 12px; padding: 12px; margin: 0; max-height: 30vh; overflow-y: auto; }
+  .share-img { display: grid; gap: 8px; }
+  .share-img img { width: 100%; border-radius: 12px; border: 1px solid var(--line); }
+  .topbar .tools { display: flex; gap: 8px; flex: none; }
+  .toast {
+    position: fixed; left: 50%; bottom: calc(84px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%);
+    z-index: 30; background: var(--ink); color: var(--ink-fg); padding: 10px 16px; border-radius: 12px;
+    font-weight: 600; font-size: 0.92rem; max-width: calc(100% - 32px); text-align: center; pointer-events: none;
+    box-shadow: 0 8px 24px -10px rgba(0,0,0,0.5); animation: up 0.2s ease;
+  }
+  .confirm { display: grid; gap: 10px; background: var(--danger-soft); padding: 14px; border-radius: 12px; }
+  .confirm .row .btn { flex: 1; }
+
+  #confetti { position: fixed; inset: 0; pointer-events: none; z-index: 40; width: 100%; height: 100%; }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap" id="app"></div>
+<div id="layer"></div>
+<canvas id="confetti" hidden></canvas>
+
+<script src="saves.js"></script>
+<script>
+(function () {
+  'use strict';
+  var KEY = 'toepen-scorebord-v2';
+  var VERSION = '31 (hoofdmenu en opslaan)';
+  var COLORS = ['#2f7d5b', '#c2571a', '#3b6fb6', '#a63d6b', '#7a5bb5', '#a67c12', '#1f8a8f', '#5d6b1f'];
+  var app = document.getElementById('app');
+  var layer = document.getElementById('layer');
+
+  // ---------- State ----------
+  var RULES = { inkopen: true, inkopenMax: 1, wittewas: true, wasStraf: 1, dubbelToep: false, scherpPassen: true, hoogsteDeelt: false };
+  function rulesOf(o) {
+    var r = o.rules || {};
+    if (o.inkopen !== undefined && r.inkopen === undefined) r.inkopen = o.inkopen;
+    Object.keys(RULES).forEach(function (k) { if (r[k] === undefined) r[k] = RULES[k]; });
+    delete o.inkopen;
+    o.rules = r;
+    return r;
+  }
+  var state = load() || fresh();
+  state.archive = state.archive || [];
+  state.redo = state.redo || [];
+  rulesOf(state.setup);
+  if (!state.setup.roster) {
+    state.setup.roster = (state.setup.names || []).map(function (n, i) { return { name: n, on: true, color: COLORS[i % COLORS.length] }; });
+    delete state.setup.names; delete state.setup.firstDealer;
+  }
+  function activeRoster() { return state.setup.roster.filter(function (r) { return r.on; }); }
+  function freeColor() {
+    var used = state.setup.roster.map(function (r) { return r.color; });
+    return COLORS.filter(function (c) { return used.indexOf(c) < 0; })[0] || COLORS[state.setup.roster.length % COLORS.length];
+  }
+  if (state.game) rulesOf(state.game);
+  var ui = { tab: 'spel', sheet: null, toast: '', bump: false, fit: 0, pages: [], pg: {} };
+  var toastTimer = null;
+
+  function fresh() {
+    return {
+      v: 2,
+      screen: 'setup',
+      setup: { roster: ['Speler 1', 'Speler 2', 'Speler 3', 'Speler 4'].map(function (n, i) { return { name: n, on: true, color: COLORS[i] }; }), limit: 10, rules: JSON.parse(JSON.stringify(RULES)) },
+      settings: { theme: 'system', sound: true, vibrate: true, wake: true },
+      game: null,
+      undo: [],
+      redo: [],
+      wins: {},
+      archive: []
+    };
+  }
+  function load() {
+    try {
+      var s = localStorage.getItem(KEY);
+      if (!s) return null;
+      var d = JSON.parse(s);
+      return d && d.v === 2 ? d : null;
+    } catch (e) { return null; }
+  }
+  // Only the most recent undo/redo steps are stored; the full history stays in memory.
+  // If storage is full, keep the score itself and drop the history.
+  var SAVED_STEPS = 20;
+  function save() {
+    var data = {};
+    Object.keys(state).forEach(function (k) { data[k] = state[k]; });
+    data.undo = state.undo.slice(-SAVED_STEPS);
+    data.redo = state.redo.slice(-SAVED_STEPS);
+    try { localStorage.setItem(KEY, JSON.stringify(data)); return; } catch (e) {}
+    data.undo = []; data.redo = [];
+    try { localStorage.setItem(KEY, JSON.stringify(data)); } catch (e) {
+      if (!save.warned) { save.warned = true; toast('Opslaan lukt niet: het geheugen van de browser is vol.'); }
+    }
+  }
+
+  function esc(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  function plural(n, one, many) { return n + ' ' + (n === 1 ? one : many); }
+
+  // ---------- Game helpers ----------
+  var G = function () { return state.game; };
+  function byId(id) { return G().players.filter(function (p) { return p.id === id; })[0]; }
+  function alive() { return G().players.filter(function (p) { return !p.out; }); }
+  function inRound(p) { return !p.out && !(p.id in G().round.passed); }
+  function inRoundPlayers() { return G().players.filter(inRound); }
+  function winner() { var a = alive(); return a.length === 1 ? a[0] : null; }
+
+  function newRound(n) { return { n: n, stake: 1, toeps: [], passed: {} }; }
+
+  function startGame(names, limit, rules, dealerIdx, colors) {
+    state.game = {
+      limit: limit,
+      rules: JSON.parse(JSON.stringify(rules)),
+      players: names.map(function (n, i) {
+        return { id: 'p' + i, name: n, color: (colors && colors[i]) || COLORS[i % COLORS.length], score: 0, out: false, bought: 0 };
+      }),
+      dealer: dealerIdx || 0,
+      round: newRound(1),
+      log: [],
+      done: false,
+      startedAt: Date.now()
+    };
+    state.undo = [];
+    state.redo = [];
+    state.screen = 'game';
+    ui.tab = 'spel';
+  }
+
+  function startFresh(names, limit, rules, dealer, colors, label) {
+    var prev = state.game ? JSON.stringify(state.game) : null;
+    startGame(names, limit, rules, dealer, colors);
+    if (prev) state.undo = [{ g: prev, label: label }];
+  }
+
+  function snapshot(label) {
+    state.undo.push({ g: JSON.stringify(state.game), label: label || 'laatste actie' });
+    if (state.undo.length > 60) state.undo.shift();
+    state.redo = [];
+  }
+  function entryOf(e) { return typeof e === 'string' ? { g: e, label: 'laatste actie' } : e; }
+  function undo() {
+    var e = state.undo.pop();
+    if (!e) return;
+    e = entryOf(e);
+    var wasDone = G().done, w = winner();
+    state.redo.push({ g: JSON.stringify(state.game), label: e.label });
+    state.game = JSON.parse(e.g);
+    confetti.run = (confetti.run || 0) + 1;
+    if (wasDone && !G().done && w && state.wins[w.name]) { state.wins[w.name]--; state.archive.pop(); }
+    toast('Ongedaan: ' + e.label);
+    buzz(20);
+    commit();
+  }
+  function redo() {
+    var e = state.redo.pop();
+    if (!e) return;
+    var wasDone = G().done;
+    state.undo.push({ g: JSON.stringify(state.game), label: e.label });
+    state.game = JSON.parse(e.g);
+    var w = winner();
+    if (!wasDone && G().done && w) recordWin(w);
+    toast('Opnieuw gedaan: ' + e.label);
+    buzz(20);
+    commit();
+  }
+
+  // Normally the deal passes to the next player still in. With the house rule
+  // "hoogste stand deelt", the player with the most points deals; ties go to
+  // whoever comes first after the current dealer.
+  function nextDealer() {
+    var ps = G().players, n = ps.length, i = G().dealer;
+    var top = G().rules.hoogsteDeelt ? Math.max.apply(null, ps.filter(function (p) { return !p.out; }).map(function (p) { return p.score; }).concat([0])) : null;
+    for (var k = 1; k <= n; k++) {
+      var j = (i + k) % n;
+      if (!ps[j].out && (top === null || ps[j].score === top)) return j;
+    }
+    return i;
+  }
+
+  function checkOut(p) {
+    if (!p.out && p.score >= G().limit) { p.out = true; return true; }
+    return false;
+  }
+
+  function checkWinner() {
+    var w = winner();
+    if (w && !G().done) {
+      G().done = true;
+      recordWin(w);
+      sound('win'); buzz([60, 40, 60, 40, 160]);
+      setTimeout(confetti, 50);
+    }
+  }
+
+  function recordWin(w) {
+      state.wins[w.name] = (state.wins[w.name] || 0) + 1;
+      var g = G(), st = computeStats();
+      state.archive.push({
+        at: Date.now(), limit: g.limit, rounds: st.rounds, maxStake: st.maxStake, winner: w.name,
+        players: g.players.map(function (p) {
+          return { name: p.name, color: p.color, score: p.score, won: st.per[p.id].won, toeps: st.per[p.id].toeps, left: !!p.left };
+        })
+      });
+      if (state.archive.length > 500) state.archive.shift();
+  }
+
+  function doToep(id) {
+    snapshot(byId(id).name + ' toept');
+    var r = G().round;
+    r.stake++;
+    r.toeps.push({ by: id, to: r.stake });
+    ui.bump = true;
+    sound('toep'); buzz(40);
+    var p = byId(id);
+    toast(p.name + ' toept! Inzet ' + r.stake);
+    commit();
+  }
+
+  function doPass(id) {
+    var r = G().round;
+    if (r.stake < 2) return;
+    snapshot(byId(id).name + ' gaat niet mee');
+    var p = byId(id), pts = r.stake - 1;
+    p.score += pts;
+    r.passed[id] = pts;
+    var out = checkOut(p);
+    sound('tick'); buzz(20);
+    var left = inRoundPlayers();
+    if (left.length === 1) {
+      finishRound(left[0].id, true);
+      return;
+    }
+    toast(p.name + ' gaat niet mee: +' + pts + (out ? ' en ligt eruit' : ''));
+    checkWinner();
+    commit();
+  }
+
+  function finishRound(winId, skipSnapshot) {
+    if (!skipSnapshot) snapshot('ronde ' + G().round.n + ', ' + byId(winId).name + ' wint');
+    var g = G(), r = g.round;
+    var losers = inRoundPlayers().filter(function (p) { return p.id !== winId; });
+    var outs = [];
+    losers.forEach(function (p) {
+      p.score += r.stake;
+      if (checkOut(p)) outs.push(p.name);
+    });
+    g.log.push({
+      t: 'round', n: r.n, stake: r.stake, toeps: r.toeps.slice(), passed: Object.keys(r.passed).reduce(function (o, k) { if (r.passed[k] > 0) o[k] = r.passed[k]; return o; }, {}),
+      winner: winId, losers: losers.map(function (p) { return p.id; }), dealer: g.players[g.dealer].id, at: Date.now()
+    });
+    g.dealer = nextDealer();
+    g.round = newRound(r.n + 1);
+    var w = byId(winId);
+    var msg = w.name + ' wint ronde ' + r.n;
+    if (losers.length) msg += ' · anderen +' + r.stake;
+    if (outs.length) msg += ' · ' + outs.join(', ') + ' ligt eruit';
+    toast(msg);
+    sound('round'); buzz(30);
+    checkWinner();
+    commit();
+  }
+
+  function adjust(id, d) {
+    var p = byId(id);
+    if (d < 0 && p.score <= 0) return;
+    snapshot('correctie bij ' + byId(id).name);
+    p.score += d;
+    if (p.score < G().limit && p.out && !p.left && d < 0) p.out = false;
+    checkOut(p);
+    G().log.push({ t: 'adj', id: id, d: d, round: G().round.n, at: Date.now() });
+    checkWinner();
+    commit();
+  }
+
+  function buyIn(id) {
+    var p = byId(id), g = G();
+    var others = alive();
+    if (!others.length) return;
+    snapshot(byId(id).name + ' koopt zich in');
+    var top = Math.max.apply(null, others.map(function (o) { return o.score; }));
+    p.score = top; p.out = false; p.bought++;
+    g.log.push({ t: 'buy', id: id, to: top, round: g.round.n, at: Date.now() });
+    toast(p.name + ' koopt zich in op ' + top);
+    sound('toep');
+    commit();
+  }
+
+  function doWas(id, by, ok) {
+    snapshot('vuile was van ' + byId(id).name);
+    var g = G(), pts = g.rules.wasStraf, melder = byId(id);
+    var target = by ? byId(ok ? by : id) : null;
+    var msg = melder.name + ' heeft vuile was';
+    if (target) {
+      target.score += pts;
+      var out = checkOut(target);
+      msg = ok ? 'Echte vuile was. ' + target.name + ' +' + pts : 'Gebluft! ' + target.name + ' +' + pts;
+      if (out) msg += ' en ligt eruit';
+    } else {
+      msg += ': nieuwe kaarten';
+    }
+    g.log.push({ t: 'was', id: id, by: by || null, ok: by ? ok : null, pts: target ? pts : 0, round: g.round.n, at: Date.now() });
+    toast(msg);
+    sound(target ? 'tick' : 'round'); buzz(30);
+    checkWinner();
+    commit();
+  }
+
+  function resetPotje() {
+    snapshot('stand op 0');
+    var g = G();
+    g.players.forEach(function (p) { p.score = 0; p.out = false; p.bought = 0; });
+    g.round = newRound(1);
+    g.log = [];
+    g.done = false;
+    toast('Stand op 0 gezet. Vergissing? Tik op Ongedaan maken.');
+    buzz(40);
+    ui.tab = 'spel';
+    commit();
+    window.scrollTo(0, 0);
+  }
+
+  function quitPlayer(id) {
+    var g = G(), p = byId(id);
+    if (p.left) return;
+    snapshot(byId(id).name + ' stopt');
+    var wasDealer = g.players[g.dealer].id === id;
+    p.left = true; p.out = true;
+    if (wasDealer) g.dealer = nextDealer();
+    g.log.push({ t: 'left', id: id, score: p.score, round: g.round.n, at: Date.now() });
+    toast(p.name + ' stopt met spelen');
+    buzz(30);
+    var r = g.round, left = inRoundPlayers();
+    if (!winner() && left.length === 1 && (r.toeps.length || Object.keys(r.passed).length)) {
+      finishRound(left[0].id, true);
+      return;
+    }
+    checkWinner();
+    commit();
+  }
+
+  function canAddPlayer() { var g = G(); return g && !g.done && g.players.filter(function (p) { return !p.left; }).length < 8; }
+  function topScore() {
+    var a = alive();
+    return a.length ? Math.max.apply(null, a.map(function (p) { return p.score; })) : 0;
+  }
+  function addPlayer(name, start) {
+    var g = G();
+    name = (name || '').trim();
+    if (!name) { toast('Vul eerst een naam in.'); renderLayer(); return false; }
+    if (g.players.some(function (p) { return p.name.toLowerCase() === name.toLowerCase(); })) { toast(name + ' speelt al mee.'); renderLayer(); return false; }
+    if (!canAddPlayer()) { toast('Er kunnen maximaal 8 spelers meedoen.'); renderLayer(); return false; }
+    var roster = state.setup.roster, rr = roster.filter(function (r) { return r.name.toLowerCase() === name.toLowerCase(); })[0];
+    if (!rr) { rr = { name: name, on: true, color: freeColor() }; roster.push(rr); }
+    else if (!rr.on && activeRoster().length < 8) rr.on = true;
+    var used = g.players.map(function (p) { return p.color; });
+    var color = used.indexOf(rr.color) < 0 ? rr.color : (COLORS.filter(function (c) { return used.indexOf(c) < 0; })[0] || rr.color);
+    var score = start === 'top' ? topScore() : 0;
+    snapshot(name + ' doet mee');
+    var n = 0; g.players.forEach(function (p) { n = Math.max(n, +p.id.slice(1) + 1); });
+    var id = 'p' + n;
+    g.players.push({ id: id, name: rr.name, color: color, score: score, out: false, bought: 0 });
+    g.round.passed[id] = 0;
+    g.log.push({ t: 'join', id: id, score: score, round: g.round.n, at: Date.now() });
+    toast(rr.name + ' doet mee vanaf de volgende ronde' + (score ? ', met ' + score : ''));
+    buzz(30);
+    commit();
+    return true;
+  }
+
+  function rejoinPlayer(id) {
+    var g = G(), p = byId(id);
+    if (!p.left || g.done) return;
+    snapshot(byId(id).name + ' doet weer mee');
+    p.left = false; p.out = p.score >= g.limit;
+    g.round.passed[id] = 0;
+    g.log.push({ t: 'back', id: id, round: g.round.n, at: Date.now() });
+    toast(p.name + ' doet weer mee vanaf de volgende ronde');
+    buzz(30);
+    commit();
+  }
+
+  function canBuyIn(p) {
+    var g = G();
+    var R = g.rules;
+    return R.inkopen && p.out && !p.left && !g.done && (R.inkopenMax === 0 || p.bought < R.inkopenMax) && alive().length >= 2 &&
+      Math.max.apply(null, alive().map(function (o) { return o.score; })) < g.limit - 1;
+  }
+
+  // ---------- Feedback: sound, vibration, wake lock, confetti ----------
+  var actx = null;
+  function sound(kind) {
+    if (!state.settings.sound) return;
+    try {
+      actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+      var notes = { toep: [523, 784], tick: [440], round: [392, 523], win: [523, 659, 784, 1047] }[kind] || [440];
+      notes.forEach(function (f, i) {
+        var o = actx.createOscillator(), g = actx.createGain(), t = actx.currentTime + i * 0.09;
+        o.type = 'triangle'; o.frequency.value = f;
+        g.gain.setValueAtTime(0.0001, t);
+        g.gain.exponentialRampToValueAtTime(0.18, t + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + 0.22);
+        o.connect(g); g.connect(actx.destination);
+        o.start(t); o.stop(t + 0.25);
+      });
+    } catch (e) {}
+  }
+  function buzz(p) { if (state.settings.vibrate && navigator.vibrate) { try { navigator.vibrate(p); } catch (e) {} } }
+
+  var wakeLock = null;
+  function updateWake() {
+    var want = state.settings.wake && state.screen === 'game' && document.visibilityState === 'visible';
+    if (want && !wakeLock && navigator.wakeLock) {
+      navigator.wakeLock.request('screen').then(function (l) {
+        wakeLock = l; l.addEventListener('release', function () { wakeLock = null; });
+      }).catch(function () {});
+    } else if (!want && wakeLock) {
+      wakeLock.release().catch(function () {}); wakeLock = null;
+    }
+  }
+  document.addEventListener('visibilitychange', updateWake);
+
+  confetti.run = 0;
+  function confetti() {
+    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    var c = document.getElementById('confetti'); c.hidden = false;
+    var ctx = c.getContext('2d'), W = c.width = innerWidth, H = c.height = innerHeight;
+    var bits = [];
+    for (var i = 0; i < 140; i++) {
+      bits.push({ x: Math.random() * W, y: -20 - Math.random() * H * 0.5, vx: (Math.random() - 0.5) * 3, vy: 2 + Math.random() * 3,
+        r: Math.random() * 6.28, vr: (Math.random() - 0.5) * 0.3, s: 6 + Math.random() * 6, c: COLORS[i % COLORS.length] });
+    }
+    var start = performance.now(), run = ++confetti.run;
+    (function frame(now) {
+      ctx.clearRect(0, 0, W, H);
+      bits.forEach(function (b) {
+        b.x += b.vx; b.y += b.vy; b.vy += 0.04; b.r += b.vr;
+        ctx.save(); ctx.translate(b.x, b.y); ctx.rotate(b.r); ctx.fillStyle = b.c;
+        ctx.fillRect(-b.s / 2, -b.s / 4, b.s, b.s / 2); ctx.restore();
+      });
+      if (now - start < 3200 && run === confetti.run) requestAnimationFrame(frame); else { ctx.clearRect(0, 0, W, H); c.hidden = true; }
+    })(start);
+  }
+
+  function toast(msg) {
+    ui.toast = msg;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { ui.toast = ''; var t = layer.querySelector('.toast'); if (t) t.remove(); }, 2600);
+  }
+
+  function applyTheme() {
+    var t = state.settings.theme, root = document.documentElement;
+    if (t === 'light' || t === 'dark') root.setAttribute('data-theme', t);
+    else if (applyTheme.touched) root.removeAttribute('data-theme');
+  }
+
+  // ---------- Rendering ----------
+  function avatar(p, sm) {
+    return '<div class="avatar' + (sm ? ' sm' : '') + '" style="background:' + p.color + '" aria-hidden="true">' + esc((p.name.trim()[0] || '?').toUpperCase()) + '</div>';
+  }
+
+  function tallySvg(n) {
+    var lines = '';
+    for (var i = 0; i < Math.min(n, 4); i++) {
+      var x = 5 + i * 7;
+      lines += '<line x1="' + x + '" y1="4" x2="' + (x + 1) + '" y2="22" />';
+    }
+    if (n === 5) lines += '<line x1="1" y1="19" x2="31" y2="7" />';
+    return '<svg viewBox="0 0 32 26" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round">' + lines + '</svg>';
+  }
+  function tally(score) {
+    if (score <= 0) return '<span class="empty">Nog geen strafpunten</span>';
+    var out = '';
+    for (var left = score; left > 0; left -= 5) out += tallySvg(Math.min(left, 5));
+    return out;
+  }
+
+  var ICONS = {
+    spel: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="11" height="15" rx="2"/><path d="M10 4.5 17.5 3a2 2 0 0 1 2.3 1.6l2 10.6a2 2 0 0 1-1.6 2.3L17 18"/></svg>',
+    verloop: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/></svg>',
+    stats: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>',
+    meer: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>'
+  };
+
+  function toggleRow(act, on, title, sub, extra) {
+    return '<button class="toggle-row" role="switch" aria-checked="' + !!on + '" data-act="' + act + '"' + (extra || '') + '>' +
+      '<div class="txt"><div><b>' + title + '</b></div>' + (sub ? '<div>' + sub + '</div>' : '') + '</div><span class="switch" aria-hidden="true"></span></button>';
+  }
+
+  function rulesPanel(R, scope) {
+    var a = ' data-scope="' + scope + '" data-k="';
+    function seg(k, opts) {
+      return '<div class="seg">' + opts.map(function (o) {
+        return '<button data-act="rulev" data-scope="' + scope + '" data-k="' + k + '" data-v="' + o[0] + '" aria-pressed="' + (R[k] === o[0]) + '">' + o[1] + '</button>';
+      }).join('') + '</div>';
+    }
+    return toggleRow('rule', R.wittewas, 'Vuile was', 'Wie alleen boeren, vrouwen, heren en azen heeft, mag die laten zien en nieuwe kaarten vragen. Je krijgt een knop om het te melden en te controleren.', a + 'wittewas"') +
+      (R.wittewas ? '<div class="sub-opt"><div class="small muted">Straf als iemand blufte, of voor wie onterecht controleert:</div>' +
+        seg('wasStraf', [[1, '1 punt'], [2, '2 punten']]) + '</div>' : '') +
+      toggleRow('rule', R.dubbelToep, 'Twee keer achter elkaar toepen', 'Uit: na jouw toep moet eerst iemand anders toepen.', a + 'dubbelToep"') +
+      toggleRow('rule', R.scherpPassen, 'Passen als je op scherp staat', 'Uit: wie op scherp staat, moet altijd mee.', a + 'scherpPassen"') +
+      toggleRow('rule', R.hoogsteDeelt, 'Hoogste stand deelt', 'Wie de meeste strafpunten heeft, deelt de volgende ronde. Bij gelijke stand: op volgorde van de tafel. Uit: de deler schuift door.', a + 'hoogsteDeelt"') +
+      toggleRow('rule', R.inkopen, 'Inkopen', 'Wie eruit ligt, mag terugkomen op de stand van de hoogste speler die nog meedoet.', a + 'inkopen"') +
+      (R.inkopen ? '<div class="sub-opt"><div class="small muted">Hoe vaak per speler?</div>' +
+        seg('inkopenMax', [[1, '1 keer'], [2, '2 keer'], [0, 'Onbeperkt']]) + '</div>' : '');
+  }
+
+  function dealerIndex() {
+    var act = activeRoster(), i = act.map(function (r) { return r.name; }).indexOf(state.setup.firstDealerName);
+    return i < 0 ? 0 : i;
+  }
+
+  function dealersHtml() {
+    var di = dealerIndex();
+    return activeRoster().map(function (r, i) {
+      return '<option value="' + esc(r.name) + '"' + (di === i ? ' selected' : '') + '>' + esc(r.name.trim() || 'Speler') + '</option>';
+    }).join('');
+  }
+
+  function rulesSummary(R) {
+    var on = [];
+    if (R.wittewas) on.push('Vuile was');
+    if (R.dubbelToep) on.push('Dubbel toepen');
+    if (!R.scherpPassen) on.push('Op scherp mee');
+    if (R.hoogsteDeelt) on.push('Hoogste deelt');
+    if (R.inkopen) on.push('Inkopen');
+    return on.length ? on.join(', ') : 'Geen';
+  }
+
+  // The multiplayer page only exists next to the installed app, not in previews.
+  var HAS_MP = /github\.io$|^localhost$|^127\./.test(location.hostname);
+  function mpLink() {
+    return HAS_MP ? '<a class="mp-link" href="index.html"><div><b>Hoofdmenu</b><span>Alleen spelen, multiplayer, opgeslagen spellen</span></div><span class="go" aria-hidden="true">→</span></a>' : '';
+  }
+
+  function renderSetup() {
+    var s = state.setup;
+    var act = activeRoster();
+    var rowsArr = s.roster.map(function (r, i) {
+      var n = r.name;
+      return '<div class="name-row' + (r.on ? '' : ' off') + '" data-row>' +
+        '<button class="toggle-row switch-btn" role="switch" aria-checked="' + r.on + '" data-act="pon" data-i="' + i + '" aria-label="' + esc(n || 'Speler') + ' doet mee"><span class="switch" aria-hidden="true"></span></button>' +
+        '<div class="avatar sm" style="background:' + r.color + '" aria-hidden="true">' + esc((n.trim()[0] || (i + 1) + '').toUpperCase()) + '</div>' +
+        '<input id="name-' + i + '" data-i="' + i + '" value="' + esc(n) + '" aria-label="Naam speler ' + (i + 1) + '" maxlength="18" autocomplete="off">' +
+        '<button class="icon-btn" data-act="up" data-i="' + i + '" aria-label="Omhoog"' + (i === 0 ? ' disabled' : '') + '>↑</button>' +
+        '<button class="icon-btn" data-act="remove" data-i="' + i + '" aria-label="Verwijder ' + esc(n || 'speler') + ' uit de lijst"' + (s.roster.length <= 2 ? ' disabled' : '') + '>×</button>' +
+        '</div>';
+    });
+    var limits = [10, 15, 21].map(function (l) {
+      return '<button data-act="limit" data-v="' + l + '" aria-pressed="' + (s.limit === l) + '">' + l + '</button>';
+    }).join('');
+    var dealers = dealersHtml();
+
+    var br = boardRows();
+
+    app.innerHTML =
+      '<div class="stack" style="gap:12px">' +
+        '<div class="topbar" style="padding-top:4px;margin-bottom:0"><div class="meta"><h1>Toepen</h1></div><div class="tools">' +
+          '<button class="btn ghost sm icon-round" data-act="sheet-rules" aria-label="Spelregels en uitleg">?</button>' +
+          (HAS_MP ? '<a class="btn ghost sm" href="index.html">← Menu</a>' : '') + '</div></div>' +
+        '<div class="panel tight"><div class="panel-head"><div class="label">Spelers · ' + act.length + ' van ' + s.roster.length + ' doen mee</div>' +
+          (s.roster.length < 20 ? '<button class="btn ghost sm" data-act="add">+ Nieuw</button>' : '') + '</div>' +
+          '<div class="roster">' + paged('roster', rowsArr) + '</div></div>' +
+        '<div class="panel tight">' +
+          '<div class="set-row"><span class="label">Af bij</span><div class="seg sm">' + limits + '</div></div>' +
+          '<div class="set-row"><label class="label" for="dealers">Eerste deler</label><select class="sel" id="dealers">' + dealers + '</select></div>' +
+          '<button class="rules-btn" data-act="sheet-setrules"><span class="label" style="width:92px">Huisregels</span><span class="sum">' + esc(rulesSummary(s.rules)) + '</span><span class="go">Wijzig ›</span></button>' +
+          (br.length ? '<button class="rules-btn" data-act="sheet-board"><span class="label" style="width:92px">Ranglijst</span><span class="sum">1. ' + esc(br[0].name) + ' · ' + plural(br[0].won, 'potje', 'potjes') + '</span><span class="go">Bekijk ›</span></button>' : '') +
+        '</div>' +
+        '<button class="btn primary big" data-act="start"' + (act.length < 2 ? ' disabled' : '') + '>' + (act.length < 2 ? 'Zet minstens 2 spelers aan' : 'Start spel met ' + act.length + ' spelers') + '</button>' +
+      '</div>';
+  }
+
+  // Setup should fit too: first tighten the rows, then let only the player
+  // list scroll inside its own box.
+  function renderSetupFit() {
+    app.classList.remove('setup-tight', 'compact', 'tight');
+    renderSetup();
+    var over = function () { return document.documentElement.scrollHeight - window.innerHeight; };
+    if (over() <= 1) return;
+    app.classList.add('setup-tight');
+  }
+
+  function isCompact() {
+    var m = state.settings.compact || 'auto';
+    if (m === 'on') return true;
+    if (m === 'off') return ui.fit >= 3;
+    return ui.fit >= 3 || G().players.filter(function (p) { return !p.left; }).length >= 6;
+  }
+
+  function renderSpel() {
+    var g = G(), r = g.round, w = winner(), html = '';
+    var dealer = g.players[g.dealer];
+
+    html += '<div class="topbar game"><div class="meta"><h1>Ronde ' + r.n + '</h1>' +
+      '<div class="small muted">Deler: <b>' + esc(dealer.name) + '</b> · af bij ' + g.limit + '</div></div>' +
+      '<div class="tools"><button class="btn ghost sm icon-round" data-act="sheet-rules" aria-label="Spelregels">?</button>' +
+      '<button class="btn ghost sm" data-act="sheet-share" data-v="stand" aria-label="Stand delen">Delen</button>' +
+      '<button class="btn ghost sm" data-act="sheet-gamemenu">Menu</button></div></div>';
+    var lastU = state.undo.length ? entryOf(state.undo[state.undo.length - 1]).label : '';
+    var lastR = state.redo.length ? state.redo[state.redo.length - 1].label : '';
+    html += '<div class="history-bar">' +
+      '<button class="btn ghost" data-act="undo"' + (lastU ? ' aria-label="Ongedaan maken: ' + esc(lastU) + '"' : ' disabled') + '>↶ Ongedaan maken</button>' +
+      '<button class="btn ghost" data-act="redo"' + (lastR ? ' aria-label="Opnieuw doen: ' + esc(lastR) + '"' : ' disabled') + '>↷ Opnieuw doen</button></div>';
+
+    if (w) {
+      var rounds = g.log.filter(function (e) { return e.t === 'round'; }).length;
+      if (ui.fit >= 3) {
+        html += '<div class="winner compact"><div class="label" style="color:inherit;opacity:.8">Winnaar van het potje</div><h2>' + esc(w.name) + '</h2>' +
+          '<div class="row"><button class="btn" data-act="again">Nog een potje</button><button class="btn ghost" data-act="sheet-share" data-v="stand">Delen</button></div></div>';
+      } else
+      html += '<div class="winner"><div class="label" style="color:inherit;opacity:.8">Winnaar van het potje</div>' +
+        '<h2>' + esc(w.name) + '</h2>' +
+        '<p>Na ' + plural(rounds, 'ronde', 'rondes') + ', met ' + plural(w.score, 'strafpunt', 'strafpunten') + '. ' +
+        'Totaal ' + plural(state.wins[w.name] || 1, 'potje', 'potjes') + ' gewonnen.</p>' +
+        '<button class="btn big" data-act="again">Nog een potje</button>' +
+        '<button class="btn ghost" data-act="sheet-share" data-v="stand">Uitslag delen</button>' +
+        '<button class="btn ghost" data-act="tosetup">Andere spelers of regels</button></div>';
+    } else {
+      var toepNames = r.toeps.map(function (t) { return esc(byId(t.by).name); }).join(' → ');
+      html += '<div class="stake"><div class="stake-main"><div class="big' + (ui.bump ? ' bump' : '') + '">' + r.stake + '</div>' +
+        '<div class="txt"><div class="label">Inzet</div><div>Verliezers krijgen ' + plural(r.stake, 'strafpunt', 'strafpunten') + '</div></div>' +
+        '<button class="btn toep" data-act="sheet-toep">Toep!</button></div>' +
+        (toepNames ? '<div class="toeplog">Getoept: ' + toepNames + '</div>' : '') +
+        '<div class="stake-row"><button class="btn finish" data-act="sheet-finish">Wie wint de ronde?</button>' +
+        (g.rules.wittewas ? '<button class="btn wit" data-act="sheet-was">Vuile was</button>' : '') + '</div></div>';
+    }
+    ui.bump = false;
+
+    var compact = isCompact();
+    app.classList.toggle('compact', compact);
+    app.classList.toggle('tight', compact && ui.fit >= 4);
+    html += '<div class="players' + (compact ? ' compact' : '') + (compact && ui.fit >= 4 ? ' tight' : '') + '">';
+    g.players.forEach(function (p, i) {
+      var af = p.out, passed = (p.id in r.passed) && !p.left && r.passed[p.id] > 0, waiting = (p.id in r.passed) && r.passed[p.id] === 0;
+      var scherp = !af && p.score === g.limit - 1;
+      var pct = Math.min(100, (p.score / g.limit) * 100);
+      var chips = '';
+      if (i === g.dealer && !w) chips += '<span class="chip deler">Deler</span>';
+      if (scherp) chips += '<span class="chip scherp">Op scherp' + (g.rules.scherpPassen ? '' : ' · moet mee') + '</span>';
+      if (p.left) chips += '<span class="chip left">Gestopt</span>';
+      else if (af) chips += '<span class="chip af">Af</span>';
+      if (passed) chips += '<span class="chip">Gepast +' + r.passed[p.id] + '</span>';
+      if (waiting) chips += '<span class="chip">Doet mee vanaf volgende ronde</span>';
+      if (p.bought) chips += '<span class="chip">Ingekocht</span>';
+      var cls = (af ? ' af' : '') + (p.left ? ' left' : '') + (scherp ? ' scherp' : '') + (passed ? ' passed' : '');
+      var lastT = r.toeps.length ? r.toeps[r.toeps.length - 1].by : null;
+      var canPass = !w && !af && !passed && !(scherp && !g.rules.scherpPassen) && r.stake > 1 && p.id !== lastT && inRoundPlayers().length > 1;
+      if (compact) {
+        html += '<div class="player compact' + cls + '">' + avatar(p, true) +
+          '<div class="p-who"><div class="p-line"><span class="p-name">' + esc(p.name) + '</span>' + chips + '</div>' +
+          '<div class="bar"><span style="width:' + pct + '%"></span></div></div>' +
+          (canPass ? '<button class="btn warn sm" data-act="pass" data-id="' + p.id + '" aria-label="' + esc(p.name) + ' gaat niet mee">Past +' + (r.stake - 1) + '</button>' : '') +
+          (canBuyIn(p) ? '<button class="btn sm" data-act="buyin" data-id="' + p.id + '">Inkopen</button>' : '') +
+          '<button class="p-score" data-act="sheet-adjust" data-id="' + p.id + '" aria-label="Score van ' + esc(p.name) + ' aanpassen">' + p.score + '<small>/' + g.limit + '</small></button></div>';
+        return;
+      }
+      // Medium step: no tally marks, buttons on the name line.
+      var medium = ui.fit === 2 && (state.settings.compact || 'auto') === 'auto';
+      var inline = medium ? (canPass ? '<button class="btn warn sm" data-act="pass" data-id="' + p.id + '">Past +' + (r.stake - 1) + '</button>' : '') +
+        (canBuyIn(p) ? '<button class="btn sm" data-act="buyin" data-id="' + p.id + '">Inkopen</button>' : '') : '';
+      html += '<div class="player' + cls + '">' +
+        '<div class="p-head">' + avatar(p) +
+          '<div class="p-who"><div class="p-name">' + esc(p.name) + '</div>' + (chips ? '<div class="chips">' + chips + '</div>' : '') + '</div>' + inline +
+          '<button class="p-score" data-act="sheet-adjust" data-id="' + p.id + '" aria-label="Score van ' + esc(p.name) + ' aanpassen">' + p.score + '<small> / ' + g.limit + '</small></button></div>' +
+        (medium ? '' : '<div class="tally" aria-label="' + p.score + ' strafpunten">' + tally(p.score) + '</div>') +
+        '<div class="bar"><span style="width:' + pct + '%"></span></div>';
+      if (medium) { html += '</div>'; return; }
+      var acts = '';
+      var lastToep = r.toeps.length ? r.toeps[r.toeps.length - 1].by : null;
+      var mustPlay = scherp && !g.rules.scherpPassen;
+      if (!w && !af && !passed && !mustPlay && r.stake > 1 && p.id !== lastToep && inRoundPlayers().length > 1) {
+        acts += '<button class="btn warn" data-act="pass" data-id="' + p.id + '">Gaat niet mee (+' + (r.stake - 1) + ')</button>';
+      }
+      if (canBuyIn(p)) acts += '<button class="btn" data-act="buyin" data-id="' + p.id + '">Inkopen</button>';
+      if (acts) html += '<div class="p-actions">' + acts + '</div>';
+      html += '</div>';
+    });
+    html += '</div>';
+
+
+    if (!w && r.n === 1 && !r.toeps.length && !g.log.length && ui.fit < 1) {
+      html += '<div class="panel small muted" style="margin-top:14px"><div><b style="color:var(--fg)">Zo werkt het:</b> tik op <b>Toep!</b> als iemand toept. ' +
+        'Gaat iemand niet mee, tik dan bij die speler op <b>Gaat niet mee</b>. Aan het eind tik je op <b>Wie wint de ronde?</b>; de rest krijgt de inzet. ' +
+        'Tik op een score om die met de hand aan te passen.</div>' +
+        '<button class="btn ghost sm" style="margin-top:10px" data-act="sheet-rules" data-v="uitleg">Volledige uitleg</button></div>';
+    }
+    return html;
+  }
+
+  function nameOf(id) { var p = byId(id); return p ? esc(p.name) : '?'; }
+
+  function renderVerloop() {
+    var g = G(), html = '<div class="topbar"><h1>Verloop</h1></div>';
+    if (!g.log.length) return html + '<div class="panel muted">Nog geen rondes gespeeld. Elke ronde, correctie en inkoop verschijnt hier.</div>';
+    var items = [];
+    g.log.slice().reverse().forEach(function (e) {
+      var h = '';
+      if (e.t === 'round') {
+        var pills = '<span class="pill win">' + nameOf(e.winner) + ' wint</span>';
+        e.losers.forEach(function (id) { pills += '<span class="pill plus">' + nameOf(id) + ' +' + e.stake + '</span>'; });
+        Object.keys(e.passed).forEach(function (id) { pills += '<span class="pill">' + nameOf(id) + ' gepast +' + e.passed[id] + '</span>'; });
+        h = '<div class="log-item" data-row><div class="log-head"><span>Ronde ' + e.n + '</span><span class="num">inzet ' + e.stake + '</span></div>' +
+          (e.toeps.length ? '<div class="small muted">Getoept: ' + e.toeps.map(function (t) { return nameOf(t.by); }).join(' → ') + '</div>' : '<div class="small muted">Niet getoept · deler ' + nameOf(e.dealer) + '</div>') +
+          '<div>' + pills + '</div></div>';
+      } else if (e.t === 'adj') {
+        h = '<div class="log-item" data-row><div class="log-head"><span>Correctie</span><span class="muted small">ronde ' + e.round + '</span></div>' +
+          '<div class="small">' + nameOf(e.id) + ' ' + (e.d > 0 ? '+' : '−') + Math.abs(e.d) + '</div></div>';
+      } else if (e.t === 'was') {
+        var wtxt = !e.by ? nameOf(e.id) + ' heeft vuile was en ruilt' :
+          (e.ok ? nameOf(e.by) + ' controleert ' + nameOf(e.id) + ': echte vuile was, ' + nameOf(e.by) + ' +' + e.pts :
+                  nameOf(e.by) + ' controleert ' + nameOf(e.id) + ': gebluft, ' + nameOf(e.id) + ' +' + e.pts);
+        h = '<div class="log-item" data-row><div class="log-head"><span>Vuile was</span><span class="muted small">ronde ' + e.round + '</span></div>' +
+          '<div class="small">' + wtxt + '</div></div>';
+      } else if (e.t === 'join') {
+        h = '<div class="log-item" data-row><div class="log-head"><span>Nieuwe speler</span><span class="muted small">ronde ' + e.round + '</span></div>' +
+          '<div class="small">' + nameOf(e.id) + ' doet mee, met ' + plural(e.score, 'strafpunt', 'strafpunten') + '</div></div>';
+      } else if (e.t === 'left' || e.t === 'back') {
+        h = '<div class="log-item" data-row><div class="log-head"><span>' + (e.t === 'left' ? 'Gestopt' : 'Doet weer mee') + '</span><span class="muted small">ronde ' + e.round + '</span></div>' +
+          '<div class="small">' + nameOf(e.id) + (e.t === 'left' ? ' stopt met spelen, met ' + plural(e.score, 'strafpunt', 'strafpunten') : ' doet weer mee') + '</div></div>';
+      } else if (e.t === 'buy') {
+        h = '<div class="log-item" data-row><div class="log-head"><span>Inkoop</span><span class="muted small">ronde ' + e.round + '</span></div>' +
+          '<div class="small">' + nameOf(e.id) + ' koopt zich in op ' + e.to + '</div></div>';
+      }
+      if (h) items.push(h);
+    });
+    return html + '<div class="panel" style="padding-block:4px">' + paged('verloop', items) + '</div>';
+  }
+
+  function computeStats() {
+    var g = G(), s = {};
+    g.players.forEach(function (p) { s[p.id] = { won: 0, toeps: 0, passed: 0, lost: 0, pts: 0 }; });
+    var rounds = 0, maxStake = 1, maxRound = null, totalToeps = 0;
+    g.log.forEach(function (e) {
+      if (e.t !== 'round') return;
+      rounds++;
+      if (s[e.winner]) s[e.winner].won++;
+      e.toeps.forEach(function (t) { if (s[t.by]) s[t.by].toeps++; totalToeps++; });
+      Object.keys(e.passed).forEach(function (id) { if (s[id]) { s[id].passed++; s[id].pts += e.passed[id]; } });
+      e.losers.forEach(function (id) { if (s[id]) { s[id].lost++; s[id].pts += e.stake; } });
+      if (e.stake > maxStake) { maxStake = e.stake; maxRound = e; }
+    });
+    return { per: s, rounds: rounds, maxStake: maxStake, maxRound: maxRound, totalToeps: totalToeps };
+  }
+
+  function boardRows() {
+    var map = {};
+    function get(n) { return map[n] || (map[n] = { name: n, won: 0, aw: 0, played: 0, ap: 0, pts: 0, toeps: 0, rounds: 0, color: null }); }
+    state.archive.forEach(function (g) {
+      get(g.winner).aw++;
+      g.players.forEach(function (p) {
+        if (p.left) return;
+        var x = get(p.name);
+        x.ap++; x.pts += p.score; x.toeps += p.toeps; x.rounds += p.won; x.color = p.color;
+      });
+    });
+    Object.keys(state.wins).forEach(function (n) { if (state.wins[n] > 0) get(n).won = state.wins[n]; });
+    state.setup.roster.forEach(function (r) { if (map[r.name] && !map[r.name].color) map[r.name].color = r.color; });
+    var rows = Object.keys(map).map(function (k) { var x = map[k]; x.played = x.ap + Math.max(0, x.won - x.aw); return x; })
+      .filter(function (x) { return x.played > 0; });
+    rows.sort(function (a, b) {
+      return b.won - a.won || (b.won / b.played) - (a.won / a.played) || b.played - a.played || a.name.localeCompare(b.name);
+    });
+    return rows;
+  }
+
+  function rankBadge(i) { return '<span class="rank' + (i < 3 ? ' r' + (i + 1) : '') + '">' + (i + 1) + '</span>'; }
+  function dot(c) { return '<span class="dot" style="background:' + (c || 'var(--muted)') + '"></span>'; }
+  function fmtDate(t) {
+    try { return new Date(t).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', year: 'numeric' }); } catch (e) { return ''; }
+  }
+
+  function allTimeHtml() {
+    var A = state.archive, rows = boardRows();
+    if (!rows.length) return '<div class="panel muted">Nog geen potjes uitgespeeld. Zodra een potje een winnaar heeft, komt die hier op de ranglijst.</div>';
+    var totalGames = Math.max(A.length, Object.keys(state.wins).reduce(function (n, k) { return n + state.wins[k]; }, 0));
+    var totalRounds = A.reduce(function (n, g) { return n + g.rounds; }, 0);
+    var maxStake = A.reduce(function (m, g) { return Math.max(m, g.maxStake || 1); }, 0);
+    var html = '<div class="stack" style="gap:10px">';
+    html += '<div class="tiles"><div class="tile"><b>' + totalGames + '</b><span>Potjes</span></div>' +
+      '<div class="tile"><b>' + totalRounds + '</b><span>Rondes</span></div>' +
+      '<div class="tile"><b>' + (maxStake || '–') + '</b><span>Hoogste inzet</span></div></div>';
+    var trs = rows.map(function (x, i) {
+      return '<tr data-row' + (i === 0 ? ' class="top"' : '') + '><td>' + rankBadge(i) + '</td><td class="who">' + dot(x.color) + '<span>' + esc(x.name) + '</span></td>' +
+        '<td>' + x.won + '</td><td>' + x.played + '</td><td>' + Math.round(x.won / x.played * 100) + '%</td></tr>';
+    });
+    var st = pgState('rank'), size = Math.max(1, Math.min(st.size, trs.length)), pages = Math.ceil(trs.length / size);
+    if (st.i >= pages) st.i = pages - 1;
+    html += '<div class="panel tight"><div class="label">Ranglijst · potjes</div><div class="table-wrap"><table class="stats"><thead><tr><th></th><th class="who">Speler</th><th>Ge-<br>wonnen</th><th>Ge-<br>speeld</th><th>Winst<br>%</th></tr></thead>' +
+      '<tbody data-paged="rank">' + trs.slice(st.i * size, st.i * size + size).join('') + '</tbody></table></div>' +
+      (pages > 1 ? '<div class="pager"><button class="btn ghost sm" data-act="pg" data-k="rank" data-v="-1"' + (st.i === 0 ? ' disabled' : '') + '>‹ Vorige</button><span class="small muted num">' + (st.i + 1) + ' / ' + pages + '</span><button class="btn ghost sm" data-act="pg" data-k="rank" data-v="1"' + (st.i >= pages - 1 ? ' disabled' : '') + '>Volgende ›</button></div>' : '') +
+      '<p class="small muted">Meeste potjes <b>gewonnen</b> bovenaan; bij gelijke stand telt het <b>winstpercentage</b>.</p></div>';
+    html += '<div class="navlist">' +
+      (A.length ? navRow('pg-open', 'Records', 'snelste, schoonste, meeste toeps', ' data-v="records"') + navRow('pg-open', 'Laatste potjes', 'laatste: ' + esc(A[A.length - 1].winner), ' data-v="laatste"') : '') +
+      '<button class="btn" data-act="sheet-share" data-v="board">Ranglijst delen</button></div>';
+    return html + '</div>';
+  }
+
+  function recordsHtml() {
+    var A = state.archive;
+    if (!A.length) return '<p class="muted">Nog geen potjes uitgespeeld.</p>';
+    var fastest = null, cleanest = null, toepKing = null, bigStake = null;
+    A.forEach(function (g) {
+      var w = g.players.filter(function (p) { return p.name === g.winner; })[0];
+      if (!fastest || g.rounds < fastest.g.rounds) fastest = { g: g };
+      if (w && (!cleanest || w.score < cleanest.score)) cleanest = { g: g, score: w.score };
+      g.players.forEach(function (p) { if (!toepKing || p.toeps > toepKing.n) toepKing = { name: p.name, n: p.toeps, g: g }; });
+      if (!bigStake || (g.maxStake || 1) > bigStake.n) bigStake = { n: g.maxStake || 1, g: g };
+    });
+    return '<div class="panel" style="gap:0">' +
+      '<div class="record"><span>Snelste overwinning</span><span>' + esc(fastest.g.winner) + ' · ' + plural(fastest.g.rounds, 'ronde', 'rondes') + '</span></div>' +
+      (cleanest ? '<div class="record"><span>Schoonste overwinning</span><span>' + esc(cleanest.g.winner) + ' · ' + plural(cleanest.score, 'strafpunt', 'strafpunten') + '</span></div>' : '') +
+      (toepKing && toepKing.n ? '<div class="record"><span>Meeste toeps in één potje</span><span>' + esc(toepKing.name) + ' · ' + toepKing.n + '×</span></div>' : '') +
+      '<div class="record"><span>Hoogste inzet</span><span>' + bigStake.n + ' · ' + fmtDate(bigStake.g.at) + '</span></div></div>';
+  }
+
+  function lastGamesHtml() {
+    var A = state.archive;
+    return '<div class="panel" style="padding-block:4px">' + paged('laatste', A.slice(-30).reverse().map(function (g) {
+      var stand = g.players.slice().sort(function (a, b) { return a.score - b.score; });
+      return '<div class="log-item" data-row><div class="log-head"><span>' + esc(g.winner) + ' wint</span><span class="muted small">' + fmtDate(g.at) + '</span></div>' +
+        '<div class="small muted">' + plural(g.rounds, 'ronde', 'rondes') + ' · af bij ' + g.limit + '</div><div>' +
+        stand.map(function (p) { return '<span class="pill' + (p.name === g.winner ? ' win' : '') + '">' + esc(p.name) + ' ' + p.score + '</span>'; }).join('') +
+        '</div></div>';
+    })) + '</div>';
+  }
+
+  function shareRows(kind) {
+    if (kind === 'board') {
+      return boardRows().slice(0, 10).map(function (x, i) {
+        return { rank: i + 1, name: x.name, color: x.color, value: x.won + '', sub: 'van ' + x.played + ' gewonnen' };
+      });
+    }
+    var g = G();
+    var ps = g.players.slice().sort(function (a, b) { return (a.out - b.out) || (a.score - b.score); });
+    return ps.map(function (p, i) {
+      var sub = p.left ? 'gestopt' : p.out ? 'af' : (p.score === g.limit - 1 ? 'op scherp' : '');
+      return { rank: i + 1, name: p.name, color: p.color, value: p.score + '', sub: sub, out: p.out };
+    });
+  }
+
+  function standLabel() { var n = G().round.n - 1; return n < 1 ? 'stand' : 'stand na ronde ' + n; }
+
+  function shareTitle(kind) {
+    if (kind === 'board') return 'Toepen ranglijst';
+    var w = winner();
+    return w ? w.name + ' wint het potje!' : 'Toepen · ' + standLabel();
+  }
+
+  function shareText(kind) {
+    var medals = ['🥇', '🥈', '🥉'];
+    var lines = [];
+    if (kind === 'board') {
+      lines.push('*🃏 Toepen ranglijst*', '');
+      shareRows('board').forEach(function (r, i) {
+        lines.push((medals[i] || (r.rank + '.')) + ' ' + r.name + ' – ' + r.value + ' ' + (r.value === '1' ? 'potje' : 'potjes') + ' gewonnen (' + r.sub.replace('van ', '') + ' gespeeld)');
+      });
+      var A = state.archive;
+      if (A.length) {
+        var last = A[A.length - 1];
+        lines.push('', 'Laatste potje: ' + last.winner + ' won op ' + fmtDate(last.at) + '.');
+      }
+    } else {
+      var g = G(), w = winner();
+      lines.push(w ? '*🏆 ' + w.name + ' wint het potje!*' : '*🃏 Toepen · ' + standLabel() + '*');
+      lines.push('Strafpunten, af bij ' + g.limit, '');
+      shareRows('stand').forEach(function (r) {
+        lines.push((r.out ? '❌ ' : (w && r.name === w.name ? '🏆 ' : r.rank + '. ')) + r.name + ' – ' + r.value + (r.sub ? ' (' + r.sub + ')' : ''));
+      });
+    }
+    lines.push('', 'Bijgehouden met Toepen Scorebord');
+    return lines.join('\n');
+  }
+
+  function shareCanvas(kind) {
+    var rows = shareRows(kind), W = 1080, rowH = 120, top = 250;
+    var H = top + rows.length * rowH + 110;
+    var c = document.createElement('canvas'); c.width = W; c.height = H;
+    var x = c.getContext('2d');
+    var disp = '"Bricolage Grotesque", system-ui, sans-serif', body = '"Figtree", system-ui, sans-serif';
+    x.fillStyle = '#eef1ea'; x.fillRect(0, 0, W, H);
+    x.fillStyle = '#253a2e'; x.fillRect(0, 0, W, 200);
+    // tally mark logo
+    x.strokeStyle = '#eef1ea'; x.lineWidth = 9; x.lineCap = 'round';
+    for (var i = 0; i < 4; i++) { x.beginPath(); x.moveTo(70 + i * 22, 60); x.lineTo(73 + i * 22, 140); x.stroke(); }
+    x.strokeStyle = '#f0a160'; x.beginPath(); x.moveTo(56, 128); x.lineTo(152, 74); x.stroke();
+    x.fillStyle = '#eef1ea'; x.font = '800 60px ' + disp; x.textBaseline = 'middle';
+    x.fillText(shareTitle(kind), 190, 88, W - 230);
+    x.font = '500 34px ' + body; x.globalAlpha = 0.8;
+    x.fillText(kind === 'board' ? 'Meeste potjes gewonnen' : 'Strafpunten · af bij ' + G().limit, 190, 148, W - 230);
+    x.globalAlpha = 1;
+    var maxV = Math.max.apply(null, rows.map(function (r) { return +r.value; }).concat([1]));
+    if (kind !== 'board') maxV = Math.max(maxV, G().limit);
+    rows.forEach(function (r, i) {
+      var y = top + i * rowH;
+      x.globalAlpha = r.out ? 0.5 : 1;
+      x.fillStyle = '#fbfcf8'; roundRect(x, 50, y, W - 100, rowH - 18, 24); x.fill();
+      x.fillStyle = r.color || '#5f6b62'; x.beginPath(); x.arc(110, y + 51, 34, 0, 6.29); x.fill();
+      x.fillStyle = '#ffffff'; x.font = '800 36px ' + disp; x.textAlign = 'center';
+      x.fillText((r.name.trim()[0] || '?').toUpperCase(), 110, y + 53);
+      x.textAlign = 'left'; x.fillStyle = '#1d2620'; x.font = '700 40px ' + body;
+      x.fillText(r.name, 170, y + 38, 560);
+      x.fillStyle = '#d5dbd0'; roundRect(x, 170, y + 70, 600, 12, 6); x.fill();
+      x.fillStyle = r.sub === 'op scherp' ? '#b4540f' : r.out ? '#b3261e' : '#1f6b4a';
+      roundRect(x, 170, y + 70, Math.max(12, 600 * Math.min(1, (+r.value) / maxV)), 12, 6); x.fill();
+      x.textAlign = 'right'; x.fillStyle = '#1d2620'; x.font = '800 60px ' + disp;
+      x.fillText(r.value, W - 90, y + 42);
+      if (r.sub) { x.font = '600 26px ' + body; x.fillStyle = r.sub === 'op scherp' ? '#b4540f' : '#5f6b62'; x.fillText(r.sub, W - 90, y + 84); }
+      x.textAlign = 'left'; x.globalAlpha = 1;
+    });
+    x.fillStyle = '#5f6b62'; x.font = '500 28px ' + body; x.textAlign = 'center';
+    x.fillText('Toepen Scorebord · ' + fmtDate(Date.now()), W / 2, H - 55);
+    return c;
+  }
+  function roundRect(x, l, t, w, h, r) {
+    x.beginPath(); x.moveTo(l + r, t); x.arcTo(l + w, t, l + w, t + h, r); x.arcTo(l + w, t + h, l, t + h, r);
+    x.arcTo(l, t + h, l, t, r); x.arcTo(l, t, l + w, t, r); x.closePath();
+  }
+
+  function shareImage(kind) {
+    var c = shareCanvas(kind), out = document.getElementById('share-img-out');
+    function showImage() {
+      if (out) out.innerHTML = '<div class="share-img"><img alt="Scorebord als plaatje" src="' + c.toDataURL('image/png') + '">' +
+        '<p class="small muted">Houd het plaatje ingedrukt om het op te slaan of te delen, en stuur het daarna in WhatsApp.</p></div>';
+    }
+    if (!c.toBlob || !navigator.canShare) { showImage(); return; }
+    c.toBlob(function (blob) {
+      var file;
+      try { file = new File([blob], 'toepen-scorebord.png', { type: 'image/png' }); } catch (e) { showImage(); return; }
+      if (navigator.canShare({ files: [file] })) {
+        navigator.share({ files: [file], title: shareTitle(kind) }).then(function () { closePage(); }, function (err) {
+          if (err && err.name === 'AbortError') closePage(); else showImage();
+        });
+      } else showImage();
+    }, 'image/png');
+  }
+
+  function copyShare(kind) {
+    var text = shareText(kind);
+    function fallback() {
+      var pre = document.getElementById('share-text');
+      if (pre) { var r = document.createRange(); r.selectNodeContents(pre); var sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); }
+      toast('Tekst geselecteerd. Kies Kopiëren.'); renderLayerToastOnly();
+    }
+    try {
+      navigator.clipboard.writeText(text).then(function () { toast('Gekopieerd. Plak het in WhatsApp.'); renderLayerToastOnly(); }, fallback);
+    } catch (e) { fallback(); }
+  }
+  function renderLayerToastOnly() {
+    var t = layer.querySelector('.toast');
+    if (t) t.remove();
+    if (ui.toast) layer.insertAdjacentHTML('beforeend', '<div class="toast" role="status">' + esc(ui.toast) + '</div>');
+  }
+
+  function renderStats() {
+    var seg = '<div class="seg" style="margin-bottom:14px">' + [['potje', 'Dit potje'], ['altijd', 'Ranglijst']].map(function (o) {
+      return '<button data-act="statsview" data-v="' + o[0] + '" aria-pressed="' + ((ui.statsView || 'potje') === o[0]) + '">' + o[1] + '</button>';
+    }).join('') + '</div>';
+    if (ui.statsView === 'altijd') return '<div class="topbar"><h1>Statistieken</h1></div>' + seg + allTimeHtml();
+    return renderPotjeStats().replace('<div class="stack">', seg + '<div class="stack">');
+  }
+
+  function renderPotjeStats() {
+    var g = G(), st = computeStats(), html = '<div class="topbar"><h1>Statistieken</h1></div><div class="stack">';
+    html += '<div class="tiles"><div class="tile"><b>' + st.rounds + '</b><span>Rondes</span></div>' +
+      '<div class="tile"><b>' + st.totalToeps + '</b><span>Keer getoept</span></div>' +
+      '<div class="tile"><b>' + st.maxStake + '</b><span>Hoogste inzet' + (st.maxRound ? ' · ' + nameOf(st.maxRound.winner) : '') + '</span></div></div>';
+    var maxWon = Math.max.apply(null, g.players.map(function (p) { return st.per[p.id].won; }).concat([1]));
+    html += '<div class="panel tight"><div class="label">Per speler</div><div class="table-wrap"><table class="stats six"><thead><tr><th>Speler</th><th>Rondes<br>gewonnen</th><th>Keer<br>getoept</th><th>Keer<br>gepast</th><th>Rondes<br>verloren</th><th>Straf-<br>punten</th></tr></thead><tbody>';
+    g.players.forEach(function (p) {
+      var x = st.per[p.id];
+      html += '<tr><td>' + dot(p.color) + esc(p.name) + '</td><td' + (x.won === maxWon && x.won > 0 ? ' style="color:var(--accent);font-weight:800"' : '') + '>' + x.won + '</td><td>' + x.toeps + '</td><td>' + x.passed + '</td><td>' + x.lost + '</td><td>' + p.score + '</td></tr>';
+    });
+    html += '</tbody></table></div><p class="small muted"><b>Rondes verloren</b>: aan het eind nog meedoen en de laatste slag niet halen. Gepast telt daar niet bij.</p></div>';
+    return html + '</div>';
+  }
+
+  function rulesTopics() {
+    var g = state.game, R = g ? g.rules : state.setup.rules, limit = g ? g.limit : state.setup.limit;
+    var straf = function (n) { return plural(n, 'strafpunt', 'strafpunten'); };
+    var cards = ['B', 'V', 'H', 'A', '7', '8', '9', '10'].map(function (c, i) {
+      return '<span class="card' + (i === 7 ? ' hi' : '') + '">' + c + '</span>';
+    }).join('');
+    var mine = [];
+    mine.push('Af bij <b>' + limit + '</b> ' + 'strafpunten.');
+    mine.push(R.dubbelToep ? 'Je mag <b>meerdere keren achter elkaar</b> toepen.' : 'Na jouw toep moet <b>eerst iemand anders</b> toepen.');
+    mine.push(R.scherpPassen ? 'Op scherp mag je <b>gewoon passen</b>.' : 'Op scherp <b>moet je mee</b>; passen mag niet.');
+    mine.push(R.wittewas ? 'Vuile was <b>telt</b>. Straf bij bluffen of onterecht controleren: <b>' + straf(R.wasStraf) + '</b>.' : 'Vuile was <b>telt niet</b>.');
+    mine.push(R.hoogsteDeelt ? 'De speler met de <b>meeste strafpunten deelt</b>.' : 'De deler <b>schuift door</b> naar links.');
+    mine.push(R.inkopen ? 'Inkopen mag, <b>' + (R.inkopenMax === 0 ? 'onbeperkt' : R.inkopenMax === 1 ? '1 keer' : '2 keer') + '</b> per speler.' : 'Inkopen <b>mag niet</b>.');
+    var T = [{ t: 'Bij jullie aan tafel', b: '<div class="table-rules"><ul>' + mine.map(function (m) { return '<li>' + m + '</li>'; }).join('') + '</ul></div>' }];
+    var sec = function (title, body) { T.push({ t: title, b: '<div class="rulebook">' + body + '</div>' }); return ''; };
+    var ignored = '<div>' +
+      sec('Doel van het spel', '<p>Zo min mogelijk strafpunten halen. Wie <b>' + limit + '</b> strafpunten heeft, ligt eruit. Wie als laatste overblijft, wint het potje.</p>', true) +
+      sec('Kaarten en volgorde', '<p>Je speelt met <b>32 kaarten</b>: van elke kleur de 7, 8, 9, 10, boer, vrouw, heer en aas. Van laag naar hoog:</p>' +
+        '<div class="cards">' + cards + '</div><div class="cards-cap"><span>← laagste</span><span>hoogste →</span></div>' +
+        '<p style="margin-top:8px">De <b>10 is de hoogste</b> kaart en de <b>boer de laagste</b>. Er is geen troef.</p>', true) +
+      sec('Delen en uitkomen', '<ul><li>De deler geeft iedereen <b>4 kaarten</b>.</li><li>De speler links van de deler komt uit (legt de eerste kaart).</li><li>' + (R.hoogsteDeelt ? 'Na elke ronde deelt wie de <b>meeste strafpunten</b> heeft; bij gelijke stand de eerstvolgende aan tafel.' : 'Na elke ronde schuift de deler één plek door.') + ' De app houdt bij wie er deelt.</li></ul>') +
+      sec('Slagen spelen', '<ul><li>Je moet <b>kleur bekennen</b>: speel dezelfde kleur als de eerste kaart als je die hebt.</li><li>Heb je die kleur niet, dan mag je elke kaart opgooien, maar daarmee kun je de slag niet winnen.</li><li>De hoogste kaart van de gevraagde kleur wint de slag. Die speler komt de volgende slag uit.</li><li>Er zijn 4 slagen per ronde. Alleen <b>de laatste slag telt</b>: wie die haalt, wint de ronde.</li></ul>') +
+      sec('Toepen', '<ul><li>Een ronde begint met een inzet van <b>1</b>.</li><li>Iedereen die nog meedoet, mag op elk moment <b>toepen</b> (op tafel kloppen). De inzet gaat dan 1 omhoog.</li>' +
+        '<li>De anderen kiezen meteen: <b>meegaan</b> of <b>passen</b>.</li><li>Wie past, krijgt de inzet van <b>vóór</b> die toep als strafpunten en doet niet meer mee aan de ronde.</li>' +
+        '<li>' + (R.dubbelToep ? 'Je mag ook zelf nog een keer toepen.' : 'Na jouw toep moet eerst iemand anders toepen voordat jij weer mag.') + '</li>' +
+        '<li>Gaat niemand mee, dan wint de toeper de ronde meteen.</li></ul>') +
+      sec('Strafpunten tellen', '<p>Wie aan het eind nog meedoet en de laatste slag <b>niet</b> haalt, krijgt de inzet als strafpunten.</p>' +
+        '<div class="example"><b>Voorbeeld.</b> Anna toept: inzet 2. Bram past en krijgt 1. Cas toept: inzet 3. Anna gaat mee, Dirk past en krijgt 2. Anna haalt de laatste slag: Cas krijgt 3.</div>') +
+      sec('Op scherp en af', '<ul><li><b>Op scherp</b>: je hebt er ' + (limit - 1) + '; nog één strafpunt en je ligt eruit. ' +
+        (R.scherpPassen ? 'Je mag gewoon passen.' : 'Bij jullie moet je dan altijd mee.') + '</li><li><b>Af</b>: ' + limit + ' of meer strafpunten. Je speelt niet meer mee' +
+        (R.inkopen ? ', tenzij je je inkoopt.' : '.') + '</li></ul>') +
+      (R.wittewas ? sec('Vuile was en bluffen', '<ul><li><b>Vuile was</b>: je hebt alleen boeren, vrouwen, heren en azen. Leg ze open en vraag 4 nieuwe kaarten.</li>' +
+        '<li>Een ander mag controleren. <b>Klopt het</b>, dan krijgt de controleur ' + straf(R.wasStraf) + '.</li>' +
+        '<li>Was het <b>gebluft</b>, dan krijgt de melder ' + straf(R.wasStraf) + '.</li><li>Tik in de app op <b>Vuile was</b> om het bij te houden.</li></ul>') : '') +
+      (R.inkopen ? sec('Inkopen', '<p>Wie eruit ligt, mag ' + (R.inkopenMax === 0 ? 'zo vaak als nodig' : R.inkopenMax === 1 ? 'één keer' : 'twee keer') +
+        ' terugkomen. Je krijgt dan net zoveel strafpunten als de hoogste speler die nog meedoet. Dat kan alleen als die niet zelf al op scherp staat.</p>') : '') +
+      sec('Tips', '<ul><li>Bewaar je hoogste kaart van een kleur voor de <b>laatste slag</b>.</li><li>Toepen met een slechte hand is <b>bluffen</b>. Dat mag en hoort erbij.</li><li>Sta je op scherp? Kijk goed wie er toept voordat je meegaat.</li></ul>') +
+      '</div>';
+    return T;
+  }
+
+  function notesHtml() {
+    return '<label class="label" for="notes">Eigen afspraken van jullie tafel</label>' +
+      '<textarea id="notes" style="min-height:40vh" placeholder="Typ hier jullie eigen afspraken">' + esc(state.setup.notes || '') + '</textarea>' +
+      '<p class="small muted">Wordt automatisch bewaard en staat hier elke keer weer.</p>';
+  }
+
+  function guideSteps() {
+    var k = function (t, c) { return '<span class="key' + (c ? ' ' + c : '') + '">' + t + '</span>'; };
+    var S = [];
+    var step = function (n, title, items) {
+      S.push({ t: title, b: '<div class="guide-step" style="border:0;padding:0"><span class="n">' + n + '</span><div><ul style="margin:0">' +
+        items.map(function (i) { return '<li>' + i + '</li>'; }).join('') + '</ul></div></div>' });
+      return '';
+    };
+    var ignored = '<div>' +
+      step(1, 'Spelers kiezen', [
+        'Zet met het <b>schuifje</b> aan wie er meespeelt. Uit = deze keer niet, de naam blijft bewaard.',
+        k('+ Nieuwe speler') + ' voegt iemand toe; ' + k('↑') + ' zet iemand een plek hoger, zodat de volgorde klopt met de tafel.',
+        'Kies bij <b>Af bij</b> tot hoeveel strafpunten je speelt, en wie als <b>eerste deelt</b>.',
+        'Zet de <b>huisregels</b> aan of uit en tik op ' + k('Start spel') + '.'
+      ]) +
+      step(2, 'Een ronde bijhouden', [
+        'Iemand toept? Tik op ' + k('Toep!', 'dark') + ' en kies wie. De inzet gaat 1 omhoog.',
+        'Gaat iemand niet mee? Tik bij die speler op ' + k('Gaat niet mee', 'warn') + '. Die krijgt meteen zijn punten.',
+        'Iemand meldt vuile was? Tik op ' + k('Vuile was', 'dark') + ' en volg de vragen.',
+        'Ronde voorbij? Tik op ' + k('Wie wint de ronde?', 'dark') + ' en kies wie de laatste slag haalde. De rest krijgt de inzet.',
+        'De volgende ronde begint vanzelf. De app wijst de nieuwe deler aan: de volgende speler, of met de huisregel <b>Hoogste stand deelt</b> de speler met de meeste strafpunten.'
+      ]) +
+      step(3, 'Vergissing herstellen', [
+        'Tik op ' + k('↶ Ongedaan maken') + ' om de laatste actie terug te draaien. Dat kan meerdere keren achter elkaar.',
+        'Toch goed? Tik op ' + k('↷ Opnieuw doen') + ' om het weer terug te zetten. Doe je eerst iets nieuws, dan vervalt Opnieuw doen.',
+        'Of tik op iemands <b>score</b> om er met de hand 1 bij te doen of af te halen.'
+      ]) +
+      step(4, 'Wat de labels betekenen', [
+        k('Deler') + ' deelt deze ronde.',
+        k('Op scherp', 'warn') + ' nog één strafpunt en je ligt eruit.',
+        '<b>Af</b>: ligt eruit. ' + k('Inkopen') + ' verschijnt als terugkomen mag.',
+        '<b>Gepast</b>: doet deze ronde niet meer mee.',
+        '<b>Gestopt</b>: wil iemand stoppen? Tik op de <b>score</b> van die speler en kies <b>stopt met spelen</b>, of ga naar <b>Meer</b> → Spelers. Daar kan diegene ook weer meedoen.',
+        'Komt er iemand bij? Tik op ' + k('+ Speler toevoegen') + ' onder de spelers. Kies een naam en of de speler met 0 of op de hoogste stand begint. Meedoen gaat vanaf de volgende ronde.'
+      ]) +
+      step(5, 'Winnaar en nieuw potje', [
+        'Blijft er één speler over, dan is die de winnaar en komt het potje op de ranglijst.',
+        k('Nog een potje') + ' begint opnieuw met dezelfde spelers; ' + k('Andere spelers of regels') + ' brengt je terug naar het begin.',
+        'Midden in een potje opnieuw beginnen? Tik rechtsboven op ' + k('Nieuw') + ' en kies zelfde of andere spelers. Met ' + k('↶ Ongedaan maken') + ' krijg je het oude potje terug.'
+      ]) +
+      step(6, 'De tabbladen onderin', [
+        '<b>Spel</b>: het scorebord. <b>Verloop</b>: elke ronde terug te lezen.',
+        '<b>Stats</b>: cijfers van ' + k('Dit potje') + ' en de ' + k('Ranglijst') + ' van alle potjes, met records.',
+        '<b>Meer</b>: thema, geluid, trillen, scherm aan houden, huisregels en opnieuw beginnen.'
+      ]) +
+      step(7, 'Delen in WhatsApp', [
+        'Tik op ' + k('Delen') + ' (rechtsboven, bij de winnaar of in de ranglijst).',
+        k('Delen via WhatsApp') + ' opent WhatsApp met het bericht al klaar. ' + k('Als plaatje') + ' maakt een plaatje van het scorebord.'
+      ]) +
+      step(8, 'Opnieuw beginnen', [
+        k('Stand op 0 zetten') + ' wist alleen dit potje; met ' + k('↶ Ongedaan maken') + ' kun je het terugzetten.',
+        'Onder <b>Meer</b> kun je ook de <b>ranglijst</b> of <b>alles</b> wissen. De app vraagt altijd eerst of je het zeker weet.'
+      ]) +
+      step(9, 'Goed om te weten', [
+        'Alles wordt bewaard op <b>deze telefoon</b>. Sluit je de app, dan staat het spel er de volgende keer nog.',
+        'Installeer de app via Chrome: ' + k('⋮') + ' → <b>App installeren</b>. Daarna werkt hij ook zonder internet.',
+        'Elke telefoon heeft zijn eigen stand en ranglijst.'
+      ]) +
+      '</div>';
+    return S;
+  }
+
+  /* ---------- Pages ---------- */
+  // Full-screen pages stack on top of the app. The phone's back button closes
+  // the top page; 'Vorige'/'Volgende' swap pages without a history entry.
+  function openPage(pg) {
+    ui.sheet = null;
+    ui.pages.push(pg);
+    try {
+      // an open window's history entry turns into the page's entry
+      if (sheetHist) { sheetHist = 0; history.replaceState({ toepenPage: ui.pages.length }, ''); }
+      else history.pushState({ toepenPage: ui.pages.length }, '');
+    } catch (e) {}
+    render();
+    var fp = layer.querySelector('.fullpage'); if (fp) fp.scrollTop = 0;
+  }
+  function closePage() {
+    if (history.state && history.state.toepenPage) history.back();
+    else { ui.pages.pop(); render(); }
+  }
+  var ignorePop = 0, sheetHist = 0;
+  // The phone's back button closes an open window: give it a history entry
+  // (and wait for a step back in flight to finish before adding the next one).
+  function syncSheetHist() {
+    if (ignorePop) return;
+    if (ui.sheet && !sheetHist) { try { history.pushState({ toepenSheet: 1 }, ''); sheetHist = 1; } catch (e) {} }
+    else if (!ui.sheet && sheetHist) { sheetHist = 0; ignorePop++; try { history.back(); } catch (e) { ignorePop--; } }
+  }
+  function closeAllPages() {
+    var n = ui.pages.length;
+    ui.pages = [];
+    if (!n) return;
+    n += sheetHist; sheetHist = 0;
+    if (history.state && (history.state.toepenPage || history.state.toepenSheet)) { ignorePop++; try { history.go(-n); } catch (e) { ignorePop--; } }
+  }
+  function swapPage(pg) { ui.pages[ui.pages.length - 1] = pg; render(); }
+
+  // Lists that do not fit get pages of their own. Each row has data-row; the
+  // number of rows per page is worked out after drawing (see autoPage).
+  function pgState(key) { return ui.pg[key] || (ui.pg[key] = { i: 0, size: 999 }); }
+  function paged(key, rows) {
+    var st = pgState(key), n = rows.length, size = Math.max(1, Math.min(st.size, n || 1)), pages = Math.max(1, Math.ceil(n / size));
+    if (st.i >= pages) st.i = pages - 1;
+    if (st.i < 0) st.i = 0;
+    var from = st.i * size, html = '<div class="paged" data-paged="' + key + '">' + rows.slice(from, from + size).join('') + '</div>';
+    if (pages > 1) html += '<div class="pager"><button class="btn ghost sm" data-act="pg" data-k="' + key + '" data-v="-1"' + (st.i === 0 ? ' disabled' : '') + '>‹ Vorige</button>' +
+      '<span class="small muted num">' + (st.i + 1) + ' / ' + pages + '</span>' +
+      '<button class="btn ghost sm" data-act="pg" data-k="' + key + '" data-v="1"' + (st.i >= pages - 1 ? ' disabled' : '') + '>Volgende ›</button></div>';
+    return html;
+  }
+  function overflowNow() {
+    var fp = layer.querySelector('.fullpage');
+    if (fp) return { el: fp, over: fp.scrollHeight - fp.clientHeight };
+    return { el: app, over: document.documentElement.scrollHeight - window.innerHeight };
+  }
+  function autoPage(redraw) {
+    for (var k = 0; k < 10; k++) {
+      var o = overflowNow();
+      if (o.over <= 1) return;
+      var box = o.el.querySelector('[data-paged]');
+      if (!box) {
+        if (o.el.classList.contains('fullpage') && !o.el.classList.contains('fp-tight2')) {
+          o.el.classList.add(o.el.classList.contains('fp-tight') ? 'fp-tight2' : 'fp-tight');
+          continue;
+        }
+        return;
+      }
+      var rows = box.querySelectorAll('[data-row]');
+      if (rows.length <= 1) return;
+      var avg = box.getBoundingClientRect().height / rows.length;
+      var st = pgState(box.dataset.paged);
+      st.size = Math.max(1, rows.length - Math.max(1, Math.ceil(o.over / Math.max(avg, 1))));
+      redraw();
+    }
+  }
+  function navRow(act, title, sub, extra) {
+    return '<button class="navrow" data-row data-act="' + act + '"' + (extra || '') + '><b>' + title + '</b><span class="sub">' + (sub || '') + '</span></button>';
+  }
+  function prevNext(i, n) {
+    return '<div class="page-nav"><button class="btn ghost" data-act="pg-step" data-v="-1"' + (i <= 0 ? ' disabled' : '') + '>‹ Vorige</button>' +
+      '<button class="btn" data-act="pg-step" data-v="1"' + (i >= n - 1 ? ' disabled' : '') + '>Volgende ›</button></div>';
+  }
+
+  function pageContent(pg) {
+    var g = state.game;
+    switch (pg.id) {
+      case 'help':
+        var T = rulesTopics();
+        return { title: 'Spelregels en uitleg', body: paged('help', T.map(function (t, i) { return navRow('pg-open', t.t, '', ' data-v="topic" data-i="' + i + '"'); })
+          .concat([navRow('pg-open', 'Uitleg van de app', 'stap voor stap', ' data-v="guide"'), navRow('pg-open', 'Eigen afspraken', esc((state.setup.notes || '').slice(0, 30)), ' data-v="notes"')])) };
+      case 'topic':
+        var T2 = rulesTopics(), t = T2[pg.i];
+        return { title: t.t, body: '<div class="topic">' + t.b + '</div><p class="small muted num" style="text-align:center">Onderwerp ' + (pg.i + 1) + ' van ' + T2.length + '</p>' + prevNext(pg.i, T2.length) };
+      case 'guide':
+        var S = guideSteps();
+        return { title: 'Uitleg van de app', body: paged('guide', S.map(function (x, i) { return '<button class="navrow" data-row data-act="pg-open" data-v="step" data-i="' + i + '"><span class="n">' + (i + 1) + '</span><b>' + x.t + '</b><span class="sub"></span></button>'; })) };
+      case 'step':
+        var S2 = guideSteps(), x = S2[pg.i];
+        return { title: (pg.i + 1) + '. ' + x.t, body: '<div class="topic">' + x.b + '</div><p class="small muted num" style="text-align:center">Stap ' + (pg.i + 1) + ' van ' + S2.length + '</p>' + prevNext(pg.i, S2.length) };
+      case 'notes':
+        return { title: 'Eigen afspraken', body: notesHtml() };
+      case 'opslaan':
+        return { title: 'Opslaan', body: opslaanPage() };
+      case 'huisregels':
+        var R = pg.scope === 'game' && g ? g.rules : state.setup.rules;
+        return { title: 'Huisregels', body: '<div class="panel tight">' + rulesPanel(R, pg.scope === 'game' && g ? 'game' : 'setup') + '</div>' };
+      case 'spelers':
+        return { title: 'Spelers', body: spelersPage() };
+      case 'weergave':
+        return { title: 'Weergave en geluid', body: weergavePage() };
+      case 'opnieuw':
+        return { title: 'Opnieuw beginnen', body: opnieuwPage() };
+      case 'ranglijst':
+        return { title: 'Ranglijst', body: allTimeHtml() };
+      case 'records':
+        return { title: 'Records', body: recordsHtml() };
+      case 'laatste':
+        return { title: 'Laatste potjes', body: lastGamesHtml() };
+      case 'share':
+        return { title: pg.kind === 'board' ? 'Ranglijst delen' : 'Stand delen', body: sharePage(pg.kind) };
+      case 'shareimg':
+        return { title: 'Plaatje van het scorebord', body: '<div class="share-img" id="share-img-out"><p class="muted">Plaatje maken…</p></div>' };
+    }
+    return { title: '', body: '' };
+  }
+
+  function spelersPage() {
+    var g = G();
+    return paged('spelers', g.players.map(function (p) {
+      var btn = g.done ? '' : p.left
+        ? '<button class="btn sm" data-act="rejoin" data-id="' + p.id + '">Doet weer mee</button>'
+        : '<button class="btn ghost sm" data-act="ask-quit" data-id="' + p.id + '">Stopt</button>';
+      return '<div class="quit-row" data-row>' + avatar(p, true) + '<b>' + esc(p.name) + '</b><span class="small muted num">' +
+        (p.left ? 'gestopt' : p.out ? 'af' : p.score + ' / ' + g.limit) + '</span>' + btn + '</div>';
+    })) + (canAddPlayer() ? '<button class="btn ghost" data-act="sheet-addp">+ Speler toevoegen</button>' : '');
+  }
+  function weergavePage() {
+    var st = state.settings;
+    return '<div class="panel tight"><div class="label">Thema</div><div class="seg">' + [['system', 'Systeem'], ['light', 'Licht'], ['dark', 'Donker']].map(function (o) {
+        return '<button data-act="theme" data-v="' + o[0] + '" aria-pressed="' + (st.theme === o[0]) + '">' + o[1] + '</button>';
+      }).join('') + '</div>' +
+      '<div class="label">Spelerslijst</div><div class="seg">' +
+      [['auto', 'Automatisch'], ['on', 'Compact'], ['off', 'Groot']].map(function (o) {
+        return '<button data-act="compact" data-v="' + o[0] + '" aria-pressed="' + ((st.compact || 'auto') === o[0]) + '">' + o[1] + '</button>';
+      }).join('') + '</div><p class="small muted">Automatisch: groot als het past, anders kleiner, zodat je niet hoeft te scrollen.</p></div>' +
+      '<div class="panel tight">' +
+      toggleRow('sound', st.sound, 'Geluid', 'Korte tonen bij toepen, rondes en de winnaar.') +
+      toggleRow('vibrate', st.vibrate, 'Trillen', 'Voelbare tik bij elke actie.') +
+      toggleRow('wake', st.wake, 'Scherm aan houden', 'Je telefoon gaat niet op slot tijdens het spel.') + '</div>';
+  }
+  function opnieuwPage() {
+    return '<div class="panel tight">' +
+      '<button class="btn ghost" data-act="sheet-new">Nieuw spel</button>' +
+      '<button class="btn ghost" data-act="ask" data-v="potje">Stand op 0 zetten</button>' +
+      '<p class="small muted">Alleen de strafpunten van dit potje. Spelers en ranglijst blijven.</p>' +
+      '<button class="btn warn" data-act="ask" data-v="ranglijst">Ranglijst wissen</button>' +
+      '<p class="small muted">Gewonnen potjes, records en eerdere potjes. Spelers blijven.</p>' +
+      '<button class="btn danger" data-act="ask" data-v="alles">Alles wissen</button>' +
+      '<p class="small muted">Ook je spelerslijst. Alleen je instellingen blijven. De stand staat alleen op dit toestel.</p></div>';
+  }
+  function sharePage(kind) {
+    var stext = shareText(kind), lines = stext.split('\n');
+    var preview = lines.slice(0, 8).join('\n') + (lines.length > 8 ? '\n…' : '');
+    return '<a class="btn wa big" href="https://wa.me/?text=' + encodeURIComponent(stext) + '" target="_blank" rel="noopener">Delen via WhatsApp</a>' +
+      '<div class="row"><button class="btn" style="flex:1" data-act="share-img" data-v="' + kind + '">Als plaatje</button>' +
+      '<button class="btn ghost" style="flex:1" data-act="share-copy" data-v="' + kind + '">Tekst kopiëren</button></div>' +
+      '<div class="label">Voorbeeld</div><pre class="share-preview" id="share-text">' + esc(preview) + '</pre>';
+  }
+
+  // Sections fold open one at a time so the page fits the screen.
+
+  function opslaanPage() {
+    var n = window.ToepenSaves ? window.ToepenSaves.count() : 0;
+    if (ui.saveName === undefined) { var d = new Date(); ui.saveName = 'Toepen ' + d.getDate() + '/' + (d.getMonth() + 1); }
+    return '<p class="muted">Bewaar dit spel met de stand en de ranglijst onder een naam. Je opent het later weer in het hoofdmenu.</p>' +
+      '<div class="panel tight"><label class="label" for="savename">Naam</label><input class="text" id="savename" maxlength="40" autocomplete="off" value="' + esc(ui.saveName) + '" placeholder="Naam" style="width:100%;height:50px;border-radius:12px;border:1.5px solid var(--line);background:var(--bg);color:var(--fg);padding:0 14px;font:inherit;font-size:1.05rem">' +
+      '<button class="btn big" data-act="do-save">Opslaan</button></div>' +
+      '<a class="btn ghost" href="index.html?view=saves">Opgeslagen spellen' + (n ? ' (' + n + ')' : '') + '</a>';
+  }
+  function renderMeer() {
+    var st = state.settings, g = G(), html = '<div class="topbar"><h1>Meer</h1></div><div class="navlist">';
+    var themeName = { system: 'Systeem', light: 'Licht', dark: 'Donker' }[st.theme] || 'Systeem';
+    var listName = { auto: 'Automatisch', on: 'Compact', off: 'Groot' }[st.compact || 'auto'];
+    html += navRow('pg-open', 'Spelers', g.players.filter(function (p) { return !p.left; }).length + ' aan tafel', ' data-v="spelers"');
+    html += navRow('pg-open', 'Huisregels', esc(rulesSummary(g.rules)), ' data-v="huisregels" data-scope="game"');
+    html += navRow('pg-open', 'Weergave en geluid', themeName + ' · ' + listName, ' data-v="weergave"');
+    html += navRow('pg-open', 'Opnieuw beginnen', 'nieuw spel, stand op 0, wissen', ' data-v="opnieuw"');
+    html += navRow('pg-open', 'Opslaan', 'bewaar dit spel onder een naam', ' data-v="opslaan"');
+    html += navRow('pg-open', 'Spelregels en uitleg', '', ' data-v="help"');
+    html += '</div>';
+    if (HAS_MP) html += '<div style="margin-top:10px">' + mpLink() + '</div>';
+    html += '<p class="small muted" style="text-align:center;margin-top:10px">Toepen Scorebord · versie ' + VERSION + '</p>';
+    return html;
+  }
+
+  // The game screen should fit the phone without scrolling: if it does not,
+  // drop the first-round hint, then the tally marks, then switch to compact
+  // rows, then tighten them.
+  function renderGame() {
+    ui.fit = 0;
+    for (;;) {
+      renderGameOnce();
+      var over = document.documentElement.scrollHeight - window.innerHeight;
+      if (ui.tab !== 'spel' || over <= 1 || ui.fit >= 4) break;
+      ui.fit++;
+    }
+  }
+  function renderGameOnce() {
+    var body = { spel: renderSpel, verloop: renderVerloop, stats: renderStats, meer: renderMeer }[ui.tab]();
+    var tabs = [['spel', 'Spel'], ['verloop', 'Verloop'], ['stats', 'Stats'], ['meer', 'Meer']];
+    app.innerHTML = body +
+      '<nav class="tabbar" aria-label="Onderdelen"><div class="inner">' + tabs.map(function (t) {
+        return '<button data-act="tab" data-v="' + t[0] + '"' + (ui.tab === t[0] ? ' aria-current="page"' : '') + '>' + ICONS[t[0]] + t[1] + '</button>';
+      }).join('') + '</div></nav>';
+  }
+
+  function renderLayer() {
+    syncSheetHist();
+    var full = '';
+    var html = '';
+    var sh = ui.sheet;
+    if (sh && (state.game || sh.type === 'board' || sh.type === 'rules' || sh.type === 'setrules' || (sh.type === 'share' && sh.kind === 'board'))) {
+      var inner = '';
+      if (sh.type === 'toep') {
+        var rt = G().round.toeps, lastT = rt.length ? rt[rt.length - 1].by : null;
+        var canToep = inRoundPlayers().filter(function (p) { return G().rules.dubbelToep || p.id !== lastT; });
+        inner = '<h2>Wie toept?</h2><p class="muted small">De inzet gaat van ' + G().round.stake + ' naar ' + (G().round.stake + 1) + '.' +
+          (lastT && !G().rules.dubbelToep ? ' ' + esc(byId(lastT).name) + ' toepte als laatste en mag nu niet.' : '') + '</p>' +
+          '<div class="pick">' + canToep.map(function (p) {
+            return '<button data-act="toep" data-id="' + p.id + '">' + avatar(p, true) + '<span>' + esc(p.name) + '</span></button>';
+          }).join('') + '</div>';
+      } else if (sh.type === 'finish') {
+        var losersN = inRoundPlayers().length - 1;
+        inner = '<h2>Wie wint ronde ' + G().round.n + '?</h2><p class="muted small">Tik op wie de laatste slag haalde. ' +
+          (losersN > 0 ? 'De ' + plural(losersN, 'andere speler', 'andere spelers') + ' krijg' + (losersN === 1 ? 't' : 'en') + ' ' + plural(G().round.stake, 'strafpunt', 'strafpunten') + '.' : '') + '</p>' +
+          '<div class="pick">' + inRoundPlayers().map(function (p) {
+            return '<button data-act="finish" data-id="' + p.id + '">' + avatar(p, true) + '<span>' + esc(p.name) + '</span></button>';
+          }).join('') + '</div>';
+      } else if (sh.type === 'setrules') {
+        inner = '<h2>Huisregels</h2><p class="small muted">Spreek ze af voordat je begint. Tijdens het spel kun je ze nog wijzigen onder Meer.</p>' + rulesPanel(state.setup.rules, 'setup');
+      } else if (sh.type === 'gamemenu') {
+        inner = '<h2>Menu</h2><div class="menu-list">' +
+          '<button class="btn ghost" data-act="sheet-new">Nieuw spel…</button>' +
+          (canAddPlayer() ? '<button class="btn ghost" data-act="sheet-addp">+ Speler toevoegen</button>' : '') +
+          '<button class="btn ghost" data-act="ask" data-v="potje">Stand op 0 zetten…</button>' +
+          '<button class="btn ghost" data-act="menu-meer">Spelers</button>' +
+          '<button class="btn ghost" data-act="pg-open" data-v="huisregels" data-scope="game">Huisregels</button>' +
+          '<button class="btn ghost" data-act="sheet-rules">Spelregels en uitleg</button>' +
+          '<button class="btn ghost" data-act="pg-open" data-v="opslaan">Opslaan…</button></div>';
+      } else if (sh.type === 'confirm') {
+        var games = Math.max(state.archive.length, Object.keys(state.wins).reduce(function (n, k) { return n + state.wins[k]; }, 0));
+        var C = {
+          potje: ['Stand op 0 zetten?', 'Alle strafpunten van dit potje gaan naar 0 en je begint weer bij ronde 1. Spelers, huisregels en de ranglijst blijven staan. Vergist? Daarna kun je het nog terugdraaien met Ongedaan maken.', 'Ja, stand op 0', 'warn'],
+          ranglijst: ['Ranglijst wissen?', 'De ranglijst, records en ' + plural(games, 'eerder potje', 'eerdere potjes') + ' worden gewist. Je spelers en het potje van nu blijven staan. Dit kun je niet ongedaan maken.', 'Ja, ranglijst wissen', 'danger'],
+          alles: ['Alles wissen?', 'Je spelerslijst, het potje van nu, de ranglijst en alle eerdere potjes worden gewist. Alleen je instellingen blijven. Dit kun je niet ongedaan maken.', 'Ja, alles wissen', 'danger']
+        }[sh.what];
+        inner = '<h2>' + C[0] + '</h2><p class="muted">' + C[1] + '</p>' +
+          '<button class="btn big ' + C[3] + '" data-act="do-reset" data-v="' + sh.what + '">' + C[2] + '</button>';
+      } else if (sh.type === 'was1') {
+        inner = '<h2>Wie heeft vuile was?</h2><p class="muted small">Alleen boeren, vrouwen, heren en azen in de hand.</p>' +
+          '<div class="pick">' + inRoundPlayers().map(function (p) {
+            return '<button data-act="was-who" data-id="' + p.id + '">' + avatar(p, true) + '<span>' + esc(p.name) + '</span></button>';
+          }).join('') + '</div>';
+      } else if (sh.type === 'was2') {
+        var m = byId(sh.id), straf = G().rules.wasStraf;
+        inner = '<h2>' + esc(m.name) + ' meldt vuile was</h2>' +
+          '<p class="muted small">Wil iemand de kaarten zien? Klopt het, dan krijgt de controleur ' + plural(straf, 'strafpunt', 'strafpunten') +
+          '. Is het gebluft, dan krijgt ' + esc(m.name) + ' ' + plural(straf, 'strafpunt', 'strafpunten') + '.</p>' +
+          '<button class="btn primary" data-act="was-none" data-id="' + m.id + '">Niemand controleert, gewoon ruilen</button>' +
+          '<div class="label">Of: wie controleert?</div>' +
+          '<div class="pick">' + inRoundPlayers().filter(function (p) { return p.id !== m.id; }).map(function (p) {
+            return '<button data-act="was-check" data-id="' + m.id + '" data-by="' + p.id + '">' + avatar(p, true) + '<span>' + esc(p.name) + '</span></button>';
+          }).join('') + '</div>';
+      } else if (sh.type === 'was3') {
+        var m3 = byId(sh.id), c3 = byId(sh.by), st3 = G().rules.wasStraf;
+        inner = '<h2>Klopte het?</h2><p class="muted small">' + esc(c3.name) + ' bekijkt de kaarten van ' + esc(m3.name) + '.</p>' +
+          '<button class="btn big" data-act="was-ok" data-id="' + m3.id + '" data-by="' + c3.id + '">Ja, echte vuile was · ' + esc(c3.name) + ' +' + st3 + '</button>' +
+          '<button class="btn warn big" data-act="was-fake" data-id="' + m3.id + '" data-by="' + c3.id + '">Nee, gebluft · ' + esc(m3.name) + ' +' + st3 + '</button>';
+      } else if (sh.type === 'adjust') {
+        var p = byId(sh.id);
+        inner = '<div class="row">' + avatar(p) + '<div><h2>' + esc(p.name) + '</h2><div class="muted small">Nu ' + plural(p.score, 'strafpunt', 'strafpunten') + '</div></div></div>' +
+          '<p class="small muted">Corrigeer een vergissing. Dit komt in het verloop te staan.</p>' +
+          '<div class="row"><button class="btn ghost big" style="flex:1" data-act="adj" data-id="' + p.id + '" data-v="-1"' + (p.score > 0 ? '' : ' disabled') + '>− 1</button>' +
+          '<button class="btn big" style="flex:1" data-act="adj" data-id="' + p.id + '" data-v="1">+ 1</button></div>' +
+          (G().done ? '' : p.left
+            ? '<button class="btn" data-act="rejoin" data-id="' + p.id + '">' + esc(p.name) + ' doet weer mee</button>'
+            : '<button class="btn ghost" data-act="ask-quit" data-id="' + p.id + '">' + esc(p.name) + ' stopt met spelen…</button>');
+      } else if (sh.type === 'newgame') {
+        var gg = G(), stay = gg.players.filter(function (p) { return !p.left; });
+        var busy = !gg.done && (gg.log.length || gg.round.toeps.length || gg.players.some(function (p) { return p.score > 0; }));
+        inner = '<h2>Nieuw spel</h2>' +
+          (busy ? '<p class="muted">Het potje van nu is nog niet uitgespeeld en telt niet mee voor de ranglijst. Vergist? Tik daarna op <b>↶ Ongedaan maken</b>, dan krijg je het terug.</p>'
+                : '<p class="muted">Hoe wil je verder?</p>') +
+          '<button class="btn primary big stacked" data-act="again">Zelfde spelers en regels<span class="sub">' +
+            esc(stay.map(function (p) { return p.name; }).join(', ')) + ' · af bij ' + gg.limit + '</span></button>' +
+          '<button class="btn big stacked" data-act="tosetup">Andere spelers of regels<span class="sub">Terug naar het beginscherm</span></button>';
+      } else if (sh.type === 'addp') {
+        var gn = G().players.map(function (p) { return p.name.toLowerCase(); });
+        var bench = state.setup.roster.filter(function (r) { return gn.indexOf(r.name.toLowerCase()) < 0; });
+        var top = topScore(), startTop = sh.start === 'top';
+        inner = '<h2>Speler toevoegen</h2><p class="muted small">De nieuwe speler doet mee vanaf de volgende ronde en schuift aan het eind van de tafel aan.</p>' +
+          '<div class="label">Begint met</div><div class="seg">' +
+          '<button data-act="addp-start" data-v="zero" aria-pressed="' + !startTop + '">0 strafpunten</button>' +
+          '<button data-act="addp-start" data-v="top" aria-pressed="' + startTop + '">' + plural(top, 'strafpunt', 'strafpunten') + ' (hoogste)</button></div>' +
+          (bench.length ? '<div class="label">Uit je spelerslijst</div><div class="pick">' + bench.map(function (r) {
+            return '<button data-act="addp-pick" data-v="' + esc(r.name) + '"><div class="avatar sm" style="background:' + r.color + '" aria-hidden="true">' +
+              esc((r.name.trim()[0] || '?').toUpperCase()) + '</div><span>' + esc(r.name) + '</span></button>';
+          }).join('') + '</div>' : '') +
+          '<div class="label">Of een nieuwe naam</div>' +
+          '<div class="name-row"><input id="addname" maxlength="18" autocomplete="off" placeholder="Naam" aria-label="Naam nieuwe speler">' +
+          '<button class="btn primary" data-act="addp-new">Toevoegen</button></div>';
+      } else if (sh.type === 'quit') {
+        var q = byId(sh.id), others = alive().filter(function (o) { return o.id !== q.id; }).length;
+        inner = '<div class="row">' + avatar(q) + '<h2>' + esc(q.name) + ' stopt met spelen?</h2></div>' +
+          '<p class="muted">' + esc(q.name) + ' doet niet meer mee in dit potje. De ' + plural(q.score, 'strafpunt', 'strafpunten') + ' blijven staan in het verloop' +
+          (G().players[G().dealer].id === q.id ? ' en de deler schuift door' : '') + '. Wil ' + esc(q.name) + ' later toch weer meedoen? Tik dan op de score.</p>' +
+          (others === 1 ? '<p class="small" style="color:var(--warn)"><b>Let op:</b> er blijft dan één speler over. Die wint het potje.</p>' : '') +
+          '<button class="btn warn big" data-act="do-quit" data-id="' + q.id + '">Ja, ' + esc(q.name) + ' stopt</button>';
+      }
+      if (full) {
+        html += '<div class="fullpage" role="dialog" aria-modal="true" aria-label="' + full + '"><div class="fp-bar"><div class="in">' +
+          '<button class="btn ghost sm" data-act="back">← Terug</button><h2>' + full + '</h2></div></div>' +
+          '<div class="fp-body">' + inner + '</div></div>';
+      } else {
+        html += '<div class="scrim" data-act="close"><div class="sheet" role="dialog" aria-modal="true"><div class="grip"></div>' + inner +
+          '<button class="btn ghost" data-act="close">Annuleren</button></div></div>';
+      }
+    }
+    if (ui.pages.length) {
+      var topPg = ui.pages[ui.pages.length - 1], pc = pageContent(topPg);
+      html = '<div class="fullpage" role="dialog" aria-modal="true" aria-label="' + esc(pc.title) + '"><div class="fp-bar"><div class="in">' +
+        '<button class="btn ghost sm" data-act="back">← Terug</button><h2>' + pc.title + '</h2></div></div>' +
+        '<div class="fp-body">' + pc.body + '</div></div>' + html;
+    }
+    if (ui.toast) html += '<div class="toast" role="status">' + esc(ui.toast) + '</div>';
+    var fpPrev = layer.querySelector('.fullpage'), fpTop = fpPrev ? fpPrev.scrollTop : 0;
+    layer.innerHTML = html;
+    var fp = layer.querySelector('.fullpage');
+    if (fp && fpPrev) fp.scrollTop = fpTop;
+    document.body.style.overflow = fp ? 'hidden' : '';
+  }
+
+  function renderCore() {
+    applyTheme();
+    if (state.screen === 'game' && state.game) renderGame(); else renderSetupFit();
+    renderLayer();
+    app.hidden = ui.pages.length > 0; // a page covers the screen; the screen behind it must not scroll
+    updateWake();
+  }
+  // Rows per page are measured again only when the screen changes (another tab
+  // or page, rotating the phone), so 'Volgende' keeps its place.
+  function remeasure() { ui.pgReset = true; }
+  function render() {
+    var where = (state.screen || '') + '|' + ui.tab + '|' + ui.pages.map(function (x) { return x.id + (x.i || ''); }).join('/');
+    if (ui.pgReset || where !== ui.pgWhere) {
+      Object.keys(ui.pg).forEach(function (k) { ui.pg[k].size = 999; });
+      ui.pgReset = false; ui.pgWhere = where;
+    }
+    renderCore();
+    autoPage(renderCore);
+  }
+  function commit() { save(); render(); }
+
+  // ---------- Events ----------
+  document.addEventListener('input', function (e) {
+    var t = e.target;
+    if (t.id === 'notes') { state.setup.notes = t.value; save(); return; }
+    if (t.id === 'savename') { ui.saveName = t.value; return; }
+    if (t.matches && t.matches('input[data-i]')) {
+      var rr = state.setup.roster[+t.dataset.i], wasDealer = state.setup.firstDealerName === rr.name;
+      rr.name = t.value;
+      if (wasDealer) state.setup.firstDealerName = t.value;
+      save();
+      var av = t.previousElementSibling;
+      if (av) av.textContent = (t.value.trim()[0] || (+t.dataset.i + 1) + '').toUpperCase();
+    }
+  });
+
+  document.addEventListener('change', function (e) {
+    var d = document.getElementById('dealers');
+    if (e.target.id === 'dealers') { state.setup.firstDealerName = e.target.value; save(); return; }
+    if (d && e.target.matches && e.target.matches('input[data-i]')) d.innerHTML = dealersHtml();
+  });
+
+  document.addEventListener('click', function (e) {
+    var el = e.target.closest('[data-act]');
+    if (!el) return;
+    if (el.classList.contains('scrim') && e.target !== el) return;
+    var act = el.dataset.act, id = el.dataset.id, v = el.dataset.v, s = state.setup;
+    switch (act) {
+      case 'add':
+        var on = activeRoster().length < 8;
+        s.roster.push({ name: 'Speler ' + (s.roster.length + 1), on: on, color: freeColor() }); commit();
+        if (!on) toast('Er doen al 8 spelers mee. Zet eerst iemand uit.');
+        var last = document.getElementById('name-' + (s.roster.length - 1));
+        if (last) { last.focus(); last.select(); }
+        break;
+      case 'remove': s.roster.splice(+el.dataset.i, 1); commit(); break;
+      case 'pon':
+        var pr = s.roster[+el.dataset.i];
+        if (!pr.on && activeRoster().length >= 8) { toast('Maximaal 8 spelers. Zet eerst iemand anders uit.'); renderLayer(); break; }
+        pr.on = !pr.on; commit(); break;
+      case 'up':
+        var i = +el.dataset.i, tmp = s.roster[i - 1]; s.roster[i - 1] = s.roster[i]; s.roster[i] = tmp; commit(); break;
+      case 'limit': s.limit = +v; commit(); break;
+      case 'firstdealer': s.firstDealerName = v; commit(); break;
+      case 'rule':
+        var R1 = el.dataset.scope === 'game' ? G().rules : s.rules; R1[el.dataset.k] = !R1[el.dataset.k]; commit(); break;
+      case 'rulev':
+        var R2 = el.dataset.scope === 'game' ? G().rules : s.rules; R2[el.dataset.k] = +v; commit(); break;
+      case 'start':
+        s.roster.forEach(function (r, i) { r.name = r.name.trim() || ('Speler ' + (i + 1)); });
+        var act2 = activeRoster();
+        if (act2.length < 2) break;
+        startFresh(act2.map(function (r) { return r.name; }), s.limit, s.rules, dealerIndex(), act2.map(function (r) { return r.color; }), 'nieuw spel');
+        sound('round');
+        commit(); break;
+      case 'tab': ui.tab = v; render(); window.scrollTo(0, 0); break;
+      case 'undo': undo(); break;
+      case 'redo': redo(); break;
+      case 'sheet-toep': ui.sheet = { type: 'toep' }; renderLayer(); break;
+      case 'sheet-finish': ui.sheet = { type: 'finish' }; renderLayer(); break;
+      case 'sheet-was': ui.sheet = { type: 'was1' }; renderLayer(); break;
+      case 'sheet-board': openPage({ id: 'ranglijst' }); break;
+      case 'statsview': ui.statsView = v; render(); break;
+      case 'sheet-share': openPage({ id: 'share', kind: v }); break;
+      case 'share-img': openPage({ id: 'shareimg', kind: v }); shareImage(v); break;
+      case 'share-copy': copyShare(v); break;
+      case 'was-who': ui.sheet = { type: 'was2', id: id }; renderLayer(); break;
+      case 'was-check': ui.sheet = { type: 'was3', id: id, by: el.dataset.by }; renderLayer(); break;
+      case 'was-none': ui.sheet = null; doWas(id, null, null); break;
+      case 'was-ok': ui.sheet = null; doWas(id, el.dataset.by, true); break;
+      case 'was-fake': ui.sheet = null; doWas(id, el.dataset.by, false); break;
+      case 'sheet-adjust': ui.sheet = { type: 'adjust', id: id }; renderLayer(); break;
+      case 'close': ui.sheet = null; renderLayer(); break;
+      case 'toep': ui.sheet = null; doToep(id); break;
+      case 'finish': ui.sheet = null; finishRound(id); break;
+      case 'pass': doPass(id); break;
+      case 'adj': adjust(id, +v); break;
+      case 'ask-quit': ui.sheet = { type: 'quit', id: id }; renderLayer(); break;
+      case 'do-quit': ui.sheet = null; quitPlayer(id); break;
+      case 'rejoin': ui.sheet = null; rejoinPlayer(id); break;
+      case 'sheet-addp': ui.sheet = { type: 'addp', start: 'zero' }; renderLayer(); break;
+      case 'addp-start': ui.sheet.start = v; renderLayer(); break;
+      case 'addp-pick': var st0 = ui.sheet.start; ui.sheet = null; if (!addPlayer(v, st0)) ui.sheet = { type: 'addp', start: st0 }; break;
+      case 'addp-new':
+        var inp = document.getElementById('addname'), st1 = ui.sheet.start, nm = inp ? inp.value : '';
+        ui.sheet = null;
+        if (!addPlayer(nm, st1)) { ui.sheet = { type: 'addp', start: st1 }; renderLayer(); var i2 = document.getElementById('addname'); if (i2) { i2.value = nm; i2.focus(); } }
+        break;
+      case 'buyin': buyIn(id); break;
+      case 'sheet-new': ui.sheet = { type: 'newgame' }; renderLayer(); break;
+      case 'again':
+        ui.sheet = null; closeAllPages();
+        var g = G();
+        var stayP = g.players.filter(function (p) { return !p.left; });
+        var names = stayP.map(function (p) { return p.name; });
+        var nextName = g.players[nextDealer()].name, nd = Math.max(0, names.indexOf(nextName));
+        if (g.done) nd = Math.max(0, names.indexOf(g.players[g.dealer].name) + 1) % names.length;
+        startFresh(names, g.limit, g.rules, nd, stayP.map(function (p) { return p.color; }), 'nieuw spel');
+        toast('Nieuw potje. ' + names[nd] + ' deelt.');
+        ui.tab = 'spel'; commit(); window.scrollTo(0, 0); break;
+      case 'tosetup':
+        ui.sheet = null; closeAllPages();
+        if (state.game) {
+          s.limit = G().limit; s.rules = JSON.parse(JSON.stringify(G().rules));
+        }
+        s.firstDealerName = G() ? G().players[G().dealer].name : s.firstDealerName;
+        state.screen = 'setup'; ui.tab = 'spel'; commit(); window.scrollTo(0, 0); break;
+      case 'theme': state.settings.theme = v; applyTheme.touched = true; commit(); break;
+      case 'compact': state.settings.compact = v; commit(); break;
+      case 'sound': state.settings.sound = !state.settings.sound; commit(); if (state.settings.sound) sound('tick'); break;
+      case 'vibrate': state.settings.vibrate = !state.settings.vibrate; commit(); buzz(30); break;
+      case 'wake': state.settings.wake = !state.settings.wake; commit(); break;
+      case 'ask': ui.sheet = { type: 'confirm', what: v }; renderLayer(); break;
+      case 'sheet-setrules': openPage({ id: 'huisregels', scope: 'setup' }); break;
+      case 'sheet-gamemenu': ui.sheet = { type: 'gamemenu' }; renderLayer(); break;
+      case 'menu-meer': openPage({ id: 'spelers' }); break;
+      case 'sheet-rules': openPage({ id: v === 'uitleg' ? 'guide' : 'help' }); break;
+      case 'back': closePage(); break;
+      case 'do-save':
+        var rec = window.ToepenSaves && window.ToepenSaves.saveState(ui.saveName, state);
+        if (rec) { toast('Opgeslagen als “' + rec.name + '”'); ui.saveName = undefined; render(); }
+        else { toast('Opslaan lukt niet: het geheugen van de browser is vol.'); render(); }
+        break;
+      case 'pg-open':
+        var np = { id: v };
+        if (el.dataset.i !== undefined) np.i = +el.dataset.i;
+        if (el.dataset.scope) np.scope = el.dataset.scope;
+        if (v === 'spelers' || v === 'laatste') ui.pg[v] = { i: 0, size: 999 };
+        openPage(np); break;
+      case 'pg-step':
+        var cur = ui.pages[ui.pages.length - 1], tot = cur.id === 'topic' ? rulesTopics().length : guideSteps().length;
+        swapPage({ id: cur.id, i: Math.max(0, Math.min(tot - 1, cur.i + +v)) });
+        break;
+      case 'pg':
+        var ps = pgState(el.dataset.k); ps.i += +v; render(); break;
+      case 'do-reset':
+        ui.sheet = null; closeAllPages();
+        if (v === 'potje') { resetPotje(); break; }
+        if (v === 'ranglijst') { state.wins = {}; state.archive = []; toast('Ranglijst gewist'); commit(); break; }
+        var keepSettings = state.settings;
+        state = fresh(); state.settings = keepSettings; ui.tab = 'spel';
+        toast('Alles gewist'); commit(); window.scrollTo(0, 0); break;
+    }
+  });
+
+  document.addEventListener('toggle', function (e) {
+    var d = e.target;
+    if (d.classList && d.classList.contains('msec')) {
+      ui.open = ui.open || {};
+      ui.open[d.dataset.sec] = d.open;
+      // Only one section open at a time keeps the page short.
+      if (d.open) document.querySelectorAll('details.msec[open]').forEach(function (o) { if (o !== d) { o.open = false; ui.open[o.dataset.sec] = false; } });
+    }
+  }, true);
+
+  // Re-fit after rotating the phone, but never while someone is typing.
+  var resizeTimer;
+  window.addEventListener('resize', function () {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(function () {
+      var a = document.activeElement;
+      if (a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA' || a.tagName === 'SELECT')) return;
+      remeasure(); render();
+    }, 200);
+  });
+
+  // The phone's back button (or back swipe) closes a full-screen page.
+  window.addEventListener('popstate', function () {
+    if (ignorePop) { ignorePop--; if (!ignorePop) syncSheetHist(); return; }
+    if (ui.sheet) { ui.sheet = null; sheetHist = 0; render(); return; }
+    if (ui.pages.length) { ui.pages.pop(); render(); }
+  });
+
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' && e.target.id === 'addname') { var b = layer.querySelector('[data-act=addp-new]'); if (b) b.click(); return; }
+    if (e.key === 'Escape') { if (ui.sheet) { ui.sheet = null; renderLayer(); } else if (ui.pages.length) closePage(); }
+  });
+
+  if (state.settings.theme !== 'system') applyTheme.touched = true;
+  render();
+})();
+</script>
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js'); });
+  }
+</script>
+</body>
+</html>

@@ -419,7 +419,7 @@
     firebase: { t: 'Firebase', d: 'Het stabielst. De host stelt het eenmalig in (ongeveer 10 minuten).' }
   };
   function renderMp0() {
-    var html = topbar('Multiplayer', 'Kies hoe jullie verbinden', '<button class="btn ghost sm" data-act="home">Terug</button>');
+    var html = topbar('Multiplayer', 'Kies hoe jullie verbinden', (S.deep ? '<a class="btn ghost sm" href="index.html">← Terug</a>' : '<button class="btn ghost sm" data-act="home">Terug</button>'));
     ['peer', 'ring', 'firebase'].forEach(function (k) {
       var m = METHODS[k];
       html += '<button class="choice" data-act="mp-method" data-v="' + k + '"><b>' + m.t + (k === 'firebase' && !NET ? ' <span class="chip">Nog niet ingesteld</span>' : '') + '</b><span>' + m.d + '</span></button>';
@@ -896,7 +896,7 @@
 
   function renderHome() {
     var saved = ls(K.host), html = '';
-    html += topbar('Multiplayer', 'Toepen, ieder op de eigen telefoon', '<a class="btn ghost sm" href="index.html" aria-label="Terug naar het scorebord">← Terug</a>');
+    html += topbar('Multiplayer', 'Toepen, ieder op de eigen telefoon', '<a class="btn ghost sm" href="index.html" aria-label="Terug naar het hoofdmenu">← Terug</a>');
     if (S.err) html += '<div class="notice" role="alert">' + esc(S.err) + '</div>';
     html += '<div class="panel"><label class="label" for="myname">Jouw naam</label><input class="text" id="myname" maxlength="18" autocomplete="off" value="' + esc(S.name) + '" placeholder="Typ je naam"></div>';
     if (S.pendingJoin || S.urlCode) {
@@ -1058,7 +1058,7 @@
 
   function renderCreate() {
     var c = S.create, practice = S.view === 'practice', html = '';
-    html += topbar(practice ? 'Oefenen' : 'Tafel maken', practice ? 'Tegen computerspelers, op deze telefoon' : (S.method ? METHODS[S.method].t : 'Kies hoe jij meedoet'), '<button class="btn ghost sm" data-act="' + (practice ? 'home' : 'mp1') + '">Terug</button>');
+    html += topbar(practice ? 'Oefenen' : 'Tafel maken', practice ? 'Tegen computerspelers, op deze telefoon' : (S.method ? METHODS[S.method].t : 'Kies hoe jij meedoet'), (practice && S.deep ? '<a class="btn ghost sm" href="index.html">← Terug</a>' : '<button class="btn ghost sm" data-act="' + (practice ? 'home' : 'mp1') + '">Terug</button>'));
     if (!practice) {
       html += '<div class="stack"><div class="label">Hoe doe jij mee?</div>' +
         '<button class="choice" data-act="mode" data-v="play" aria-pressed="' + (c.mode === 'play') + '"><b>Ik speel mee</b><span>Je ziet je eigen kaarten en speelt mee. Je telefoon is ook de host.</span></button>' +
@@ -1315,7 +1315,7 @@
           inner += '<button class="btn ghost" data-act="leave">Tafel verlaten</button><p class="small muted">Je kunt later weer meedoen met dezelfde code.</p>';
         }
         if (S.kind === 'ring') inner += '<button class="btn" data-act="ring-open">Telefoons koppelen (QR)</button>';
-        inner += '<a class="btn ghost" href="index.html">Naar het scorebord</a>';
+        inner += '<a class="btn ghost" href="index.html">Naar het hoofdmenu</a>';
       } else if (sh.type === 'ring') {
         inner = ringSheet();
       } else if (sh.type === 'close') {
@@ -1397,6 +1397,7 @@
     } else if (navHist) {
       navHist = 0;
       if (S.view === 'table') { if (pushMark('nav')) navHist = 1; S.sheet = { type: 'menu' }; renderLayer(); return; }
+      if (S.deep && (S.view === 'mp0' || S.view === 'practice')) { location.href = 'index.html'; return; }
       var par = parentView(); S.err = ''; S.view = par;
       if (par === 'home') { S.method = null; S.rl = null; }
       render();
@@ -1522,6 +1523,12 @@
   /* ---------- Start ---------- */
   var qcode = Q.get('tafel');
   S.urlCode = qcode ? qcode.toUpperCase() : null;
+  // Coming from the main menu: go straight to the right screen, and Terug goes back to the menu
+  var START = Q.get('start');
+  if (!qcode && (START === 'oefenen' || START === 'multi')) {
+    S.deep = true; S.view = START === 'oefenen' ? 'practice' : 'mp0';
+    if (START === 'oefenen') S.create.bots = Math.max(S.create.bots, 3);
+  }
   if (qcode && S.name.trim() && (VIA || NET)) joinTable(qcode);
   else {
     var j = ls(K.join);
