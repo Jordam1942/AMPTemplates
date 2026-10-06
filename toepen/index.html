@@ -154,7 +154,7 @@
     h += '<a class="choice ic t-blue" href="spelen.html?start=multi"><i class="i" aria-hidden="true"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18-3-3-3-15 0-18"/></svg></i><b>Multiplayer</b><span>Met vrienden, ook op afstand. Nodig ze uit via WhatsApp.</span></a>';
     h += '<a class="choice ic t-purple" href="scorebord.html"><i class="i" aria-hidden="true"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 13h.01M12 13h.01M15 13h.01M9 17h.01M12 17h.01M15 17h.01"/></svg></i><b>Scores bijhouden</b><span>Het scorebord voor aan tafel, met echte kaarten.</span></a>';
     var n = S.count();
-    h += '<button class="choice ic t-gold" data-act="saves"><i class="i" aria-hidden="true"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12v18l-6-4-6 4z"/></svg></i><b>Opgeslagen spellen <span class="go">→</span></b><span>' + (n ? n + ' opgeslagen. Open er een, of bewaar je spel onder een naam.' : 'Bewaar een spel met de ranglijst onder een naam.') + '</span></button>' +
+    h += '<button class="choice ic t-gold" data-act="saves"><i class="i" aria-hidden="true"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12v18l-6-4-6 4z"/></svg></i><b>Opgeslagen scores <span class="go">→</span></b><span>' + (n ? n + ' opgeslagen. Open er een, of bewaar je spel onder een naam.' : 'Bewaar een spel met de ranglijst onder een naam.') + '</span></button>' +
       '<button class="btn ghost" data-act="settings">Instellingen</button></div>';
     return h;
   }
@@ -182,7 +182,7 @@
   }
   function renderSaves() {
     var list = S.list(), cur = S.current(), h = '';
-    h += '<div class="topbar"><div class="meta"><h1>Opgeslagen</h1><div class="small muted">Spellen en scores onder een naam</div></div><button class="btn ghost sm" data-act="menu">← Terug</button></div>';
+    h += '<div class="topbar"><div class="meta"><h1>Opgeslagen scores</h1><div class="small muted">Scorebord en ranglijst onder een naam</div></div><button class="btn ghost sm" data-act="menu">← Terug</button></div>';
     var saveBtn = '<button class="btn primary big" data-act="new"' + (cur ? '' : ' disabled') + '>Huidig scorebord opslaan</button>' +
       (cur ? '' : '<p class="small muted" style="text-align:center">Er staat nu niets op het scorebord om op te slaan.</p>');
     if (!list.length) {

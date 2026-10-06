@@ -959,7 +959,7 @@
   // The multiplayer page only exists next to the installed app, not in previews.
   var HAS_MP = /github\.io$|^localhost$|^127\./.test(location.hostname);
   function mpLink() {
-    return HAS_MP ? '<a class="mp-link" href="index.html"><div><b>Hoofdmenu</b><span>Alleen spelen, multiplayer, opgeslagen spellen</span></div><span class="go" aria-hidden="true">→</span></a>' : '';
+    return HAS_MP ? '<a class="mp-link" href="index.html"><div><b>Hoofdmenu</b><span>Alleen spelen, multiplayer, opgeslagen scores</span></div><span class="go" aria-hidden="true">→</span></a>' : '';
   }
 
   function renderSetup() {
@@ -1685,10 +1685,10 @@
   function opslaanPage() {
     var n = window.ToepenSaves ? window.ToepenSaves.count() : 0;
     if (ui.saveName === undefined) { var d = new Date(); ui.saveName = 'Toepen ' + d.getDate() + '/' + (d.getMonth() + 1); }
-    return '<p class="muted">Bewaar dit spel met de stand en de ranglijst onder een naam. Je opent het later weer in het hoofdmenu.</p>' +
+    return '<p class="muted">Bewaar dit scorebord met de stand en de ranglijst onder een naam. Je opent het later weer in het hoofdmenu.</p>' +
       '<div class="panel tight"><label class="label" for="savename">Naam</label><input class="text" id="savename" maxlength="40" autocomplete="off" value="' + esc(ui.saveName) + '" placeholder="Naam" style="width:100%;height:50px;border-radius:12px;border:1.5px solid var(--line);background:var(--bg);color:var(--fg);padding:0 14px;font:inherit;font-size:1.05rem">' +
       '<button class="btn big" data-act="do-save">Opslaan</button></div>' +
-      '<a class="btn ghost" href="index.html?view=saves">Opgeslagen spellen' + (n ? ' (' + n + ')' : '') + '</a>';
+      '<a class="btn ghost" href="index.html?view=saves">Opgeslagen scores' + (n ? ' (' + n + ')' : '') + '</a>';
   }
   function renderMeer() {
     var st = state.settings, g = G(), html = '<div class="topbar"><h1>Meer</h1></div><div class="navlist">';
@@ -1698,7 +1698,7 @@
     html += navRow('pg-open', 'Huisregels', esc(rulesSummary(g.rules)), ' data-v="huisregels" data-scope="game"');
     html += navRow('pg-open', 'Weergave en geluid', themeName + ' · ' + listName, ' data-v="weergave"');
     html += navRow('pg-open', 'Opnieuw beginnen', 'nieuw spel, stand op 0, wissen', ' data-v="opnieuw"');
-    html += navRow('pg-open', 'Opslaan', 'bewaar dit spel onder een naam', ' data-v="opslaan"');
+    html += navRow('pg-open', 'Opslaan', 'bewaar deze scores onder een naam', ' data-v="opslaan"');
     html += navRow('pg-open', 'Spelregels en uitleg', '', ' data-v="help"');
     html += '</div>';
     if (HAS_MP) html += '<div style="margin-top:10px">' + mpLink() + '</div>';
