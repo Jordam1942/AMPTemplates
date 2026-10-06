@@ -422,7 +422,7 @@
 (function () {
   'use strict';
   var KEY = 'toepen-scorebord-v2';
-  var VERSION = '28 (voorbeeldteksten weg)';
+  var VERSION = '29 (terugknop van de telefoon)';
   var COLORS = ['#2f7d5b', '#c2571a', '#3b6fb6', '#a63d6b', '#7a5bb5', '#a67c12', '#1f8a8f', '#5d6b1f'];
   var app = document.getElementById('app');
   var layer = document.getElementById('layer');
@@ -1490,7 +1490,11 @@
   function openPage(pg) {
     ui.sheet = null;
     ui.pages.push(pg);
-    try { history.pushState({ toepenPage: ui.pages.length }, ''); } catch (e) {}
+    try {
+      // an open window's history entry turns into the page's entry
+      if (sheetHist) { sheetHist = 0; history.replaceState({ toepenPage: ui.pages.length }, ''); }
+      else history.pushState({ toepenPage: ui.pages.length }, '');
+    } catch (e) {}
     render();
     var fp = layer.querySelector('.fullpage'); if (fp) fp.scrollTop = 0;
   }
@@ -1498,11 +1502,20 @@
     if (history.state && history.state.toepenPage) history.back();
     else { ui.pages.pop(); render(); }
   }
-  var ignorePop = 0;
+  var ignorePop = 0, sheetHist = 0;
+  // The phone's back button closes an open window: give it a history entry
+  // (and wait for a step back in flight to finish before adding the next one).
+  function syncSheetHist() {
+    if (ignorePop) return;
+    if (ui.sheet && !sheetHist) { try { history.pushState({ toepenSheet: 1 }, ''); sheetHist = 1; } catch (e) {} }
+    else if (!ui.sheet && sheetHist) { sheetHist = 0; ignorePop++; try { history.back(); } catch (e) { ignorePop--; } }
+  }
   function closeAllPages() {
     var n = ui.pages.length;
     ui.pages = [];
-    if (n && history.state && history.state.toepenPage) { ignorePop = 1; try { history.go(-n); } catch (e) { ignorePop = 0; } }
+    if (!n) return;
+    n += sheetHist; sheetHist = 0;
+    if (history.state && (history.state.toepenPage || history.state.toepenSheet)) { ignorePop++; try { history.go(-n); } catch (e) { ignorePop--; } }
   }
   function swapPage(pg) { ui.pages[ui.pages.length - 1] = pg; render(); }
 
@@ -1681,6 +1694,7 @@
   }
 
   function renderLayer() {
+    syncSheetHist();
     var full = '';
     var html = '';
     var sh = ui.sheet;
@@ -1987,7 +2001,8 @@
 
   // The phone's back button (or back swipe) closes a full-screen page.
   window.addEventListener('popstate', function () {
-    if (ignorePop) { ignorePop--; return; }
+    if (ignorePop) { ignorePop--; if (!ignorePop) syncSheetHist(); return; }
+    if (ui.sheet) { ui.sheet = null; sheetHist = 0; render(); return; }
     if (ui.pages.length) { ui.pages.pop(); render(); }
   });
 

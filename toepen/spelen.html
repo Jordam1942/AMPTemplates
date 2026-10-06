@@ -163,6 +163,13 @@
   .fit2 .trick { min-height: 84px; gap: 6px; }
   .fit2 .players.compact .pl { padding: 4px 10px; }
   .fit2 .players { margin-top: 8px; }
+  .fit4 .felt { padding: 6px 10px; gap: 4px; }
+  .fit4 .felt .stake { font-size: 1.7rem; }
+  .fit4 .trick { min-height: 66px; } .fit4 .trick .pc { width: 44px; height: 62px; } .fit4 .trick .pc .s2 { font-size: 1.4rem; } .fit4 .trick .pc .s1 { top: 17px; }
+  .fit4 .hand { padding-top: 6px; }
+  .fit4 .hand .pc { width: 54px; height: 78px; } .fit4 .hand .pc .s2 { font-size: 1.7rem; }
+  .fit4 .hand .acts .btn { min-height: 38px; padding-block: 4px; }
+  .wrap.has-hand.fit4 { padding-bottom: 140px; }
   /* Home screen spacing */
   .home .panel { padding: 12px 14px; gap: 8px; }
   .home .choice { padding: 12px 14px; }
@@ -223,6 +230,7 @@
   .fit2 .prow .avatar { width: 28px; height: 28px; font-size: 0.8rem; }
   .fit3 .qr { width: 130px; padding: 8px; }
   .fit3 .bigcode { font-size: 1.6rem; }
+  .fit3 .lobby-line { display: none; }
   .scanner { position: fixed; inset: 0; z-index: 60; background: var(--bg); display: flex; flex-direction: column; gap: 10px; padding: 12px 16px; padding-top: max(12px, env(safe-area-inset-top)); }
   .scanner .scan-bar { display: flex; align-items: center; gap: 10px; }
   .scanner .scan-view { position: relative; flex: 1; min-height: 0; border-radius: 16px; overflow: hidden; background: #000; }
@@ -398,9 +406,10 @@
   }
   function ringPanel() {
     return '<div class="panel"><b>Telefoons koppelen</b>' +
-      '<p class="small muted lobby-hint">Alle telefoons op dezelfde wifi of hotspot (internet hoeft niet). Koppel in een kring: jij → je buurman → de volgende… en de laatste weer met de host. Dan blijft alles werken als één verbinding wegvalt.</p>' +
+      '<p class="small muted lobby-hint">Alle telefoons op dezelfde wifi of hotspot (internet hoeft niet). Koppel in een kring: elke speler met zijn buurman, en de laatste weer met de host.</p>' +
       linkLine() +
-      '<div class="row"><button class="btn primary" style="flex:1" data-act="ring-show">QR tonen</button><button class="btn" style="flex:1" data-act="ring-scan">QR scannen</button></div></div>';
+      '<div class="row"><button class="btn primary" style="flex:1" data-act="ring-show">QR tonen</button><button class="btn" style="flex:1" data-act="ring-scan">QR scannen</button></div>' +
+      '<p class="small muted" style="margin:0"><b>QR tonen:</b> je buurman scant jouw QR. <b>QR scannen:</b> jij scant de QR van je buurman.</p></div>';
   }
   var METHODS = {
     peer: { t: 'PeerJS, via internet', d: 'Gratis, zonder account of instellen. Iedereen heeft internet (wifi of 4G/5G). Eén QR scannen.' },
@@ -443,13 +452,13 @@
     return '<div class="stack">' + html + '</div>';
   }
   function renderRingJoin() {
-    var rl = S.rl || { step: 'intro' }, html = topbar('Meedoen', 'Zonder internet', '<button class="btn ghost sm" data-act="home">Terug</button>');
+    var rl = S.rl || { step: 'intro' }, html = topbar('Meedoen', 'Zonder internet', '<button class="btn ghost sm" data-act="mp1">Terug</button>');
     if (rl.err) html += '<div class="notice" role="alert">' + esc(rl.err) + '</div>';
     if (rl.step === 'answer' || rl.step === 'linking') {
       html += '<div class="panel" style="text-align:center"><b>Laat je buurman dit scannen</b><p class="small muted lobby-hint">Je buurman kiest <b>Antwoord scannen</b>. Zodra dat lukt, zit je aan tafel.</p>' +
         qrSvg(rl.code, 'small') + '<div class="small muted">Even wachten…</div><button class="btn ghost" data-act="copy" data-v="' + esc(rl.code) + '">Code kopiëren</button></div>';
     } else {
-      html += '<div class="panel" style="text-align:center"><b>Scan de QR van je buurman</b><p class="small muted lobby-hint">De host of een speler die al aan tafel zit, kiest <b>QR tonen</b>. Scan die code met de camera van deze app.</p>' +
+      html += '<div class="panel" style="text-align:center"><b>Scan de QR van je buurman</b><p class="small muted">Je doet mee als <b>' + esc(S.name) + '</b>.</p><p class="small muted lobby-hint">1. De host of een speler die al aan tafel zit, kiest <b>QR tonen</b>.<br>2. Jij scant die QR met de camera van deze app.<br>3. Daarna laat jij een antwoord zien, dat je buurman scant.</p>' +
         '<button class="btn primary big" data-act="ring-scan"' + (rl.busy ? ' disabled' : '') + '>' + (rl.busy ? 'Even geduld…' : 'QR scannen') + '</button></div>';
     }
     return '<div class="stack">' + html + '</div>';
@@ -539,6 +548,30 @@
     }).catch(function (e) { S.rl = { step: 'intro', err: e.message }; S.busy = false; S.view = 'ringjoin'; render(); });
   }
 
+  /* ---------- Phone back button ----------
+   * One history entry stands for 'a screen deeper than home', one for 'a window
+   * is open' and one for 'the scanner is open'. Back then closes the window or
+   * scanner, or goes one screen up (and from the table it opens the menu, so a
+   * swipe can never throw you out of a running game). */
+  var navHist = 0, sheetHist = 0, scanHist = 0, ignoreBack = 0, backWait = null;
+  function pushMark(k) { try { history.pushState({ toepenMark: k }, '', location.href); return true; } catch (e) { return false; } }
+  function popMark() { ignoreBack++; try { history.back(); } catch (e) { ignoreBack--; } }
+  function reconcileHistory() {
+    if (ignoreBack > 0) return;
+    var wantNav = S.view !== 'home' ? 1 : 0, wantSheet = S.sheet && S.sheet.type !== 'help' ? 1 : 0;
+    if (wantNav && !navHist) { if (pushMark('nav')) navHist = 1; }
+    else if (!wantNav && navHist) { navHist = 0; popMark(); }
+    if (wantSheet && !sheetHist) { if (pushMark('sheet')) sheetHist = 1; }
+    else if (!wantSheet && sheetHist) { sheetHist = 0; popMark(); }
+  }
+  function parentView() {
+    var v = S.view;
+    if (v === 'mp1') return 'mp0';
+    if (v === 'mpjoin' || v === 'ringjoin' || v === 'create') return 'mp1';
+    if (v === 'fb') return S.method ? 'mp1' : 'home';
+    return 'home';
+  }
+
   /* ---------- Camera scanner ---------- */
   var scanEl = null, scanStream = null, scanTimer = 0, jsqrLoading = null;
   function loadJsQR() {
@@ -548,24 +581,31 @@
     });
     return jsqrLoading;
   }
-  function closeScanner() {
+  function closeScanner(fromPop) {
     clearInterval(scanTimer); scanTimer = 0;
     if (scanStream) { scanStream.getTracks().forEach(function (t) { t.stop(); }); scanStream = null; }
     if (scanEl) { scanEl.remove(); scanEl = null; }
+    if (scanHist && !fromPop) {
+      scanHist = 0;
+      return new Promise(function (res) { backWait = res; popMark(); setTimeout(function () { if (backWait === res) { backWait = null; res(); } }, 500); });
+    }
+    scanHist = 0;
+    return Promise.resolve();
   }
   var TP = /^TP1[oa]\./;
   function openScanner(title, hint, accept, onText) {
-    closeScanner();
+    closeScanner(true);
     scanEl = document.createElement('div'); scanEl.className = 'scanner'; scanEl.setAttribute('role', 'dialog'); scanEl.setAttribute('aria-label', title);
     scanEl.innerHTML = '<div class="scan-bar"><button class="btn ghost sm" id="scan-x">← Terug</button><b>' + title + '</b></div>' +
       '<div class="scan-view"><video playsinline muted></video><div class="scan-frame"></div></div>' +
       '<p class="small muted scan-hint">' + hint + '</p><p class="small scan-err" id="scan-err" role="alert"></p>' +
       '<div class="scan-paste"><input class="text" id="scan-paste" autocomplete="off" placeholder="Of plak hier de code"><button class="btn" id="scan-ok">OK</button></div>';
     document.body.appendChild(scanEl);
+    if (pushMark('scan')) scanHist = 1;
     var errEl = scanEl.querySelector('#scan-err'), video = scanEl.querySelector('video'), mine = scanEl;
-    function done(t) { if (scanEl !== mine) return; closeScanner(); onText(t); }
+    function done(t) { if (scanEl !== mine) return; closeScanner().then(function () { onText(t); }); }
     function bad(m) { errEl.textContent = m; }
-    scanEl.querySelector('#scan-x').onclick = closeScanner;
+    scanEl.querySelector('#scan-x').onclick = function () { closeScanner(); };
     scanEl.querySelector('#scan-ok').onclick = function () {
       var t = scanEl.querySelector('#scan-paste').value.trim();
       if (accept.test(t)) done(t); else bad('Dit is niet de juiste code.');
@@ -1067,9 +1107,9 @@
     } else if (host) {
       var qr = '';
       try { var q = qrcode(0, 'M'); q.addData(joinUrl()); q.make(); qr = q.createSvgTag({ cellSize: 6, margin: 2, scalable: true }); } catch (e) { qr = ''; }
-      html += '<div class="panel" style="text-align:center"><b>Laat je vrienden deze code scannen</b><p class="small muted lobby-hint">Met de gewone camera van hun telefoon. Ze zitten dan meteen aan tafel.</p>' +
+      html += '<div class="panel" style="text-align:center"><b>Laat je vrienden deze code scannen</b>' +
         '<div class="qr" id="qr">' + qr + '</div><div class="bigcode" aria-label="Tafelcode ' + esc(S.code) + '">' + esc(S.code) + '</div>' +
-        '<p class="small muted lobby-hint">Of laat ze de code invullen bij <b>Meedoen</b>.</p>' +
+        '<p class="small muted lobby-line" style="margin:0">Met de gewone camera, of in de app: <b>Multiplayer → ' + (S.kind === 'peer' ? 'PeerJS' : 'Firebase') + ' → Ik doe mee</b>.</p>' +
         '<button class="btn ghost" data-act="share-link">Link delen</button></div>';
     } else {
       html += '<div class="panel" style="text-align:center"><h2>Je zit aan tafel!</h2><p class="muted">Wachten tot ' + esc(m.hostName || 'de host') + ' het spel start…</p>' +
@@ -1217,6 +1257,7 @@
   }
 
   function renderLayer() {
+    reconcileHistory();
     var full = '';
     var html = '';
     if (!S.connected && S.view === 'table') html += '<div class="conn" role="alert">Geen verbinding. Even geduld…</div>';
@@ -1287,8 +1328,8 @@
 
   // Tighten the layout step by step until the screen fits without scrolling.
   function render() {
-    for (var lvl = 0; lvl <= 3; lvl++) {
-      app.className = 'wrap' + (lvl ? ' fit1' : '') + (lvl > 1 ? ' fit2' : '') + (lvl > 2 ? ' fit3' : '') + (S.view === 'home' ? ' home' : '') + (S.view === 'fb' ? ' fbwrap' : '');
+    for (var lvl = 0; lvl <= 4; lvl++) {
+      app.className = 'wrap' + (lvl ? ' fit1' : '') + (lvl > 1 ? ' fit2' : '') + (lvl > 2 ? ' fit3' : '') + (lvl > 3 ? ' fit4' : '') + (S.view === 'home' ? ' home' : '') + (S.view === 'fb' ? ' fbwrap' : '');
       var html;
       if (S.view === 'table') html = renderTable();
       else if (S.view === 'create' || S.view === 'practice') html = renderCreate();
@@ -1331,10 +1372,21 @@
 
   // The phone's back button (or back swipe) closes the rules page.
   window.addEventListener('popstate', function () {
+    if (ignoreBack > 0) { ignoreBack--; if (backWait) { var w = backWait; backWait = null; w(); } if (!ignoreBack) reconcileHistory(); return; }
     if (S.sheet && S.sheet.type === 'help') {
       S.sheet.stack.pop();
       if (!S.sheet.stack.length) S.sheet = null;
       renderLayer();
+    } else if (scanEl) {
+      closeScanner(true);
+    } else if (S.sheet) {
+      sheetHist = 0; S.sheet = null; renderLayer();
+    } else if (navHist) {
+      navHist = 0;
+      if (S.view === 'table') { if (pushMark('nav')) navHist = 1; S.sheet = { type: 'menu' }; renderLayer(); return; }
+      var par = parentView(); S.err = ''; S.view = par;
+      if (par === 'home') { S.method = null; S.rl = null; }
+      render();
     }
   });
 
