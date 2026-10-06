@@ -22,6 +22,12 @@
             ".read": "auth != null && (auth.uid === $uid || root.child('rooms').child($code).child('meta/host').val() === auth.uid)"
           }
         },
+        "chat": {
+          ".read": "auth != null",
+          "$key": {
+            ".write": "auth != null && !data.exists() && newData.child('uid').val() === auth.uid && newData.child('text').isString() && newData.child('text').val().length <= 200"
+          }
+        },
         "actions": {
           ".read": "auth != null && root.child('rooms').child($code).child('meta/host').val() === auth.uid",
           ".write": "auth != null && root.child('rooms').child($code).child('meta/host').val() === auth.uid",

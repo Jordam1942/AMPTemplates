@@ -178,6 +178,7 @@
   .fit2 .trick { min-height: 84px; gap: 6px; }
   .fit2 .players.compact .pl { padding: 4px 10px; }
   .fit2 .players { margin-top: 8px; }
+  .fit4 .toggle-row { min-height: 36px; } .fit4 .seg button { min-height: 38px; }
   .fit4 .felt { padding: 6px 10px; gap: 4px; }
   .fit4 .felt .stake { font-size: 1.7rem; }
   .fit4 .trick { min-height: 66px; } .fit4 .trick .pc { width: 44px; height: 62px; } .fit4 .trick .pc .s2 { font-size: 1.4rem; } .fit4 .trick .pc .s1 { top: 17px; }
@@ -246,6 +247,21 @@
   .fit3 .qr { width: 130px; padding: 8px; }
   .fit3 .bigcode { font-size: 1.6rem; }
   .fit3 .lobby-line { display: none; }
+  .chatfab { position: fixed; right: 14px; bottom: 14px; z-index: 12; width: 52px; height: 52px; border-radius: 50%; background: var(--accent); color: var(--accent-fg); font-size: 1.5rem; box-shadow: 0 6px 16px -4px rgba(0,0,0,0.45); display: grid; place-items: center; }
+  .chatfab .badge { position: absolute; top: -4px; right: -4px; min-width: 22px; height: 22px; padding: 0 5px; border-radius: 11px; background: var(--warn); color: #fff; font-size: 0.75rem; font-weight: 800; display: grid; place-items: center; }
+  .chatlist { display: flex; flex-direction: column; gap: 6px; height: 34vh; height: 34%; min-height: 120px; max-height: 300px; overflow-y: auto; padding: 6px; background: var(--bg); border-radius: 12px; }
+  .cmsg { align-self: flex-start; max-width: 85%; background: var(--surface); border: 1px solid var(--line); border-radius: 14px 14px 14px 4px; padding: 6px 10px; display: grid; gap: 0; overflow-wrap: anywhere; }
+  .cmsg b { font-size: 0.75rem; color: var(--muted); }
+  .cmsg.mine { align-self: flex-end; background: var(--accent); color: var(--accent-fg); border-color: var(--accent); border-radius: 14px 14px 4px 14px; }
+  .chatquick { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; }
+  .chip-btn { flex: none; min-height: 38px; padding: 0 12px; border-radius: 19px; border: 1.5px solid var(--line); background: var(--surface); font-weight: 600; white-space: nowrap; }
+  .chatinput { display: flex; gap: 8px; align-items: center; }
+  .chatinput .text { flex: 1; min-width: 0; }
+  .btn.mic { width: 52px; padding: 0; font-size: 1.3rem; }
+  .btn.mic.on { background: var(--danger); color: #fff; animation: pulse 1s infinite; }
+  @keyframes pulse { 50% { opacity: 0.6; } }
+  .navlist.cols2 { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .navlist.cols2 .navrow { padding-inline: 10px; font-size: 0.9rem; min-height: 46px; }
   .scanner { position: fixed; inset: 0; z-index: 60; background: var(--bg); display: flex; flex-direction: column; gap: 10px; padding: 12px 16px; padding-top: max(12px, env(safe-area-inset-top)); }
   .scanner .scan-bar { display: flex; align-items: center; gap: 10px; }
   .scanner .scan-view { position: relative; flex: 1; min-height: 0; border-radius: 16px; overflow: hidden; background: #000; }
@@ -318,7 +334,7 @@
   var S = {
     view: 'home', name: ls(K.name) || '', db: null, uid: null, code: null, role: null, practice: false,
     meta: null, players: {}, pub: null, hand: [], subs: [], G: null, sheet: null, toast: '', connected: true,
-    lastHands: {}, lastResultKey: '', hostTimer: null, err: '', busy: false, kind: null, method: null, rl: null, peek: false, flat: false,
+    lastHands: {}, lastResultKey: '', hostTimer: null, err: '', busy: false, kind: null, method: null, rl: null, peek: false, flat: false, chat: [], chatUnread: 0, chatDraft: '', chatFrom: 0, listening: false,
     create: {
       mode: 'play', limit: sbRules.limit || 10, bots: 0,
       rules: {
@@ -382,6 +398,8 @@
   function subscribe() {
     var db = S.db, b = base();
     S.subs.push(db.on(b + '/meta', function (m) { S.meta = m; if (S.role === 'client' && (!m || m.status === 'closed')) { leave(); toast('De host heeft de tafel gesloten.'); return; } render(); }));
+    S.chatFrom = Date.now() + 1500;   // messages arriving in the first moments are old ones, no pop-ups for those
+    S.subs.push(db.onChildAdded(b + '/chat', function (k, m) { onChat(k, m); }));
     S.subs.push(db.on(b + '/players', function (p) {
       S.players = p || {};
       if (S.role === 'client' && S.meta && !S.players[S.uid] && S.view !== 'home') { leave(); toast('Je bent van de tafel gehaald.'); return; }
@@ -703,9 +721,70 @@
     });
   }
 
-  function seatList() {
-    return Object.keys(S.players).map(function (id) { return { id: id, name: S.players[id].name, bot: !!S.players[id].bot, joined: S.players[id].joined || 0 }; })
+  function memberList() {
+    return Object.keys(S.players).map(function (id) { return { id: id, name: S.players[id].name, bot: !!S.players[id].bot, joined: S.players[id].joined || 0, watch: !!S.players[id].spectator }; })
       .sort(function (a, b) { return a.joined - b.joined; });
+  }
+  // Only players who take part get a seat; people who just watch do not.
+  function seatList() { return memberList().filter(function (m) { return !m.watch; }); }
+
+  /* ---------- Chat ---------- */
+  var recog = null;
+  function chatAvailable() { return S.view === 'table' && !S.practice && !!S.code; }
+  function onChat(k, m) {
+    if (!m || !m.text) return;
+    S.chat = S.chat || [];
+    if (S.chat.some(function (x) { return x.k === k; })) return;
+    S.chat.push({ k: k, uid: m.uid, name: m.name || '?', text: String(m.text), at: m.at || 0 });
+    S.chat.sort(function (a, b) { return a.k < b.k ? -1 : a.k > b.k ? 1 : 0; });
+    if (S.chat.length > 80) S.chat = S.chat.slice(-80);
+    // old messages (read when joining) get no pop-up; a fresh one always does
+    var live = Date.now() > S.chatFrom || Date.now() - (m.at || 0) < 10000, mine = m.uid === S.uid, open = S.sheet && S.sheet.type === 'chat';
+    if (live && !mine && !open) { S.chatUnread = (S.chatUnread || 0) + 1; buzz(20); toast(m.name + ': ' + String(m.text).slice(0, 70)); }
+    else if (!live && !mine) S.chatUnread = 0;
+    if (S.view === 'table' || S.sheet) renderLayer();
+  }
+  function sendChat(text) {
+    text = String(text || '').trim().slice(0, 200);
+    if (!text || !S.db || !S.code) return false;
+    var now = Date.now(); if (now - (S.chatLast || 0) < 500) return false; S.chatLast = now;
+    var nm = (S.players[S.uid] && S.players[S.uid].name) || S.name || (S.meta && S.meta.hostName) || 'Ik';
+    S.db.push(base() + '/chat', { uid: S.uid, name: nm, text: text, at: now });
+    return true;
+  }
+  function stopListening() { if (recog) { try { recog.stop(); } catch (e) {} } recog = null; S.listening = false; }
+  function toggleMic() {
+    if (S.listening) { stopListening(); renderLayer(); return; }
+    var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) { toast('Praten werkt niet in deze browser. Gebruik de microfoon op je toetsenbord.'); return; }
+    var base0 = (S.chatDraft || '').trim();
+    try {
+      recog = new SR(); recog.lang = 'nl-NL'; recog.interimResults = true; recog.continuous = false;
+      recog.onresult = function (e) {
+        var t = ''; for (var i = 0; i < e.results.length; i++) t += e.results[i][0].transcript;
+        S.chatDraft = (base0 ? base0 + ' ' : '') + t.trim();
+        var inp = document.getElementById('chattext'); if (inp) inp.value = S.chatDraft;
+      };
+      recog.onerror = function (e) {
+        var m = { 'not-allowed': 'Geef toegang tot de microfoon om te praten.', 'service-not-allowed': 'Geef toegang tot de microfoon om te praten.', 'no-speech': 'Ik hoorde niets. Probeer het nog eens.', 'network': 'Praten heeft internet nodig. Tik je bericht, of gebruik de microfoon op je toetsenbord.' }[e.error];
+        if (m) toast(m);
+      };
+      recog.onend = function () { S.listening = false; recog = null; if (S.sheet && S.sheet.type === 'chat') renderLayer(); };
+      recog.start(); S.listening = true; renderLayer();
+    } catch (er) { S.listening = false; toast('Praten lukt niet op deze telefoon.'); }
+  }
+  function chatSheet() {
+    var list = (S.chat || []).slice(-30).map(function (m) {
+      var mine = m.uid === S.uid;
+      return '<div class="cmsg' + (mine ? ' mine' : '') + '">' + (mine ? '' : '<b>' + esc(m.name) + '</b>') + '<span>' + esc(m.text) + '</span></div>';
+    }).join('') || '<p class="muted small" style="text-align:center;margin:auto">Nog geen berichten. Zeg iets!</p>';
+    var quick = ['👍', '😂', 'Toep!', 'Even wachten', 'Wie is aan de beurt?'].map(function (q) { return '<button class="chip-btn" data-act="chat-quick" data-v="' + esc(q) + '">' + esc(q) + '</button>'; }).join('');
+    var hasSR = !!(window.SpeechRecognition || window.webkitSpeechRecognition);
+    return '<h2>Chat</h2><div class="chatlist" id="chatlist">' + list + '</div><div class="chatquick">' + quick + '</div>' +
+      '<div class="chatinput"><input class="text" id="chattext" maxlength="200" autocomplete="off" placeholder="' + (S.listening ? 'Ik luister…' : 'Typ of praat een bericht') + '" value="' + esc(S.chatDraft || '') + '">' +
+      (hasSR ? '<button class="btn mic' + (S.listening ? ' on' : '') + '" data-act="chat-mic" aria-label="' + (S.listening ? 'Stop met luisteren' : 'Praten in plaats van typen') + '" aria-pressed="' + !!S.listening + '">🎤</button>' : '') +
+      '<button class="btn primary" data-act="chat-send">Stuur</button></div>' +
+      (hasSR ? '<p class="small muted" style="margin:0">Tik op 🎤 en praat: je woorden verschijnen als tekst. Dat werkt met internet.</p>' : '<p class="small muted" style="margin:0">Tip: gebruik de microfoon op je toetsenbord om te praten.</p>');
   }
 
   function hostStart() {
@@ -858,6 +937,7 @@
     if (S.role === 'client' && S.db && S.code) { ls(K.join, null); }
     unsubscribe();
     S.view = 'home'; S.role = null; S.code = null; S.meta = null; S.players = {}; S.pub = null; S.hand = []; S.G = null; S.sheet = null;
+    S.chat = []; S.chatUnread = 0; S.chatDraft = ''; stopListening();
     var closing = S.db; // a moment later, so the host's 'table closed' still reaches the others
     if (closing && closing.stop) setTimeout(function () { closing.stop(); }, 700);
     S.urlCode = null; S.kind = null; S.method = null; S.rl = null;
@@ -1085,7 +1165,7 @@
     }).join('') + '</div></div>';
     html += '<div class="panel"><div class="label">Huisregels</div>' +
       toggleRow('rule-wittewas', c.rules.wittewas, 'Vuile was', 'Wie alleen boeren, vrouwen, heren en azen heeft, mag 4 nieuwe kaarten nemen. Je mag ook bluffen: de anderen kunnen controleren en het spel beslist.') +
-      (c.rules.wittewas ? '<div class="row" style="padding:0 2px 6px"><span class="small muted" style="flex:1">Straf bij fout melden of onterecht controleren</span><div class="seg">' + [1, 2].map(function (n) {
+      (c.rules.wittewas ? '<div class="row" style="padding:0 2px 6px"><span class="small muted" style="flex:1" title="Straf bij fout melden of onterecht controleren">Straf bij fout</span><div class="seg" style="flex:none">' + [1, 2].map(function (n) {
         return '<button data-act="was-straf" data-v="' + n + '" aria-pressed="' + ((c.rules.wasStraf || 1) === n) + '">' + n + ' ' + (n === 1 ? 'punt' : 'punten') + '</button>'; }).join('') + '</div></div>' : '') +
       toggleRow('rule-dubbelToep', c.rules.dubbelToep, 'Twee keer achter elkaar toepen', 'Uit: na jouw toep moet eerst iemand anders toepen.') +
       toggleRow('rule-scherpPassen', c.rules.scherpPassen, 'Passen als je op scherp staat', 'Uit: wie op scherp staat, moet mee.') +
@@ -1108,21 +1188,26 @@
   }
 
   function playerRows(withRemove) {
-    var list = seatList();
+    var list = memberList();
     if (!list.length) return '<p class="muted small">Nog niemand aan tafel.</p>';
     return '<div class="plist">' + list.map(function (s) {
       var p = S.players[s.id], me = s.id === S.uid;
       return '<div class="prow">' + avatar(s.id, s.name) + '<b>' + esc(s.name) + (me ? ' (jij)' : '') + '</b>' +
+        (s.watch ? '<span class="chip">Kijkt mee</span>' : '') +
         (p.bot ? '<span class="chip">Computer</span>' : '<span class="dot' + (p.online === false ? ' off' : '') + '" title="' + (p.online === false ? 'offline' : 'online') + '"></span>') +
         (withRemove && !me ? '<button class="btn ghost sm icon-round" data-act="kick" data-id="' + esc(s.id) + '" aria-label="' + esc(s.name) + ' verwijderen">×</button>' : '') + '</div>';
     }).join('') + '</div>';
   }
 
+  function watchToggle() {
+    var me = S.players[S.uid] || {};
+    return '<button class="btn ' + (me.spectator ? 'primary' : 'ghost') + '" data-act="watch" aria-pressed="' + !!me.spectator + '">' + (me.spectator ? '✓ Ik kijk alleen mee' : 'Ik kijk alleen mee, ik speel niet') + '</button>';
+  }
   function renderLobby() {
     var html = '', m = S.meta || {}, host = S.role === 'host', n = seatList().length;
     html += topbar('Tafel ' + esc(S.code), host ? (m.mode === 'lead' ? 'Jij bent tafelleider' : 'Jij bent de host') : 'Host: ' + esc(m.hostName || ''), '<button class="btn ghost sm" data-act="' + (host ? 'ask-close' : 'leave') + '">' + (host ? 'Sluiten' : 'Verlaten') + '</button>');
     if (S.kind === 'ring') {
-      if (!host) html += '<div class="panel" style="text-align:center"><h2>Je zit aan tafel!</h2><p class="muted">Wachten tot ' + esc(m.hostName || 'de host') + ' het spel start…</p></div>';
+      if (!host) html += '<div class="panel" style="text-align:center"><h2>Je zit aan tafel!</h2><p class="muted">Wachten tot ' + esc(m.hostName || 'de host') + ' het spel start…</p>' + watchToggle() + '</div>';
       html += ringPanel();
     } else if (host) {
       var qr = '';
@@ -1132,7 +1217,7 @@
         '<p class="small muted lobby-line" style="margin:0">Met de gewone camera, of in de app: <b>Multiplayer → ' + (S.kind === 'peer' ? 'PeerJS' : 'Firebase') + ' → Ik doe mee</b>.</p>' +
         '<button class="btn ghost" data-act="share-link">Link delen</button></div>';
     } else {
-      html += '<div class="panel" style="text-align:center"><h2>Je zit aan tafel!</h2><p class="muted">Wachten tot ' + esc(m.hostName || 'de host') + ' het spel start…</p>' +
+      html += '<div class="panel" style="text-align:center"><h2>Je zit aan tafel!</h2><p class="muted">Wachten tot ' + esc(m.hostName || 'de host') + ' het spel start…</p>' + watchToggle() +
         (m.mode === 'lead' ? '<p class="small muted">Er is een tafelleider. Die speelt niet mee en kan alle kaarten zien.</p>' : '') + '</div>';
     }
     html += '<div class="panel"><div class="label">Aan tafel · ' + n + '</div>' + playerRows(host) +
@@ -1207,7 +1292,7 @@
     });
     html += '</div>';
     if (lead && G.phase === 'play') html += '<p class="small muted" style="margin-top:10px">Je bent tafelleider: je ziet alle kaarten en speelt niet mee.</p>';
-    if (!seated && !lead) html += '<p class="small muted" style="margin-top:10px">Je kijkt mee. Je doet mee vanaf het volgende potje als de host je toevoegt.</p>';
+    if (!seated && !lead) html += '<p class="small muted" style="margin-top:10px">Je kijkt mee en ziet het spel en de stand. Kaarten van anderen blijven privé. Wil je alle kaarten zien? Laat de host de tafel openen als <b>Tafelleider</b>.</p>';
 
     app.classList.toggle('has-hand', seated && G.phase === 'play' && !(G.players[S.uid] && G.players[S.uid].out));
     return html + renderHand(G, seated);
@@ -1324,6 +1409,7 @@
       step('Spelen', ['Jouw kaarten staan onderin. Ben je aan de beurt, dan lichten de kaarten op die je mag spelen. Tik erop.', 'Wil je toepen? Tik op <b>Toep!</b> als je aan de beurt bent, vóór je een kaart speelt.', 'Toept een ander, dan vraagt je telefoon <b>Meegaan</b> of <b>Passen</b>. Je telefoon trilt.', 'Midden op tafel zie je de slag en wie er aan de beurt is.']) +
       step('Kaarten verbergen', ['Tik rechtsboven op <b>Kaarten</b> en kies <b>Verborgen</b> of <b>Automatisch</b>.', 'Verborgen: je kaarten worden kaartruggen. Tik erop om ze even te zien en speel er een. Daarna zijn ze weer verborgen.', 'Automatisch: verborgen zodra je telefoon plat op tafel ligt, zichtbaar als je hem oppakt.']) +
       step('Vuile was', ['Voor de eerste kaart kun je <b>Vuile was</b> melden, ook als je bluft.', 'De anderen kiezen <b>Ik geloof je</b> of <b>Controleren</b>. Bij controle beslist het spel en ziet iedereen je kaarten.', 'Klopt het, dan krijgt de controleur strafpunten. Blufte je, dan krijg jij ze.']) +
+      step('Chat en meekijken', ['Tik op de ronde knop 💬 om te kletsen met de anderen aan tafel. Handig als jullie op afstand spelen.', 'Tik op 🎤 en praat: je woorden worden tekst. Dat werkt met internet. Daarna tik je op <b>Stuur</b>.', 'Wil je alleen kijken? Kies in de wachtruimte <b>Ik kijk alleen mee</b>. Wil je ook alle kaarten zien? Laat de host de tafel openen als <b>Tafelleider</b>.']) +
       step('Punten', ['De punten worden automatisch bijgehouden. Na elke ronde zie je wie er wat kreeg.', 'Aan het eind komt de uitslag op de ranglijst van de host.']) +
       step('Goed om te weten', ['Iedereen heeft internet nodig. Valt je verbinding weg, open dan de app opnieuw: je zit weer aan tafel.', 'Is er een <b>tafelleider</b>, dan speelt die niet mee en kan die alle kaarten zien.', 'Laat je scherm aan staan; de app probeert dat zelf te regelen.']) +
       '</div>';
@@ -1402,6 +1488,8 @@
         }
         if (S.kind === 'ring') inner += '<button class="btn" data-act="ring-open">Telefoons koppelen (QR)</button>';
         inner += '<a class="btn ghost" href="index.html">Naar het hoofdmenu <span class="small muted">(je spel blijft open)</span></a>';
+      } else if (sh.type === 'chat') {
+        inner = chatSheet();
       } else if (sh.type === 'wasask') {
         var wp = (S.meta && S.meta.rules && S.meta.rules.wasStraf) || 1;
         inner = '<h2>Vuile was melden?</h2><p class="muted">Je meldt dat je alleen boeren, vrouwen, heren en azen hebt. De anderen mogen controleren. Klopt het niet, dan krijg je ' + plural(wp, 'strafpunt', 'strafpunten') + '. Controleert niemand, dan neem je 4 nieuwe kaarten.</p>' +
@@ -1421,14 +1509,22 @@
           '<button class="btn ghost" data-act="sheet-close">Sluiten</button></div></div>';
       }
     }
+    if (chatAvailable() && !(S.sheet && S.sheet.type === 'chat')) html += '<button class="chatfab" data-act="chat-open" aria-label="Chat' + (S.chatUnread ? ', ' + S.chatUnread + ' nieuw' : '') + '">💬' + (S.chatUnread ? '<span class="badge">' + S.chatUnread + '</span>' : '') + '</button>';
     if (S.toast) html += '<div class="toast" role="status">' + esc(S.toast) + '</div>';
+    var chatFocus = document.activeElement && document.activeElement.id === 'chattext' ? { a: document.activeElement.selectionStart, b: document.activeElement.selectionEnd } : null;
     var fpPrev = layer.querySelector('.fullpage'), fpTop = fpPrev ? fpPrev.scrollTop : 0;
     layer.innerHTML = html;
     var fp = layer.querySelector('.fullpage');
     if (fp && fpPrev) fp.scrollTop = fpTop;
     if (fp && fp.scrollHeight > fp.clientHeight + 1) fp.classList.add('fit1');
     if (fp && fp.scrollHeight > fp.clientHeight + 1) fp.querySelectorAll('.navrow').forEach(function (r) { r.style.minHeight = '42px'; r.style.paddingBlock = '4px'; });
+    if (fp && fp.scrollHeight > fp.clientHeight + 1) fp.querySelectorAll('.navlist').forEach(function (l) { l.classList.add('cols2'); });  // still too long: two columns
     document.body.style.overflow = fp ? 'hidden' : '';
+    var fab = layer.querySelector('.chatfab'), hd = app.querySelector('.hand');
+    if (fab) fab.style.bottom = ((hd ? hd.offsetHeight : 0) + 14) + 'px';
+    var cl = document.getElementById('chatlist'); if (cl) cl.scrollTop = cl.scrollHeight;
+    var ct = document.getElementById('chattext');
+    if (ct && chatFocus) { ct.focus(); try { ct.setSelectionRange(chatFocus.a, chatFocus.b); } catch (e) {} }
   }
 
   // Tighten the layout step by step until the screen fits without scrolling.
@@ -1463,6 +1559,7 @@
   /* ---------- Events ---------- */
   document.addEventListener('input', function (e) {
     if (e.target.id === 'myname') { S.name = e.target.value; ls(K.name, S.name); }
+    if (e.target.id === 'chattext') S.chatDraft = e.target.value;
     if (e.target.id === 'joincode') e.target.value = e.target.value.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 4);
   });
   // Re-fit after rotating the phone, but never while someone is typing.
@@ -1499,6 +1596,7 @@
 
   document.addEventListener('keydown', function (e) {
     if (e.key === 'Enter' && e.target.id === 'joincode') joinTable(e.target.value);
+    if (e.key === 'Enter' && e.target.id === 'chattext') { if (sendChat(e.target.value)) { S.chatDraft = ''; stopListening(); renderLayer(); } }
     if (e.key === 'Escape' && S.sheet) { if (S.sheet.type === 'help' && history.state && history.state.toepenPage) history.back(); else { S.sheet = null; renderLayer(); } }
   });
   document.addEventListener('click', function (e) {
@@ -1612,6 +1710,11 @@
       case 'hide-peek':
         S.peek = true; clearTimeout(S.peekTimer); S.peekTimer = setTimeout(function () { S.peek = false; render(); }, 20000); render(); break;
       case 'toep': act({ type: 'toep' }); buzz(40); break;
+      case 'watch': S.db.update(base() + '/players/' + S.uid, { spectator: !(S.players[S.uid] && S.players[S.uid].spectator) }); break;
+      case 'chat-open': S.sheet = { type: 'chat' }; S.chatUnread = 0; renderLayer(); break;
+      case 'chat-send': var ci = document.getElementById('chattext'); if (sendChat(ci ? ci.value : S.chatDraft)) { S.chatDraft = ''; stopListening(); renderLayer(); } break;
+      case 'chat-quick': if (sendChat(v)) renderLayer(); break;
+      case 'chat-mic': toggleMic(); break;
       case 'was-ask': S.sheet = { type: 'wasask' }; renderLayer(); break;
       case 'was': S.sheet = null; act({ type: 'was' }); break;
       case 'was-answer': act({ type: 'wascheck', check: v === 'check' }); break;
