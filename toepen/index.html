@@ -170,9 +170,12 @@
       if (ui.view === 'saves') { if (ui.size > 1) { ui.size--; continue; } break; }
       cls = lvl === 0 ? ' compact' : ' compact tight';
     }
+    // keep what is being typed (and where the cursor is) when the screen is drawn again
+    var cur = document.activeElement, keep = cur && cur.id === 'savename' ? { a: cur.selectionStart, b: cur.selectionEnd } : null;
     layer.innerHTML = renderSheet() + (ui.toast ? '<div class="toast" role="status">' + esc(ui.toast) + '</div>' : '');
     var inp = document.getElementById('savename');
-    if (inp && !inp.dataset.f) { inp.dataset.f = 1; inp.focus(); inp.select(); }
+    if (inp && keep) { inp.focus(); try { inp.setSelectionRange(keep.a, keep.b); } catch (e) {} }
+    else if (inp && ui.sheet && !ui.sheet.focused) { ui.sheet.focused = true; inp.focus(); inp.select(); }
   }
 
   /* ---------- Phone back button ---------- */
@@ -223,7 +226,15 @@
       case 'do-delete': S.remove(id); ui.sheet = null; draw(); toast('Verwijderd'); break;
     }
   });
-  window.addEventListener('resize', function () { ui.size = 4; draw(); });
+  var resizeTimer;
+  window.addEventListener('resize', function () {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(function () {
+      var a = document.activeElement;
+      if (a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA')) return;  // the keyboard opening is not a reason to redraw
+      ui.size = 4; draw();
+    }, 200);
+  });
   draw();
 })();
 </script>
