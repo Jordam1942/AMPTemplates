@@ -31,7 +31,8 @@
   * { box-sizing: border-box; }
   html { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
   body { margin: 0; background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 16px; line-height: 1.4; -webkit-tap-highlight-color: transparent; }
-  .wrap { max-width: 560px; margin: 0 auto; padding: 14px 16px 24px; min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; gap: 12px; }
+  .wrap { max-width: 560px; margin: 0 auto; padding: 14px 16px 24px; min-height: calc(100vh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)); min-height: calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; gap: 12px; }
+  .down { margin-top: auto; } /* choices sit at the bottom: in reach of the thumb */
   h1, h2 { font-family: var(--font-display); margin: 0; letter-spacing: -0.01em; }
   h1 { font-size: 1.9rem; font-weight: 800; } h2 { font-size: 1.25rem; font-weight: 700; }
   p { margin: 0; } button { font: inherit; color: inherit; cursor: pointer; border: 0; background: none; text-align: left; }
@@ -56,7 +57,7 @@
   .row b { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .row .sub { color: var(--muted); font-size: 0.85rem; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .row .go { color: var(--accent); font-size: 1.4rem; }
   .tag { display: inline-block; font-size: 0.7rem; font-weight: 700; padding: 1px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); margin-left: 6px; vertical-align: middle; }
-  .pager { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: auto; padding-top: 6px; }
+  .pager { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
   .pager .btn { min-width: 112px; }
   .scrim { position: fixed; inset: 0; background: var(--scrim); z-index: 30; display: flex; align-items: flex-end; justify-content: center; }
   .sheet { background: var(--surface); width: 100%; max-width: 560px; border-radius: 20px 20px 0 0; padding: 18px 16px calc(18px + env(safe-area-inset-bottom, 0px)); display: grid; gap: 12px; max-height: 92vh; }
@@ -98,7 +99,7 @@
   /* ---------- Views ---------- */
   function renderMenu() {
     var cur = S.current(), h = '';
-    h += '<div class="topbar"><div class="meta"><h1>Toepen</h1><div class="suits" aria-hidden="true">♠ ♥ ♣ ♦</div></div></div>';
+    h += '<div class="topbar"><div class="meta"><h1>Toepen</h1><div class="suits" aria-hidden="true">♠ ♥ ♣ ♦</div></div></div><div class="stack down">';
     if (cur && cur.sum.players.length && !cur.sum.done) {
       h += '<a class="choice main" href="scorebord.html"><b>Verder met je spel <span class="go">→</span></b><span>Ronde ' + cur.sum.round + ' · ' + esc(who(cur.sum)) + '</span></a>';
     }
@@ -106,25 +107,26 @@
     h += '<a class="choice" href="spelen.html?start=multi"><b>Multiplayer</b><span>Met vrienden, ieder op de eigen telefoon.</span></a>';
     h += '<a class="choice" href="scorebord.html"><b>Scores bijhouden</b><span>Het scorebord voor aan tafel, met echte kaarten.</span></a>';
     var n = S.count();
-    h += '<button class="choice" data-act="saves"><b>Opgeslagen spellen en scores <span class="go">→</span></b><span>' + (n ? n + ' opgeslagen. Open er een, of bewaar je spel onder een naam.' : 'Bewaar een spel met de ranglijst onder een naam.') + '</span></button>';
+    h += '<button class="choice" data-act="saves"><b>Opgeslagen spellen en scores <span class="go">→</span></b><span>' + (n ? n + ' opgeslagen. Open er een, of bewaar je spel onder een naam.' : 'Bewaar een spel met de ranglijst onder een naam.') + '</span></button></div>';
     return h;
   }
   function renderSaves() {
     var list = S.list(), cur = S.current(), h = '';
     h += '<div class="topbar"><div class="meta"><h1>Opgeslagen</h1><div class="small muted">Spellen en scores onder een naam</div></div><button class="btn ghost sm" data-act="menu">← Terug</button></div>';
-    h += '<button class="btn primary" data-act="new"' + (cur ? '' : ' disabled') + '>Huidig scorebord opslaan</button>';
-    if (!cur) h += '<p class="small muted" style="margin-top:-6px">Er staat nu niets op het scorebord om op te slaan.</p>';
+    var saveBtn = '<button class="btn primary big" data-act="new"' + (cur ? '' : ' disabled') + '>Huidig scorebord opslaan</button>' +
+      (cur ? '' : '<p class="small muted" style="text-align:center">Er staat nu niets op het scorebord om op te slaan.</p>');
     if (!list.length) {
       h += '<div class="choice" style="cursor:default"><b>Nog niets opgeslagen</b><span>Tik op <b>Huidig scorebord opslaan</b> en geef het een naam, bijvoorbeeld de avond of de groep. Je vindt het hier terug.</span></div>';
-      return h;
+      return h + '<div class="down stack">' + saveBtn + '</div>';
     }
     var size = ui.size, pages = Math.max(1, Math.ceil(list.length / size));
     if (ui.page >= pages) ui.page = pages - 1;
     h += '<div class="stack">' + list.slice(ui.page * size, ui.page * size + size).map(function (r) {
       return '<button class="row" data-act="open" data-id="' + esc(r.id) + '"><span><b>' + esc(r.name) + (r.auto ? '<span class="tag">automatisch</span>' : '') + '</b><span class="sub">' + esc(sub(r)) + '</span></span><span class="go" aria-hidden="true">›</span></button>';
     }).join('') + '</div>';
+    h += '<div class="down stack">';
     if (pages > 1) h += '<div class="pager"><button class="btn ghost sm" data-act="page" data-v="-1"' + (ui.page === 0 ? ' disabled' : '') + '>‹ Vorige</button><span class="small muted">' + (ui.page + 1) + ' / ' + pages + '</span><button class="btn ghost sm" data-act="page" data-v="1"' + (ui.page >= pages - 1 ? ' disabled' : '') + '>Volgende ›</button></div>';
-    return h;
+    return h + saveBtn + '</div>';
   }
   function renderSheet() {
     var sh = ui.sheet; if (!sh) return '';

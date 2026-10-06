@@ -37,6 +37,9 @@
   body { margin: 0; background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 16px; line-height: 1.4; -webkit-tap-highlight-color: transparent; }
   .wrap { max-width: 560px; margin: 0 auto; padding-inline: 16px; padding-block: 12px 40px; }
   .wrap.has-hand { padding-bottom: 210px; }
+  /* Menu screens: title on top, the choices at the bottom where the thumb is */
+  .wrap.menuview > .stack { display: flex; flex-direction: column; gap: 12px; min-height: calc(100vh - 52px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)); min-height: calc(100dvh - 52px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)); }
+  .wrap.menuview > .stack > .topbar + * { margin-top: auto; }
   h1, h2, h3 { font-family: var(--font-display); margin: 0; text-wrap: balance; letter-spacing: -0.01em; }
   h1 { font-size: 1.7rem; font-weight: 800; }
   h2 { font-size: 1.25rem; font-weight: 700; }
@@ -1342,7 +1345,7 @@
   // Tighten the layout step by step until the screen fits without scrolling.
   function render() {
     for (var lvl = 0; lvl <= 4; lvl++) {
-      app.className = 'wrap' + (lvl ? ' fit1' : '') + (lvl > 1 ? ' fit2' : '') + (lvl > 2 ? ' fit3' : '') + (lvl > 3 ? ' fit4' : '') + (S.view === 'home' ? ' home' : '') + (S.view === 'fb' ? ' fbwrap' : '');
+      app.className = 'wrap' + (lvl ? ' fit1' : '') + (lvl > 1 ? ' fit2' : '') + (lvl > 2 ? ' fit3' : '') + (lvl > 3 ? ' fit4' : '') + (S.view === 'home' ? ' home' : '') + (/^(home|mp0|mp1|mpjoin|ringjoin)$/.test(S.view) ? ' menuview' : '') + (S.view === 'fb' ? ' fbwrap' : '');
       var html;
       if (S.view === 'table') html = renderTable();
       else if (S.view === 'create' || S.view === 'practice') html = renderCreate();

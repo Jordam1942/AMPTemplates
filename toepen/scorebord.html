@@ -250,6 +250,17 @@
   .guide-step h3 { margin-bottom: 4px; }
   .guide-step ul { margin: 4px 0 0; padding-left: 18px; display: grid; gap: 4px; color: var(--muted); }
   .guide-step li b { color: var(--fg); }
+  /* Action dock: the buttons you press every round sit at the bottom, in reach of the thumb */
+  .dock { position: fixed; left: 0; right: 0; bottom: 0; z-index: 9; background: var(--bg); border-top: 1px solid var(--line); padding: 8px 16px; box-shadow: 0 -10px 20px -14px rgba(0,0,0,0.35); }
+  .dock.solo { padding-bottom: 10px; }
+  .dock .in { max-width: 560px; margin: 0 auto; display: grid; gap: 8px; }
+  .dock-main { display: flex; gap: 8px; }
+  .dock-main .btn { min-height: 56px; font-size: 1.05rem; }
+  .dock .btn.toep { background: var(--accent); color: var(--accent-fg); flex: 1; }
+  .dock .btn.finish { background: var(--ink); color: var(--ink-fg); flex: 2; }
+  .dock-row { display: flex; gap: 8px; }
+  .dock-row .btn { flex: 1; min-width: 0; min-height: 42px; font-size: 0.85rem; padding: 0 6px; white-space: nowrap; }
+  .dock-row .btn.wit { border: 1.5px dashed var(--line); background: transparent; color: var(--fg); }
   .history-bar { display: flex; gap: 8px; margin: -4px 0 12px; }
   .history-bar .btn { flex: 1; min-width: 0; min-height: 40px; font-size: 0.85rem; padding: 0 6px; white-space: nowrap; }
   .topbar.game h1 { font-size: clamp(1.3rem, 5.6vw, 1.6rem); overflow: hidden; text-overflow: ellipsis; }
@@ -424,7 +435,7 @@
 (function () {
   'use strict';
   var KEY = 'toepen-scorebord-v2';
-  var VERSION = '32 (menu-knop en typen)';
+  var VERSION = '33 (knoppen binnen duimbereik)';
   var COLORS = ['#2f7d5b', '#c2571a', '#3b6fb6', '#a63d6b', '#7a5bb5', '#a67c12', '#1f8a8f', '#5d6b1f'];
   var app = document.getElementById('app');
   var layer = document.getElementById('layer');
@@ -969,14 +980,17 @@
           '<button class="rules-btn" data-act="sheet-setrules"><span class="label" style="width:92px">Huisregels</span><span class="sum">' + esc(rulesSummary(s.rules)) + '</span><span class="go">Wijzig ›</span></button>' +
           (br.length ? '<button class="rules-btn" data-act="sheet-board"><span class="label" style="width:92px">Ranglijst</span><span class="sum">1. ' + esc(br[0].name) + ' · ' + plural(br[0].won, 'potje', 'potjes') + '</span><span class="go">Bekijk ›</span></button>' : '') +
         '</div>' +
-        '<button class="btn primary big" data-act="start"' + (act.length < 2 ? ' disabled' : '') + '>' + (act.length < 2 ? 'Zet minstens 2 spelers aan' : 'Start spel met ' + act.length + ' spelers') + '</button>' +
+        '<div class="dock solo"><div class="in"><button class="btn primary big" data-act="start"' + (act.length < 2 ? ' disabled' : '') + '>' + (act.length < 2 ? 'Zet minstens 2 spelers aan' : 'Start spel met ' + act.length + ' spelers') + '</button></div></div>' +
       '</div>';
+    var sd = app.querySelector('.dock.solo');
+    if (sd) app.style.paddingBottom = (sd.offsetHeight + 12) + 'px';
   }
 
   // Setup should fit too: first tighten the rows, then let only the player
   // list scroll inside its own box.
   function renderSetupFit() {
     app.classList.remove('setup-tight', 'compact', 'tight');
+    app.style.paddingBottom = '';
     renderSetup();
     var over = function () { return document.documentElement.scrollHeight - window.innerHeight; };
     if (over() <= 1) return;
@@ -1001,31 +1015,27 @@
       '<button class="btn ghost sm" data-act="sheet-gamemenu">Menu</button></div></div>';
     var lastU = state.undo.length ? entryOf(state.undo[state.undo.length - 1]).label : '';
     var lastR = state.redo.length ? state.redo[state.redo.length - 1].label : '';
-    html += '<div class="history-bar">' +
-      '<button class="btn ghost" data-act="undo"' + (lastU ? ' aria-label="Ongedaan maken: ' + esc(lastU) + '"' : ' disabled') + '>↶ Ongedaan maken</button>' +
-      '<button class="btn ghost" data-act="redo"' + (lastR ? ' aria-label="Opnieuw doen: ' + esc(lastR) + '"' : ' disabled') + '>↷ Opnieuw doen</button></div>';
+    var undoBtn = '<button class="btn ghost" data-act="undo"' + (lastU ? ' aria-label="Ongedaan maken: ' + esc(lastU) + '"' : ' aria-label="Ongedaan maken" disabled') + '>↶ Ongedaan</button>';
+    var redoBtn = '<button class="btn ghost" data-act="redo"' + (lastR ? ' aria-label="Opnieuw doen: ' + esc(lastR) + '"' : ' aria-label="Opnieuw doen" disabled') + '>↷ Opnieuw</button>';
+    var dock = '';
 
     if (w) {
       var rounds = g.log.filter(function (e) { return e.t === 'round'; }).length;
-      if (ui.fit >= 3) {
-        html += '<div class="winner compact"><div class="label" style="color:inherit;opacity:.8">Winnaar van het potje</div><h2>' + esc(w.name) + '</h2>' +
-          '<div class="row"><button class="btn" data-act="again">Nog een potje</button><button class="btn ghost" data-act="sheet-share" data-v="stand">Delen</button></div></div>';
-      } else
-      html += '<div class="winner"><div class="label" style="color:inherit;opacity:.8">Winnaar van het potje</div>' +
+      html += '<div class="winner' + (ui.fit >= 3 ? ' compact' : '') + '"><div class="label" style="color:inherit;opacity:.8">Winnaar van het potje</div>' +
         '<h2>' + esc(w.name) + '</h2>' +
-        '<p>Na ' + plural(rounds, 'ronde', 'rondes') + ', met ' + plural(w.score, 'strafpunt', 'strafpunten') + '. ' +
-        'Totaal ' + plural(state.wins[w.name] || 1, 'potje', 'potjes') + ' gewonnen.</p>' +
-        '<button class="btn big" data-act="again">Nog een potje</button>' +
-        '<button class="btn ghost" data-act="sheet-share" data-v="stand">Uitslag delen</button>' +
-        '<button class="btn ghost" data-act="tosetup">Andere spelers of regels</button></div>';
+        (ui.fit >= 3 ? '' : '<p>Na ' + plural(rounds, 'ronde', 'rondes') + ', met ' + plural(w.score, 'strafpunt', 'strafpunten') + '. ' +
+        'Totaal ' + plural(state.wins[w.name] || 1, 'potje', 'potjes') + ' gewonnen.</p>') + '</div>';
+      dock = '<div class="dock"><div class="in"><button class="btn primary big" data-act="again">Nog een potje</button>' +
+        '<div class="dock-row">' + undoBtn + '<button class="btn ghost" data-act="sheet-share" data-v="stand">Uitslag delen</button><button class="btn ghost" data-act="tosetup">Spelers / regels</button></div></div></div>';
     } else {
       var toepNames = r.toeps.map(function (t) { return esc(byId(t.by).name); }).join(' → ');
       html += '<div class="stake"><div class="stake-main"><div class="big' + (ui.bump ? ' bump' : '') + '">' + r.stake + '</div>' +
         '<div class="txt"><div class="label">Inzet</div><div>Verliezers krijgen ' + plural(r.stake, 'strafpunt', 'strafpunten') + '</div></div>' +
-        '<button class="btn toep" data-act="sheet-toep">Toep!</button></div>' +
-        (toepNames ? '<div class="toeplog">Getoept: ' + toepNames + '</div>' : '') +
-        '<div class="stake-row"><button class="btn finish" data-act="sheet-finish">Wie wint de ronde?</button>' +
-        (g.rules.wittewas ? '<button class="btn wit" data-act="sheet-was">Vuile was</button>' : '') + '</div></div>';
+        '</div>' +
+        (toepNames ? '<div class="toeplog">Getoept: ' + toepNames + '</div>' : '') + '</div>';
+      dock = '<div class="dock"><div class="in"><div class="dock-main"><button class="btn toep" data-act="sheet-toep">Toep!</button>' +
+        '<button class="btn finish" data-act="sheet-finish">Wie wint de ronde?</button></div>' +
+        '<div class="dock-row">' + undoBtn + redoBtn + (g.rules.wittewas ? '<button class="btn wit" data-act="sheet-was">Vuile was</button>' : '') + '</div></div></div>';
     }
     ui.bump = false;
 
@@ -1087,7 +1097,7 @@
         'Tik op een score om die met de hand aan te passen.</div>' +
         '<button class="btn ghost sm" style="margin-top:10px" data-act="sheet-rules" data-v="uitleg">Volledige uitleg</button></div>';
     }
-    return html;
+    return html + dock;
   }
 
   function nameOf(id) { var p = byId(id); return p ? esc(p.name) : '?'; }
@@ -1698,6 +1708,10 @@
       '<nav class="tabbar" aria-label="Onderdelen"><div class="inner">' + tabs.map(function (t) {
         return '<button data-act="tab" data-v="' + t[0] + '"' + (ui.tab === t[0] ? ' aria-current="page"' : '') + '>' + ICONS[t[0]] + t[1] + '</button>';
       }).join('') + (HAS_MP ? '<a class="tabhome" href="index.html" aria-label="Naar het hoofdmenu">' + ICONS.menu + 'Menu</a>' : '') + '</div></nav>';
+    // The action dock sits right above the tab bar; reserve room for both so nothing hides behind them.
+    var tb = app.querySelector('.tabbar'), dk = app.querySelector('.dock');
+    if (dk && tb) { dk.style.bottom = tb.offsetHeight + 'px'; app.style.paddingBottom = (tb.offsetHeight + dk.offsetHeight + 12) + 'px'; }
+    else app.style.paddingBottom = '';
   }
 
   function renderLayer() {
@@ -1726,13 +1740,11 @@
         inner = '<h2>Huisregels</h2><p class="small muted">Spreek ze af voordat je begint. Tijdens het spel kun je ze nog wijzigen onder Meer.</p>' + rulesPanel(state.setup.rules, 'setup');
       } else if (sh.type === 'gamemenu') {
         inner = '<h2>Menu</h2><div class="menu-list">' +
-          '<button class="btn ghost" data-act="sheet-new">Nieuw spel…</button>' +
           (canAddPlayer() ? '<button class="btn ghost" data-act="sheet-addp">+ Speler toevoegen</button>' : '') +
+          '<button class="btn ghost" data-act="sheet-new">Nieuw spel…</button>' +
           '<button class="btn ghost" data-act="ask" data-v="potje">Stand op 0 zetten…</button>' +
-          '<button class="btn ghost" data-act="menu-meer">Spelers</button>' +
-          '<button class="btn ghost" data-act="pg-open" data-v="huisregels" data-scope="game">Huisregels</button>' +
-          '<button class="btn ghost" data-act="sheet-rules">Spelregels en uitleg</button>' +
-          '<button class="btn ghost" data-act="pg-open" data-v="opslaan">Opslaan…</button></div>';
+          '<button class="btn ghost" data-act="pg-open" data-v="opslaan">Opslaan…</button>' +
+          '<button class="btn ghost" data-act="menu-meer">Spelers, regels en meer</button></div>';
       } else if (sh.type === 'confirm') {
         var games = Math.max(state.archive.length, Object.keys(state.wins).reduce(function (n, k) { return n + state.wins[k]; }, 0));
         var C = {
@@ -1961,7 +1973,7 @@
       case 'ask': ui.sheet = { type: 'confirm', what: v }; renderLayer(); break;
       case 'sheet-setrules': openPage({ id: 'huisregels', scope: 'setup' }); break;
       case 'sheet-gamemenu': ui.sheet = { type: 'gamemenu' }; renderLayer(); break;
-      case 'menu-meer': openPage({ id: 'spelers' }); break;
+      case 'menu-meer': ui.sheet = null; ui.tab = 'meer'; render(); break;
       case 'sheet-rules': openPage({ id: v === 'uitleg' ? 'guide' : 'help' }); break;
       case 'back': closePage(); break;
       case 'do-save':
