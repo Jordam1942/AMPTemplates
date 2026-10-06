@@ -179,3 +179,14 @@ assert(E.apply(G2, 'b', { type: 'play', card: '10h' }).ok);
 assert.strictEqual(G2.round.lastTrick.winner, 'b', '10 beats 7');
 assert.strictEqual(G2.round.turn, 'b', 'trick winner leads');
 console.log('OK', stats, (Date.now() - t0) + 'ms');
+
+// A game saved before 'maxInzet' existed must not allow unlimited toepen.
+(function () {
+  const E = require('../engine.js');
+  const G = E.newGame({ seats: [{ id: 'a', name: 'A' }, { id: 'b', name: 'B' }], limit: 15, rules: { dubbelToep: true }, dealer: 0 });
+  delete G.rules.maxInzet;
+  G.round.stake = 4;
+  if (E.canToep(G, G.round.turn)) { console.error('FAIL: old game allows toep above 4'); process.exit(1); }
+  G.round.stake = 3;
+  if (!E.canToep(G, G.round.turn)) { console.error('FAIL: toep at 3 should be allowed'); process.exit(1); }
+})();

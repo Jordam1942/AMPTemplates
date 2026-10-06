@@ -130,10 +130,12 @@
 
   function isScherp(G, id) { return G.players[id].score === G.limit - 1; }
 
+  // Games saved before this rule existed have no maxInzet: they get the default, not 'no limit'.
+  function maxStake(G) { return G.rules.maxInzet === undefined ? DEFAULT_RULES.maxInzet : G.rules.maxInzet; }
   function canToep(G, id) {
     var r = G.round;
     return G.phase === 'play' && !r.pending && !r.was && r.turn === id && inRound(G, id) &&
-      (!G.rules.maxInzet || r.stake < G.rules.maxInzet) && inRoundIds(G).length > 1 && (G.rules.dubbelToep || lastToeper(G) !== id);
+      (!maxStake(G) || r.stake < maxStake(G)) && inRoundIds(G).length > 1 && (G.rules.dubbelToep || lastToeper(G) !== id);
   }
 
   function isWitteWas(hand) {
@@ -377,7 +379,7 @@
   var api = {
     SUITS: SUITS, RANKS: RANKS, suitOf: suitOf, rankOf: rankOf, power: power, newDeck: newDeck, shuffle: shuffle,
     newGame: newGame, startRound: startRound, nextRound: nextRound, apply: apply,
-    legalCards: legalCards, canToep: canToep, canWas: canWas, mustPlay: mustPlay, isScherp: isScherp,
+    legalCards: legalCards, canToep: canToep, maxStake: maxStake, canWas: canWas, mustPlay: mustPlay, isScherp: isScherp,
     inRound: inRound, inRoundIds: inRoundIds, activeSeats: activeSeats, leadSuit: leadSuit,
     publicState: publicState, botAction: botAction, isWitteWas: isWitteWas
   };

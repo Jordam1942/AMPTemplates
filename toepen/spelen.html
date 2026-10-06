@@ -18,7 +18,7 @@
   :root {
     --bg: #eef1ea; --surface: #fbfcf8; --sunken: #e3e8df; --fg: #1d2620; --muted: #5f6b62; --line: #d5dbd0;
     --accent: #1f6b4a; --accent-fg: #ffffff; --accent-soft: #dcebe2;
-    --warn: #b4540f; --warn-soft: #fbe7d6; --danger: #b3261e; --danger-soft: #f9dedc; --blue: #2563eb; --blue-soft: #dbe7fd; --orange: #e8590c; --orange-soft: #fde5d4; --purple: #7c3aed; --purple-soft: #eadffd; --gold: #b7791f; --gold-soft: #f8ecc9;
+    --warn: #b4540f; --warn-soft: #fbe7d6; --danger: #b3261e; --danger-soft: #f9dedc; --blue: #34638f; --blue-soft: #e3ebf3; --orange: #b4602a; --orange-soft: #f4e8de; --purple: #6a4f8c; --purple-soft: #ece6f2; --gold: #9a7a1f; --gold-soft: #f3ecd6;
     --ink: #253a2e; --ink-fg: #eef1ea; --felt: #1d5c40; --felt-line: #2f7354;
     --card: #ffffff; --card-red: #c62828; --card-black: #1b1f1d; --scrim: rgba(18, 26, 21, 0.5);
     --font-display: "Bricolage Grotesque", "Arial Rounded MT Bold", system-ui, sans-serif;
@@ -28,7 +28,7 @@
     :root:not([data-theme="light"]) {
       --bg: #121a15; --surface: #1b251f; --sunken: #16201a; --fg: #e8eee8; --muted: #9eaba1; --line: #2c3a31;
       --accent: #4fbf89; --accent-fg: #0d1a13; --accent-soft: #1f3a2b;
-      --warn: #f0a160; --warn-soft: #3a2817; --danger: #f2b8b5; --danger-soft: #4a1f1c; --blue: #7aa7ff; --blue-soft: #1c2a4a; --orange: #ff9a5c; --orange-soft: #3d2512; --purple: #b79cff; --purple-soft: #2c2147; --gold: #ebbd4d; --gold-soft: #38300f;
+      --warn: #f0a160; --warn-soft: #3a2817; --danger: #f2b8b5; --danger-soft: #4a1f1c; --blue: #86abd3; --blue-soft: #1d2a38; --orange: #e09a63; --orange-soft: #33241a; --purple: #b6a0d6; --purple-soft: #2a2336; --gold: #d6b659; --gold-soft: #2f2a15;
       --ink: #dfe9e1; --ink-fg: #121a15; --felt: #17432f; --felt-line: #24573f; --scrim: rgba(0, 0, 0, 0.65);
       color-scheme: dark;
     }
@@ -36,7 +36,7 @@
   :root[data-theme="dark"] {
     --bg: #121a15; --surface: #1b251f; --sunken: #16201a; --fg: #e8eee8; --muted: #9eaba1; --line: #2c3a31;
     --accent: #4fbf89; --accent-fg: #0d1a13; --accent-soft: #1f3a2b;
-    --warn: #f0a160; --warn-soft: #3a2817; --danger: #f2b8b5; --danger-soft: #4a1f1c; --blue: #7aa7ff; --blue-soft: #1c2a4a; --orange: #ff9a5c; --orange-soft: #3d2512; --purple: #b79cff; --purple-soft: #2c2147; --gold: #ebbd4d; --gold-soft: #38300f;
+    --warn: #f0a160; --warn-soft: #3a2817; --danger: #f2b8b5; --danger-soft: #4a1f1c; --blue: #86abd3; --blue-soft: #1d2a38; --orange: #e09a63; --orange-soft: #33241a; --purple: #b6a0d6; --purple-soft: #2a2336; --gold: #d6b659; --gold-soft: #2f2a15;
     --ink: #dfe9e1; --ink-fg: #121a15; --felt: #17432f; --felt-line: #24573f; --scrim: rgba(0, 0, 0, 0.65);
     color-scheme: dark;
   }
@@ -81,8 +81,8 @@
   input.code { text-transform: uppercase; letter-spacing: 0.3em; font-weight: 800; font-family: var(--font-display); text-align: center; font-size: 1.4rem; }
   .choice { display: grid; gap: 4px; text-align: left; padding: 14px; border-radius: 14px; border: 1.5px solid var(--line); background: var(--surface); }
   .choice b { font-size: 1.05rem; } .choice span { color: var(--muted); font-size: 0.9rem; }
-  .choice.ic { grid-template-columns: 52px minmax(0, 1fr); column-gap: 14px; align-items: center; padding: 13px 14px; border-color: color-mix(in srgb, var(--t) 40%, var(--line)); background: linear-gradient(120deg, var(--ts), var(--surface) 85%); }
-  .choice.ic .i { grid-row: 1 / 3; width: 52px; height: 52px; border-radius: 15px; display: grid; place-items: center; font-size: 1.7rem; font-style: normal; background: var(--t); box-shadow: 0 3px 8px color-mix(in srgb, var(--t) 40%, transparent); }
+  .choice.ic { grid-template-columns: 52px minmax(0, 1fr); column-gap: 14px; align-items: center; padding: 13px 14px; border-left: 5px solid var(--t); background: var(--surface); }
+  .choice.ic .i { grid-row: 1 / 3; width: 52px; height: 52px; border-radius: 15px; display: grid; place-items: center; font-size: 1.7rem; font-style: normal; background: var(--ts); color: var(--t); }
   .fit3 .choice.ic .i { width: 40px; height: 40px; font-size: 1.3rem; border-radius: 12px; } .fit3 .choice.ic { grid-template-columns: 40px minmax(0, 1fr); }
   .t-green { --t: var(--accent); --ts: var(--accent-soft); } .t-blue { --t: var(--blue); --ts: var(--blue-soft); } .t-orange { --t: var(--orange); --ts: var(--orange-soft); } .t-purple { --t: var(--purple); --ts: var(--purple-soft); } .t-gold { --t: var(--gold); --ts: var(--gold-soft); }
   .choice[aria-pressed="true"] { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); background: var(--accent-soft); }
@@ -505,7 +505,7 @@
     var html = topbar('Multiplayer', 'Kies hoe jullie verbinden', (S.deep ? '<a class="btn ghost sm" href="index.html">← Terug</a>' : '<button class="btn ghost sm" data-act="home">Terug</button>'));
     ['peer', 'ring', 'firebase'].forEach(function (k) {
       var m = METHODS[k];
-      html += '<button class="choice ic ' + ({ peer: 't-blue', ring: 't-orange', firebase: 't-gold' })[k] + '" data-act="mp-method" data-v="' + k + '"><i class="i" aria-hidden="true">' + ({ peer: '🌍', ring: '📡', firebase: '🔥' })[k] + '</i><b>' + m.t + (k === 'firebase' && !NET ? ' <span class="chip">Nog niet ingesteld</span>' : '') + '</b><span>' + m.d + '</span></button>';
+      html += '<button class="choice ic ' + ({ peer: 't-blue', ring: 't-orange', firebase: 't-gold' })[k] + '" data-act="mp-method" data-v="' + k + '"><i class="i" aria-hidden="true">' + ({ peer: '<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18-3-3-3-15 0-18"/></svg>', ring: '<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5a10 10 0 0 1 14 0M8.5 16a5 5 0 0 1 7 0"/><circle cx="12" cy="19.5" r="1"/></svg>', firebase: '<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 18a4 4 0 0 1-.5-8 5.5 5.5 0 0 1 10.6 1.5A3.3 3.3 0 0 1 17 18z"/></svg>' })[k] + '</i><b>' + m.t + (k === 'firebase' && !NET ? ' <span class="chip">Nog niet ingesteld</span>' : '') + '</b><span>' + m.d + '</span></button>';
     });
     return '<div class="stack">' + html + '</div>';
   }
@@ -518,8 +518,8 @@
       : k === 'ring' ? 'Je toont een QR aan je buurman en scant daarna zijn antwoord.'
       : 'Je opent de tafel en nodigt vrienden uit via WhatsApp of een QR. Ze mogen overal zijn.';
     var guestD = k === 'ring' ? 'Scan de QR van de host of van je buurman in de kring.' : 'Scan de QR van de host, of vul de tafelcode in.';
-    html += '<button class="choice ic t-green" data-act="mp-host"><i class="i" aria-hidden="true">👑</i><b>Ik ben de host</b><span>' + hostD + '</span></button>';
-    html += '<button class="choice ic t-blue" data-act="mp-guest"><i class="i" aria-hidden="true">🙋</i><b>Ik doe mee</b><span>' + guestD + '</span></button>';
+    html += '<button class="choice ic t-green" data-act="mp-host"><i class="i" aria-hidden="true"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8l4 4 5-7 5 7 4-4-2 11H5z"/></svg></i><b>Ik ben de host</b><span>' + hostD + '</span></button>';
+    html += '<button class="choice ic t-blue" data-act="mp-guest"><i class="i" aria-hidden="true"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4v18h-4M10 17l5-5-5-5M15 12H3"/></svg></i><b>Ik doe mee</b><span>' + guestD + '</span></button>';
     if (needSetup) html += '<p class="small muted lobby-hint" style="text-align:center">Doe je alleen mee? Dan hoef je niets in te stellen. Scan de QR van de host, dan wordt alles vanzelf ingesteld.</p>';
     return '<div class="stack">' + html + '</div>';
   }
@@ -1045,6 +1045,7 @@
     var closing = S.db; // a moment later, so the host's 'table closed' still reaches the others
     if (closing && closing.stop) setTimeout(function () { closing.stop(); }, 700);
     S.urlCode = null; S.kind = null; S.method = null; S.rl = null;
+    if (S.deep) { location.href = 'index.html'; return; }
     try { var q2 = new URLSearchParams(location.search); q2.delete('tafel'); history.replaceState(null, '', location.pathname + (q2.toString() ? '?' + q2 : '')); } catch (e) {}
     render();
   }
@@ -1118,8 +1119,8 @@
       html += '<div class="panel"><b>Je tafel ' + esc(saved.code) + ' is nog open' + (saved.practice ? ' (oefenen)' : '') + '.</b>' +
         '<div class="row"><button class="btn primary" style="flex:1" data-act="resume">Verder spelen</button><button class="btn ghost" data-act="forget">Sluiten</button></div></div>';
     }
-    html += '<button class="choice ic t-blue" data-act="go-mp"><i class="i" aria-hidden="true">🌍</i><b>Multiplayer</b><span>Speel met vrienden, ieder op de eigen telefoon. Kies PeerJS, QR-ring of Firebase.</span></button>';
-    html += '<button class="choice ic t-orange" data-act="go-practice"><i class="i" aria-hidden="true">🤖</i><b>Oefenen tegen de computer</b><span>Speel alleen op deze telefoon tegen computerspelers. Werkt zonder internet.</span></button>';
+    html += '<button class="choice ic t-blue" data-act="go-mp"><i class="i" aria-hidden="true"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18-3-3-3-15 0-18"/></svg></i><b>Multiplayer</b><span>Speel met vrienden, ieder op de eigen telefoon. Kies PeerJS, QR-ring of Firebase.</span></button>';
+    html += '<button class="choice ic t-orange" data-act="go-practice"><i class="i" aria-hidden="true"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg></i><b>Oefenen tegen de computer</b><span>Speel alleen op deze telefoon tegen computerspelers. Werkt zonder internet.</span></button>';
     html += '<button class="btn ghost" data-act="help">Spelregels en uitleg</button>';
     if (NET === 'firebase' && CFG_SRC !== 'app') html += '<button class="btn ghost sm" data-act="go-fb">Firebase-instellingen</button>';
     return '<div class="stack">' + html + '</div>';
@@ -1497,7 +1498,7 @@
     var acts = '';
     if (E.canToep(G, S.uid)) acts += '<button class="btn toep" data-act="' + (window.ToepenPrefs && !ToepenPrefs.get().confirmToep ? 'toep' : 'toep-ask') + '">Toep! → ' + (r.stake + 1) + '</button>';
     var shown = !handHidden() || S.peek;
-    if (!E.canToep(G, S.uid) && G.rules.maxInzet && r.stake >= G.rules.maxInzet && r.turn === S.uid && !r.pending && !r.was && inRoundCount(G) > 1) acts += '<button class="btn toep" disabled>Hoogste inzet (' + r.stake + ')</button>';
+    if (!E.canToep(G, S.uid) && E.maxStake(G) && r.stake >= E.maxStake(G) && r.turn === S.uid && !r.pending && !r.was && inRoundCount(G) > 1) acts += '<button class="btn toep" disabled>Hoogste inzet (' + r.stake + ')</button>';
     if (E.canWas(G, S.uid)) acts += '<button class="btn warn" data-act="was-ask">Vuile was</button>';
     if (acts) html += '<div class="acts">' + acts + '</div>';
     if (!shown && hand.length) {
@@ -1606,7 +1607,11 @@
       } else if (sh.type === 'menu') {
         var host = S.role === 'host';
         inner = '<h2>Menu</h2>';
-        if (host && S.G) {
+        if (host && S.G && S.practice) {
+          var ut0 = undoTarget();
+          inner += '<button class="btn ' + (ut0 ? 'warn' : 'ghost') + '" data-act="undo-ask"' + (ut0 ? '' : ' disabled') + '>↶ Ongedaan maken' + (ut0 ? ': ' + esc(ut0.label) : '') + '</button>';
+          inner += '<button class="btn danger" data-act="ask-close">Spel stoppen</button>';
+        } else if (host && S.G) {
           var ut = undoTarget();
           inner += '<button class="btn ' + (ut ? 'warn' : 'ghost') + '" data-act="undo-ask"' + (ut ? '' : ' disabled') + '>↶ Ongedaan maken' + (ut ? ': ' + esc(ut.label) : '') + '</button>';
           inner += '<div class="label">Spelers</div>' + S.G.seats.map(function (id) {
