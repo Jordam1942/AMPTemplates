@@ -171,6 +171,7 @@
   .fit1 .toggle-row { min-height: 40px; }
   .fit1 .panel { padding: 10px 12px; gap: 8px; }
   .fit2 .choice span { display: none; }
+  .fit3 .choice { padding: 9px 12px; gap: 0; } .fit3 .stack { gap: 8px; } .fit3 .home .panel, .fit3.home .panel { padding: 10px; }
   .fit2 .toggle-row .txt div:last-child { display: none; }
 
   .result { background: var(--warn-soft); color: var(--fg); border-radius: 14px; padding: 12px 14px; font-weight: 600; text-align: center; }
@@ -222,6 +223,18 @@
   .fit2 .prow .avatar { width: 28px; height: 28px; font-size: 0.8rem; }
   .fit3 .qr { width: 130px; padding: 8px; }
   .fit3 .bigcode { font-size: 1.6rem; }
+  .scanner { position: fixed; inset: 0; z-index: 60; background: var(--bg); display: flex; flex-direction: column; gap: 10px; padding: 12px 16px; padding-top: max(12px, env(safe-area-inset-top)); }
+  .scanner .scan-bar { display: flex; align-items: center; gap: 10px; }
+  .scanner .scan-view { position: relative; flex: 1; min-height: 0; border-radius: 16px; overflow: hidden; background: #000; }
+  .scanner video { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .scanner .scan-frame { position: absolute; inset: 18% 14%; border: 3px solid rgba(255, 255, 255, 0.85); border-radius: 18px; pointer-events: none; }
+  .scanner .scan-paste { display: flex; gap: 8px; }
+  .scanner .scan-paste .text { flex: 1; min-width: 0; }
+  .scanner .scan-err { color: var(--danger, #c0392b); min-height: 1.2em; margin: 0; }
+  .scanner .scan-hint { margin: 0; text-align: center; }
+  .linkstate { display: flex; align-items: center; gap: 8px; justify-content: center; }
+  .qr.small { width: min(230px, 100%); }
+  .fit1 .qr.small { width: min(200px, 100%); } .fit2 .qr.small { width: 150px; } .fit3 .qr.small { width: 120px; }
   .toast { position: fixed; left: 50%; bottom: calc(220px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); z-index: 30; background: var(--ink); color: var(--ink-fg); padding: 10px 16px; border-radius: 12px; font-weight: 600; font-size: 0.92rem; max-width: calc(100% - 32px); text-align: center; pointer-events: none; }
   .conn { position: fixed; top: env(safe-area-inset-top, 0px); left: 0; right: 0; z-index: 40; background: var(--danger); color: #fff; text-align: center; font-weight: 700; font-size: 0.85rem; padding: 4px; }
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
@@ -233,6 +246,7 @@
 <script src="vendor/qrcode.js"></script>
 <script src="engine.js"></script>
 <script src="net.js"></script>
+<script src="ring.js"></script>
 <script src="firebase-config.js"></script>
 <script>
 (function () {
@@ -279,7 +293,7 @@
   var S = {
     view: 'home', name: ls(K.name) || '', db: null, uid: null, code: null, role: null, practice: false,
     meta: null, players: {}, pub: null, hand: [], subs: [], G: null, sheet: null, toast: '', connected: true,
-    lastHands: {}, lastResultKey: '', hostTimer: null, err: '', busy: false,
+    lastHands: {}, lastResultKey: '', hostTimer: null, err: '', busy: false, kind: null, ringMode: false, rl: null,
     create: {
       mode: 'play', limit: sbRules.limit || 10, bots: 0,
       rules: {
@@ -308,6 +322,7 @@
   }
   function connect(kind, practice) {
     var p = kind === 'firebase' ? loadFirebase().then(function () { return window.ToepenNet.firebase(CFG); })
+      : kind === 'ring' ? Promise.resolve(getRing())
       : Promise.resolve(window.ToepenNet.local(practice ? 'practice' : 'test'));
     return p.then(function (db) {
       S.db = db;
@@ -316,6 +331,14 @@
         S.subs.push(db.onConnection(function (c) { S.connected = c; renderLayer(); }));
       });
     });
+  }
+  var RING = null;
+  function getRing() {
+    if (!RING) {
+      RING = window.ToepenNet.ring();
+      RING.onLinks(function (open) { onRingLinks(open); });
+    }
+    return RING;
   }
   function base() { return 'rooms/' + S.code; }
   function unsubscribe() { S.subs.forEach(function (f) { try { f(); } catch (e) {} }); S.subs = []; }
@@ -351,6 +374,182 @@
     render();
   }
 
+  /* ---------- QR-ring: linking phones ---------- */
+  function qrSvg(text, cls) {
+    if (!text) return '<p class="muted" style="text-align:center">Code maken…</p>';
+    try { var q = qrcode(0, 'M'); q.addData(text); q.make(); return '<div class="qr ' + (cls || '') + '">' + q.createSvgTag({ cellSize: 5, margin: 2, scalable: true }) + '</div>'; }
+    catch (e) { return '<p class="muted">De code is te groot voor een QR. Gebruik Kopiëren.</p>'; }
+  }
+  function linkLine() {
+    var n = RING ? RING.linkCount() : 0;
+    return '<div class="small linkstate"><span class="dot' + (n ? '' : ' off') + '"></span>' + (n ? 'Verbonden met ' + plural(n, 'telefoon', 'telefoons') : 'Nog niet gekoppeld') + '</div>';
+  }
+  function ringPanel() {
+    return '<div class="panel"><b>Telefoons koppelen</b>' +
+      '<p class="small muted lobby-hint">Alle telefoons op dezelfde wifi of hotspot (internet hoeft niet). Koppel in een kring: jij → je buurman → de volgende… en de laatste weer met de host. Dan blijft alles werken als één verbinding wegvalt.</p>' +
+      linkLine() +
+      '<div class="row"><button class="btn primary" style="flex:1" data-act="ring-show">QR tonen</button><button class="btn" style="flex:1" data-act="ring-scan">QR scannen</button></div></div>';
+  }
+  function renderRing0() {
+    var html = topbar('Zonder internet', 'QR-ring: werkt op wifi of hotspot', '<button class="btn ghost sm" data-act="home">Terug</button>');
+    if (S.err) html += '<div class="notice" role="alert">' + esc(S.err) + '</div>';
+    html += '<div class="panel"><label class="label" for="myname">Jouw naam</label><input class="text" id="myname" maxlength="18" autocomplete="off" value="' + esc(S.name) + '" placeholder="Bijvoorbeeld Anna"></div>';
+    html += '<div class="panel"><b>Zo werkt het</b><p class="small muted lobby-hint">Zet alle telefoons op dezelfde wifi of op de hotspot van één telefoon. Internet is niet nodig. Je koppelt telefoons om de beurt door elkaars QR-code te scannen, in een kring.</p></div>';
+    html += '<button class="choice" data-act="ring-create"><b>Tafel maken</b><span>Jij bent de host. Je toont een QR aan je buurman en scant daarna het antwoord.</span></button>';
+    html += '<button class="choice" data-act="go-ringjoin"><b>Meedoen</b><span>Scan de QR van de host of van je buurman in de kring.</span></button>';
+    return '<div class="stack">' + html + '</div>';
+  }
+  function renderRingJoin() {
+    var rl = S.rl || { step: 'intro' }, html = topbar('Meedoen', 'Zonder internet', '<button class="btn ghost sm" data-act="home">Terug</button>');
+    if (rl.err) html += '<div class="notice" role="alert">' + esc(rl.err) + '</div>';
+    if (rl.step === 'answer' || rl.step === 'linking') {
+      html += '<div class="panel" style="text-align:center"><b>Laat je buurman dit scannen</b><p class="small muted lobby-hint">Je buurman kiest <b>Antwoord scannen</b>. Zodra dat lukt, zit je aan tafel.</p>' +
+        qrSvg(rl.code, 'small') + '<div class="small muted">Even wachten…</div><button class="btn ghost" data-act="copy" data-v="' + esc(rl.code) + '">Code kopiëren</button></div>';
+    } else {
+      html += '<div class="panel" style="text-align:center"><b>Scan de QR van je buurman</b><p class="small muted lobby-hint">De host of een speler die al aan tafel zit, kiest <b>QR tonen</b>. Scan die code met de camera van deze app.</p>' +
+        '<button class="btn primary big" data-act="ring-scan"' + (rl.busy ? ' disabled' : '') + '>' + (rl.busy ? 'Even geduld…' : 'QR scannen') + '</button></div>';
+    }
+    return '<div class="stack">' + html + '</div>';
+  }
+  function ringSheet() {
+    var rl = S.rl || { step: 'choose' }, h = '';
+    if (rl.err) h += '<div class="notice" role="alert">' + esc(rl.err) + '</div>';
+    if (rl.step === 'show') {
+      h += '<h2>Laat je buurman scannen</h2>' + qrSvg(rl.code, 'small') +
+        '<p class="small muted" style="text-align:center">Je buurman kiest <b>QR scannen</b> (of Meedoen). Daarna toont zijn telefoon een antwoord.</p>' +
+        '<button class="btn primary big" data-act="ring-scan-answer">Antwoord scannen</button>' +
+        '<button class="btn ghost" data-act="copy" data-v="' + esc(rl.code) + '">Code kopiëren</button>';
+    } else if (rl.step === 'answer' || rl.step === 'linking') {
+      h += '<h2>Laat je buurman dit scannen</h2>' + qrSvg(rl.code, 'small') +
+        '<p class="small muted" style="text-align:center">Je buurman kiest <b>Antwoord scannen</b>. Dit scherm sluit vanzelf als jullie gekoppeld zijn.</p>' +
+        '<button class="btn ghost" data-act="copy" data-v="' + esc(rl.code) + '">Code kopiëren</button>';
+    } else {
+      h += '<h2>Telefoons koppelen</h2>' + linkLine() +
+        '<p class="small muted" style="text-align:center">Koppel in een kring: jij → buurman → volgende → … → weer de host.</p>' +
+        '<button class="btn primary big" data-act="ring-show">QR tonen aan de volgende</button>' +
+        '<button class="btn big" data-act="ring-scan">QR scannen van de vorige</button>';
+    }
+    return h;
+  }
+  function ringShow() {
+    S.err = ''; S.sheet = { type: 'ring' }; S.rl = { step: 'show', code: '', base: RING ? RING.linkCount() : 0, busy: true };
+    var db = getRing(); S.rl.base = db.linkCount(); render();
+    primeCamera().then(function () { return db.makeOffer(); }).then(function (code) { S.rl.code = code; S.rl.busy = false; render(); })
+      .catch(function (e) { S.rl = { step: 'choose', err: e.message }; render(); });
+  }
+  // With camera permission Chrome shares the phone's real network address in the code
+  // (without it the address is hidden behind a temporary name that not every wifi can resolve).
+  function primeCamera() {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return Promise.resolve();
+    return navigator.mediaDevices.getUserMedia({ video: true, audio: false })
+      .then(function (st) { st.getTracks().forEach(function (t) { t.stop(); }); }, function () {});
+  }
+  function ringScan(purpose) {
+    var db = getRing();
+    openScanner(purpose === 'answer' ? 'Antwoord scannen' : 'QR scannen',
+      purpose === 'answer' ? 'Richt de camera op het scherm van je buurman.' : 'Richt de camera op de QR van je buurman.',
+      function (text) {
+        S.rl = S.rl || {};
+        var step0 = S.rl.step;
+        S.rl.err = ''; S.rl.busy = true; S.rl.base = db.linkCount(); render();
+        var job = purpose === 'answer'
+          ? db.finishOffer(text).then(function () { S.rl.step = 'linking'; S.rl.code = S.rl.code || ''; })
+          : db.acceptOffer(text).then(function (code) {
+              S.rl.step = 'answer'; S.rl.code = code;
+              if (S.view !== 'ringjoin' && !S.sheet) S.sheet = { type: 'ring' };
+            });
+        job.then(function () { S.rl.busy = false; render(); }).catch(function (e) {
+          S.rl.busy = false; S.rl.err = e.message; if (step0) S.rl.step = step0; render();
+        });
+      });
+  }
+  function onRingLinks(open) {
+    var rl = S.rl;
+    if (S.view === 'table' || S.view === 'ringjoin') renderLayer();
+    if (S.view === 'table') render();
+    if (!rl || !(rl.step === 'answer' || rl.step === 'linking') || open <= (rl.base || 0)) return;
+    toast('Verbonden!');
+    if (S.view === 'ringjoin') { rl.step = 'joining'; ringJoinFinish(0); return; }
+    S.sheet = null; S.rl = null; render();
+  }
+  function ringJoinFinish(tries) {
+    var db = S.db || getRing();
+    db.get('rooms').then(function (rooms) {
+      var best = null;
+      Object.keys(rooms || {}).forEach(function (code) {
+        var m = rooms[code] && rooms[code].meta;
+        if (m && m.status !== 'closed' && (!best || (m.created || 0) > (best.m.created || 0))) best = { code: code, m: m };
+      });
+      if (!best) {
+        if (tries < 25) { setTimeout(function () { ringJoinFinish(tries + 1); }, 400); return null; }
+        throw new Error('Er is nog geen tafel gevonden. Vraag de host om de tafel te openen en probeer opnieuw.');
+      }
+      S.code = best.code; S.meta = best.m; S.kind = 'ring';
+      if (best.m.host === S.uid) { return resumeHost({ code: best.code, kind: 'ring' }); }
+      S.role = 'client';
+      return db.get(base() + '/players/' + S.uid).then(function (me) {
+        return db.update(base() + '/players/' + S.uid, { name: S.name.trim(), joined: (me && me.joined) || Date.now(), online: true });
+      }).then(function () {
+        db.onDisconnect(base() + '/players/' + S.uid + '/online', false);
+        subscribe(); S.rl = null; S.busy = false; S.view = 'table'; render();
+      });
+    }).catch(function (e) { S.rl = { step: 'intro', err: e.message }; S.busy = false; S.view = 'ringjoin'; render(); });
+  }
+
+  /* ---------- Camera scanner ---------- */
+  var scanEl = null, scanStream = null, scanTimer = 0, jsqrLoading = null;
+  function loadJsQR() {
+    if (window.jsQR) return Promise.resolve();
+    if (!jsqrLoading) jsqrLoading = new Promise(function (res, rej) {
+      var sc = document.createElement('script'); sc.src = 'vendor/jsqr.js'; sc.onload = res; sc.onerror = function () { jsqrLoading = null; rej(new Error('Scanner laden mislukt')); }; document.head.appendChild(sc);
+    });
+    return jsqrLoading;
+  }
+  function closeScanner() {
+    clearInterval(scanTimer); scanTimer = 0;
+    if (scanStream) { scanStream.getTracks().forEach(function (t) { t.stop(); }); scanStream = null; }
+    if (scanEl) { scanEl.remove(); scanEl = null; }
+  }
+  function openScanner(title, hint, onText) {
+    closeScanner();
+    scanEl = document.createElement('div'); scanEl.className = 'scanner'; scanEl.setAttribute('role', 'dialog'); scanEl.setAttribute('aria-label', title);
+    scanEl.innerHTML = '<div class="scan-bar"><button class="btn ghost sm" id="scan-x">← Terug</button><b>' + title + '</b></div>' +
+      '<div class="scan-view"><video playsinline muted></video><div class="scan-frame"></div></div>' +
+      '<p class="small muted scan-hint">' + hint + '</p><p class="small scan-err" id="scan-err" role="alert"></p>' +
+      '<div class="scan-paste"><input class="text" id="scan-paste" autocomplete="off" placeholder="Of plak hier de code"><button class="btn" id="scan-ok">OK</button></div>';
+    document.body.appendChild(scanEl);
+    var errEl = scanEl.querySelector('#scan-err'), video = scanEl.querySelector('video'), mine = scanEl;
+    function done(t) { if (scanEl !== mine) return; closeScanner(); onText(t); }
+    function bad(m) { errEl.textContent = m; }
+    scanEl.querySelector('#scan-x').onclick = closeScanner;
+    scanEl.querySelector('#scan-ok').onclick = function () {
+      var t = scanEl.querySelector('#scan-paste').value.trim();
+      if (/^TP1[oa]\./.test(t)) done(t); else bad('Dit is geen koppelcode.');
+    };
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { bad('Camera niet beschikbaar. Plak de code hieronder.'); return; }
+    var detector = null;
+    try { if (window.BarcodeDetector) detector = new window.BarcodeDetector({ formats: ['qr_code'] }); } catch (e) {}
+    Promise.all([navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false }), detector ? Promise.resolve() : loadJsQR()]).then(function (r) {
+      if (scanEl !== mine) { r[0].getTracks().forEach(function (t) { t.stop(); }); return; }
+      scanStream = r[0]; video.srcObject = scanStream; video.play().catch(function () {});
+      var cv = document.createElement('canvas'), cx = cv.getContext('2d', { willReadFrequently: true }), busy = false;
+      scanTimer = setInterval(function () {
+        if (busy || video.readyState < 2 || !video.videoWidth) return;
+        var sc = Math.min(1, 640 / video.videoWidth); cv.width = Math.round(video.videoWidth * sc); cv.height = Math.round(video.videoHeight * sc);
+        cx.drawImage(video, 0, 0, cv.width, cv.height);
+        if (detector) {
+          busy = true;
+          detector.detect(cv).then(function (codes) { busy = false; for (var i = 0; i < codes.length; i++) if (/^TP1[oa]\./.test(codes[i].rawValue)) { done(codes[i].rawValue); return; } }).catch(function () { busy = false; });
+        } else {
+          var img = cx.getImageData(0, 0, cv.width, cv.height), res = window.jsQR(img.data, img.width, img.height, { inversionAttempts: 'dontInvert' });
+          if (res && /^TP1[oa]\./.test(res.data)) done(res.data);
+        }
+      }, 140);
+    }).catch(function (e) {
+      bad(e && e.name === 'NotAllowedError' ? 'Geen toegang tot de camera. Sta de camera toe, of plak de code hieronder.' : 'Camera starten lukt niet. Plak de code hieronder.');
+    });
+  }
+
   /* ---------- Host ---------- */
   function genCode() {
     var A = 'ABCDEFGHJKLMNPQRSTUVWXYZ', s = '';
@@ -359,12 +558,13 @@
   }
 
   function createTable(practice) {
-    var kind = practice ? 'local' : NET;
+    var kind = practice ? 'local' : (S.ringMode ? 'ring' : NET);
     if (!kind) { toast('Online spelen is nog niet ingesteld.'); return; }
     if (!S.name.trim() && S.create.mode === 'play') { toast('Vul eerst je naam in.'); return; }
     S.busy = true; render();
     connect(kind, practice).then(function () {
-      if (practice && S.db.reset) S.db.reset();
+      if ((practice || kind === 'ring') && S.db.reset) S.db.reset();
+      S.kind = kind;
       return tryCode(5);
     }).then(function (code) {
       S.code = code; S.role = 'host'; S.practice = practice;
@@ -488,7 +688,7 @@
   function resumeHost(saved) {
     S.busy = true; render();
     connect(saved.kind, saved.practice).then(function () {
-      S.code = saved.code; S.role = 'host'; S.practice = !!saved.practice;
+      S.code = saved.code; S.role = 'host'; S.practice = !!saved.practice; S.kind = saved.kind;
       return S.db.get(base() + '/meta');
     }).then(function (m) {
       if (!m || m.host !== S.uid) { ls(K.host, null); throw new Error('Deze tafel bestaat niet meer.'); }
@@ -542,7 +742,7 @@
     if (S.role === 'client' && S.db && S.code) { ls(K.join, null); }
     unsubscribe();
     S.view = 'home'; S.role = null; S.code = null; S.meta = null; S.players = {}; S.pub = null; S.hand = []; S.G = null; S.sheet = null;
-    S.urlCode = null;
+    S.urlCode = null; S.kind = null; S.ringMode = false; S.rl = null;
     try { var q2 = new URLSearchParams(location.search); q2.delete('tafel'); history.replaceState(null, '', location.pathname + (q2.toString() ? '?' + q2 : '')); } catch (e) {}
     render();
   }
@@ -611,6 +811,7 @@
     html += '<div class="panel"><b>Meedoen met een code</b><p class="small muted">Of scan de QR-code van de host met je camera.</p>' +
       '<div class="row"><input class="text code" id="joincode" maxlength="4" autocomplete="off" placeholder="KLAV" style="flex:1;min-width:0">' +
       '<button class="btn primary" data-act="join"' + (NET && !S.busy ? '' : ' disabled') + '>Meedoen</button></div></div>';
+    html += '<button class="choice" data-act="go-ring"><b>Zonder internet</b><span>Telefoons koppelen met QR-codes, in een kring. Werkt op dezelfde wifi of hotspot.</span></button>';
     html += '<button class="choice" data-act="go-practice"><b>Oefenen tegen de computer</b><span>Speel alleen op deze telefoon tegen computerspelers. Werkt zonder internet.</span></button>';
     html += '<button class="btn ghost" data-act="help">Spelregels en uitleg</button>';
     if (NET === 'firebase' && CFG_SRC !== 'app') html += '<button class="btn ghost sm" data-act="go-fb">Firebase-instellingen</button>';
@@ -760,7 +961,7 @@
 
   function renderCreate() {
     var c = S.create, practice = S.view === 'practice', html = '';
-    html += topbar(practice ? 'Oefenen' : 'Tafel maken', practice ? 'Tegen computerspelers, op deze telefoon' : 'Kies hoe jij meedoet', '<button class="btn ghost sm" data-act="home">Terug</button>');
+    html += topbar(practice ? 'Oefenen' : 'Tafel maken', practice ? 'Tegen computerspelers, op deze telefoon' : (S.ringMode ? 'Zonder internet, via QR-codes' : 'Kies hoe jij meedoet'), '<button class="btn ghost sm" data-act="home">Terug</button>');
     if (!practice) {
       html += '<div class="stack"><div class="label">Hoe doe jij mee?</div>' +
         '<button class="choice" data-act="mode" data-v="play" aria-pressed="' + (c.mode === 'play') + '"><b>Ik speel mee</b><span>Je ziet je eigen kaarten en speelt mee. Je telefoon is ook de host.</span></button>' +
@@ -804,7 +1005,10 @@
   function renderLobby() {
     var html = '', m = S.meta || {}, host = S.role === 'host', n = seatList().length;
     html += topbar('Tafel ' + esc(S.code), host ? (m.mode === 'lead' ? 'Jij bent tafelleider' : 'Jij bent de host') : 'Host: ' + esc(m.hostName || ''), '<button class="btn ghost sm" data-act="' + (host ? 'ask-close' : 'leave') + '">' + (host ? 'Sluiten' : 'Verlaten') + '</button>');
-    if (host) {
+    if (S.kind === 'ring') {
+      if (!host) html += '<div class="panel" style="text-align:center"><h2>Je zit aan tafel!</h2><p class="muted">Wachten tot ' + esc(m.hostName || 'de host') + ' het spel start…</p></div>';
+      html += ringPanel();
+    } else if (host) {
       var qr = '';
       try { var q = qrcode(0, 'M'); q.addData(joinUrl()); q.make(); qr = q.createSvgTag({ cellSize: 6, margin: 2, scalable: true }); } catch (e) { qr = ''; }
       html += '<div class="panel" style="text-align:center"><b>Laat je vrienden deze code scannen</b><p class="small muted lobby-hint">Met de gewone camera van hun telefoon. Ze zitten dan meteen aan tafel.</p>' +
@@ -1000,7 +1204,10 @@
         } else {
           inner += '<button class="btn ghost" data-act="leave">Tafel verlaten</button><p class="small muted">Je kunt later weer meedoen met dezelfde code.</p>';
         }
+        if (S.kind === 'ring') inner += '<button class="btn" data-act="ring-open">Telefoons koppelen (QR)</button>';
         inner += '<a class="btn ghost" href="index.html">Naar het scorebord</a>';
+      } else if (sh.type === 'ring') {
+        inner = ringSheet();
       } else if (sh.type === 'close') {
         inner = '<h2>Tafel sluiten?</h2><p class="muted">Het spel stopt voor iedereen aan tafel. De ranglijst blijft bewaard.</p><button class="btn danger big" data-act="close">Ja, tafel sluiten</button>';
       }
@@ -1030,6 +1237,8 @@
       if (S.view === 'table') html = renderTable();
       else if (S.view === 'create' || S.view === 'practice') html = renderCreate();
       else if (S.view === 'fb') html = renderFb();
+      else if (S.view === 'ring0') html = renderRing0();
+      else if (S.view === 'ringjoin') html = renderRingJoin();
       else html = renderHome();
       app.innerHTML = html;
       if (document.documentElement.scrollHeight <= window.innerHeight + 1) break;
@@ -1080,6 +1289,15 @@
     if (el.classList.contains('scrim') && e.target !== el) return;
     var a = el.dataset.act, v = el.dataset.v, id = el.dataset.id, c = S.create;
     switch (a) {
+      case 'go-ring': S.err = ''; S.view = 'ring0'; render(); break;
+      case 'ring-create': S.err = ''; S.ringMode = true; S.view = 'create'; c.bots = 0; render(); break;
+      case 'go-ringjoin':
+        if (!S.name.trim()) { toast('Vul eerst je naam in.'); break; }
+        S.err = ''; S.view = 'ringjoin'; S.rl = { step: 'intro' }; connect('ring').then(function () { render(); }); break;
+      case 'ring-open': S.sheet = { type: 'ring' }; S.rl = { step: 'choose' }; renderLayer(); break;
+      case 'ring-show': ringShow(); break;
+      case 'ring-scan': ringScan('offer'); break;
+      case 'ring-scan-answer': ringScan('answer'); break;
       case 'help':
         S.sheet = { type: 'help', stack: [{ v: 'menu' }] };
         try { history.pushState({ toepenPage: 1 }, '', location.href); } catch (e6) {}
@@ -1120,7 +1338,7 @@
       case 'copy': try { navigator.clipboard.writeText(v).then(function () { toast('Gekopieerd'); }); } catch (e5) { toast(v); } break;
       case 'menu': S.sheet = { type: 'menu' }; renderLayer(); break;
       case 'sheet-close': S.sheet = null; renderLayer(); break;
-      case 'home': S.view = 'home'; render(); break;
+      case 'home': S.view = 'home'; S.ringMode = false; if (S.rl && S.view === 'home') S.rl = null; render(); break;
       case 'go-create': S.err = ''; S.view = 'create'; c.bots = 0; render(); break;
       case 'go-practice': S.err = ''; S.view = 'practice'; c.bots = Math.max(c.bots, 3); render(); break;
       case 'mode': c.mode = v; render(); break;
