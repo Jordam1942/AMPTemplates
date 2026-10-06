@@ -506,10 +506,11 @@
   };
   function renderMp0() {
     var html = topbar('Multiplayer', 'Kies hoe jullie verbinden', (S.deep ? '<a class="btn ghost sm" href="index.html">← Terug</a>' : '<button class="btn ghost sm" data-act="home">Terug</button>'));
-    ['peer', 'ring', 'firebase'].forEach(function (k) {
+    ['peer', 'ring'].forEach(function (k) {
       var m = METHODS[k];
-      html += '<button class="choice ic ' + ({ peer: 't-blue', ring: 't-orange', firebase: 't-gold' })[k] + '" data-act="mp-method" data-v="' + k + '"><i class="i" aria-hidden="true">' + ({ peer: '<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18-3-3-3-15 0-18"/></svg>', ring: '<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5a10 10 0 0 1 14 0M8.5 16a5 5 0 0 1 7 0"/><circle cx="12" cy="19.5" r="1"/></svg>', firebase: '<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 18a4 4 0 0 1-.5-8 5.5 5.5 0 0 1 10.6 1.5A3.3 3.3 0 0 1 17 18z"/></svg>' })[k] + '</i><b>' + m.t + (k === 'firebase' && !NET ? ' <span class="chip">Nog niet ingesteld</span>' : '') + '</b><span>' + m.d + '</span></button>';
+      html += '<button class="choice ic ' + ({ peer: 't-blue', ring: 't-orange', firebase: 't-gold' })[k] + '" data-act="mp-method" data-v="' + k + '"><i class="i" aria-hidden="true">' + ({ peer: '<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18-3-3-3-15 0-18"/></svg>', ring: '<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5a10 10 0 0 1 14 0M8.5 16a5 5 0 0 1 7 0"/><circle cx="12" cy="19.5" r="1"/></svg>', firebase: '<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 18a4 4 0 0 1-.5-8 5.5 5.5 0 0 1 10.6 1.5A3.3 3.3 0 0 1 17 18z"/></svg>' })[k] + '</i><b>' + m.t + (k === 'peer' ? ' <span class="chip">Aanbevolen</span>' : '') + '</b><span>' + m.d + '</span></button>';
     });
+    html += '<button class="btn ghost" data-act="mp-method" data-v="firebase">Geavanceerd: Firebase' + (NET === 'firebase' ? '' : '') + '</button>';
     return '<div class="stack">' + html + '</div>';
   }
   function renderMp1() {
