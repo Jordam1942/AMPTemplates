@@ -85,6 +85,9 @@
   .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: var(--fg); color: var(--bg); padding: 10px 16px; border-radius: 12px; z-index: 40; pointer-events: none; font-weight: 600; }
   .compact .choice { padding: 12px 14px; } .compact .choice span { font-size: 0.85rem; }
   .tight .choice span { display: none; } .tight .choice { padding: 10px 14px; }
+  .compact .panel { padding: 10px 14px; gap: 8px; } .compact .toggle-row { min-height: 44px; } .compact .seg button { min-height: 40px; }
+  .compact .panel p.small { display: none; }
+  .tight .toggle-row .txt div:last-child { display: none; } .tight .toggle-row { min-height: 40px; } .tight .panel { padding: 8px 14px; gap: 6px; }
 </style>
 </head>
 <body>
@@ -129,11 +132,11 @@
     var cur = S.current(), h = '', ot = openTable();
     h += '<div class="topbar"><div class="meta"><h1>Toepen</h1><div class="suits" aria-hidden="true">♠ ♥ ♣ ♦</div></div></div><div class="stack down">';
     if (ot) {
-      h += '<a class="choice main" href="spelen.html?start=verder"><b>' + (ot.practice ? 'Verder met je oefenspel' : ot.host ? 'Verder met je tafel ' + esc(ot.code) : 'Terug naar tafel ' + esc(ot.code)) + ' <span class="go">→</span></b><span>' +
-        (ot.practice ? 'Tegen de computer. Waar je gebleven was.' : 'Je zit nog aan tafel.') + '</span></a>';
+      h += '<a class="choice main" href="spelen.html?start=verder"><b>Verder met spelen <span class="go">→</span></b><span>' +
+        (ot.practice ? 'Tegen de computer. Waar je gebleven was.' : ot.host ? 'Je tafel ' + esc(ot.code) + '. Verbind opnieuw, dan gaan jullie verder waar je was.' : 'Tafel ' + esc(ot.code) + '. Terug naar je plek.') + '</span></a>';
     }
     if (cur && cur.sum.players.length && !cur.sum.done) {
-      h += '<a class="choice main" href="scorebord.html"><b>Verder met je spel <span class="go">→</span></b><span>Ronde ' + cur.sum.round + ' · ' + esc(who(cur.sum)) + '</span></a>';
+      h += '<a class="choice main" href="scorebord.html"><b>Verder met je scorebord <span class="go">→</span></b><span>Ronde ' + cur.sum.round + ' · ' + esc(who(cur.sum)) + '</span></a>';
     }
     h += '<a class="choice" href="spelen.html?start=oefenen"><b>Alleen spelen</b><span>Tegen computerspelers, op deze telefoon. Werkt zonder internet.</span></a>';
     h += '<a class="choice" href="spelen.html?start=multi"><b>Multiplayer</b><span>Met vrienden, ook op afstand. Nodig ze uit via WhatsApp.</span></a>';
@@ -151,9 +154,12 @@
     h += '<div class="topbar"><div class="meta"><h1>Instellingen</h1><div class="small muted">Geldt voor het hele spel</div></div><button class="btn ghost sm" data-act="menu">← Terug</button></div><div class="stack down">';
     h += '<div class="panel"><div class="label">Thema</div><div class="seg">' + [['system', 'Systeem'], ['light', 'Licht'], ['dark', 'Donker']].map(function (o) {
       return '<button data-act="pref-theme" data-v="' + o[0] + '" aria-pressed="' + (pr.theme === o[0]) + '">' + o[1] + '</button>'; }).join('') + '</div></div>';
-    h += '<div class="panel"><div class="label">Je kaarten verbergen</div><div class="seg">' + [['zichtbaar', 'Zichtbaar'], ['verborgen', 'Verborgen'], ['auto', 'Plat op tafel']].map(function (o) {
+    h += '<div class="panel"><div class="label">Je kaarten verbergen</div><div class="seg">' + [['zichtbaar', 'Zichtbaar'], ['verborgen', 'Verborgen']].map(function (o) {
       return '<button data-act="pref-hand" data-v="' + o[0] + '" aria-pressed="' + (pr.hand === o[0]) + '">' + o[1] + '</button>'; }).join('') + '</div>' +
-      '<p class="small muted" style="margin:0">' + ({ zichtbaar: 'Je kaarten zijn altijd te zien.', verborgen: 'Kaartruggen. Tik erop om ze even te zien.', auto: 'Verborgen zodra je telefoon plat op tafel ligt. Pak je hem op, dan zie je ze weer.' }[pr.hand] || '') + '</p></div>';
+      '<p class="small muted" style="margin:0">' + ({ zichtbaar: 'Je kaarten zijn altijd te zien.', verborgen: 'Kaartruggen. Tik erop om ze even te zien. Aan tafel verberg of toon je ze ook met de ronde knop naast je kaarten.' }[pr.hand === 'auto' ? 'verborgen' : pr.hand] || '') + '</p></div>';
+    h += '<div class="panel"><div class="label">Als iemand wegvalt (voor tafels die jij opent)</div><div class="seg">' + [[0, 'Wachten'], [15, '15 s'], [45, '45 s'], [120, '2 min']].map(function (o) {
+      return '<button data-act="pref-takeover" data-v="' + o[0] + '" aria-pressed="' + (pr.takeover === o[0]) + '">' + o[1] + '</button>'; }).join('') + '</div>' +
+      '<p class="small muted" style="margin:0">' + (pr.takeover ? 'Na ' + (pr.takeover >= 60 ? pr.takeover / 60 + ' min' : pr.takeover + ' seconden') + ' offline speelt de computer voor die speler, tot hij of zij terug is.' : 'Het spel wacht tot de speler terug is. De host kan zelf de computer laten overnemen.') + '</p></div>';
     h += '<div class="panel">' + toggle('pref-sound', pr.sound, 'Geluid', 'Korte tonen bij toepen, rondes en de winnaar.') +
       toggle('pref-vibrate', pr.vibrate, 'Trillen', 'Voelbare tik bij elke actie.') +
       toggle('pref-wake', pr.wake, 'Scherm aan houden', 'Je telefoon gaat niet op slot tijdens het spel.') + '</div>';
@@ -260,6 +266,7 @@
     switch (a) {
       case 'saves': ui.view = 'saves'; ui.page = 0; draw(); break;
       case 'settings': ui.view = 'settings'; draw(); break;
+      case 'pref-takeover': window.ToepenPrefs.set('takeover', +el.dataset.v); draw(); break;
       case 'pref-hand': window.ToepenPrefs.set('hand', el.dataset.v); draw(); break;
       case 'pref-theme': window.ToepenPrefs.set('theme', el.dataset.v); window.ToepenPrefs.apply(); draw(); break;
       case 'pref-sound': case 'pref-vibrate': case 'pref-wake':

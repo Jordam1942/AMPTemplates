@@ -73,6 +73,8 @@
   .panel { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 16px; display: grid; gap: 12px; grid-template-columns: minmax(0, 1fr); }
   .topbar { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 12px; }
   .topbar .meta { min-width: 0; }
+  .topbar .meta .small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .topbar h1 { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .tools { display: flex; gap: 8px; flex: none; }
   .icon-round { width: 40px; min-height: 40px; padding: 0; font-weight: 800; }
   input.text { width: 100%; height: 50px; border-radius: 12px; border: 1.5px solid var(--line); background: var(--bg); color: var(--fg); padding: 0 14px; font: inherit; font-size: 1.05rem; }
@@ -247,6 +249,10 @@
   .fit3 .qr { width: 130px; padding: 8px; }
   .fit3 .bigcode { font-size: 1.6rem; }
   .fit3 .lobby-line { display: none; }
+  .handfab { position: fixed; right: 14px; bottom: 76px; z-index: 12; width: 52px; height: 52px; border-radius: 50%; background: var(--surface); color: var(--fg); border: 1.5px solid var(--line); font-size: 1.5rem; box-shadow: 0 6px 16px -4px rgba(0,0,0,0.35); display: grid; place-items: center; }
+  .handfab[aria-pressed="true"] { background: var(--ink); color: var(--ink-fg); }
+  .blackout { position: fixed; inset: 0; z-index: 70; background: #000; display: flex; align-items: flex-end; justify-content: center; padding: 24px; }
+  .blackout span { color: #2a2a2a; font-size: 0.8rem; }
   .chatfab { position: fixed; right: 14px; bottom: 14px; z-index: 12; width: 52px; height: 52px; border-radius: 50%; background: var(--accent); color: var(--accent-fg); font-size: 1.5rem; box-shadow: 0 6px 16px -4px rgba(0,0,0,0.45); display: grid; place-items: center; }
   .chatfab .badge { position: absolute; top: -4px; right: -4px; min-width: 22px; height: 22px; padding: 0 5px; border-radius: 11px; background: var(--warn); color: #fff; font-size: 0.75rem; font-weight: 800; display: grid; place-items: center; }
   .chatlist { display: flex; flex-direction: column; gap: 6px; height: 34vh; height: 34%; min-height: 120px; max-height: 300px; overflow-y: auto; padding: 6px; background: var(--bg); border-radius: 12px; }
@@ -254,6 +260,7 @@
   .cmsg b { font-size: 0.75rem; color: var(--muted); }
   .cmsg.mine { align-self: flex-end; background: var(--accent); color: var(--accent-fg); border-color: var(--accent); border-radius: 14px 14px 4px 14px; }
   .chatquick { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; }
+  .chips .chip-btn { min-height: 26px; padding: 0 10px; font-size: 0.72rem; border-radius: 13px; background: var(--warn-soft); color: var(--warn); border-color: transparent; }
   .chip-btn { flex: none; min-height: 38px; padding: 0 12px; border-radius: 19px; border: 1.5px solid var(--line); background: var(--surface); font-weight: 600; white-space: nowrap; }
   .chatinput { display: flex; gap: 8px; align-items: center; }
   .chatinput .text { flex: 1; min-width: 0; }
@@ -334,7 +341,7 @@
   var S = {
     view: 'home', name: ls(K.name) || '', db: null, uid: null, code: null, role: null, practice: false,
     meta: null, players: {}, pub: null, hand: [], subs: [], G: null, sheet: null, toast: '', connected: true,
-    lastHands: {}, lastResultKey: '', hostTimer: null, err: '', busy: false, kind: null, method: null, rl: null, peek: false, flat: false, chat: [], chatUnread: 0, chatDraft: '', chatFrom: 0, listening: false,
+    lastHands: {}, lastResultKey: '', hostTimer: null, err: '', busy: false, kind: null, method: null, rl: null, peek: false, black: false, blackTap: 0, offSince: {}, chat: [], chatUnread: 0, chatDraft: '', chatFrom: 0, listening: false,
     create: {
       mode: 'play', limit: sbRules.limit || 10, bots: 0,
       rules: {
@@ -371,7 +378,15 @@
       S.db = db;
       return db.ready().then(function (uid) {
         S.uid = uid;
-        S.subs.push(db.onConnection(function (c) { S.connected = c || S.role === 'host'; renderLayer(); }));
+        S.subs.push(db.onConnection(function (c) {
+          S.connected = c || S.role === 'host'; renderLayer();
+          // back online after a drop: say so, and ask to be marked offline again if it happens once more
+          var me = S.players && S.players[S.uid];
+          if (c && S.code && S.view === 'table' && me && me.online === false) {
+            S.db.update(base() + '/players/' + S.uid, { online: true });
+            S.db.onDisconnect(base() + '/players/' + S.uid + '/online', false);
+          }
+        }));
       });
     });
   }
@@ -381,7 +396,21 @@
     if (Q.get('peerhost')) { o.host = Q.get('peerhost'); o.port = +Q.get('peerport') || 9000; o.path = Q.get('peerpath') || '/'; o.secure = Q.get('peersecure') === '1'; o.iceServers = []; }
     return o;
   }
-  function getPeer() { if (!PEER) PEER = window.ToepenNet.peer(peerOptions()); return PEER; }
+  function getPeer() {
+    if (!PEER) {
+      PEER = window.ToepenNet.peer(peerOptions());
+      PEER.onLinks(function (open, info) {
+        if (S.role !== 'host' || !S.code || S.kind !== 'peer') return;
+        var live = {}; info.forEach(function (l) { if (l.open && l.peer) live[l.peer] = true; });
+        Object.keys(S.players).forEach(function (id) {
+          var p = S.players[id]; if (p.bot || id === S.uid) return;
+          var on = !!live[id];
+          if ((p.online !== false) !== on && (on || info.some(function (l) { return !l.open || l.peer === id; }) || p.online !== false)) S.db.update(base() + '/players/' + id, { online: on });
+        });
+      });
+    }
+    return PEER;
+  }
   function kindFor() { return S.method === 'ring' ? 'ring' : S.method === 'peer' ? 'peer' : NET; }
   function joinKindNow() { return S.method === 'peer' ? 'peer' : S.method === 'firebase' ? NET : (VIA || NET); }
   var RING = null;
@@ -402,6 +431,19 @@
     S.subs.push(db.onChildAdded(b + '/chat', function (k, m) { onChat(k, m); }));
     S.subs.push(db.on(b + '/players', function (p) {
       S.players = p || {};
+      S.prevOnline = S.prevOnline || {};
+      Object.keys(S.players).forEach(function (id) {
+        var pl = S.players[id], off = pl.online === false && !pl.bot;
+        if (off) {
+          if (!S.offSince[id]) {
+            S.offSince[id] = Date.now();
+            var secs = takeoverSecs();
+            if (secs) setTimeout(function () { if (S.offSince[id] && S.view === 'table') { render(); if (S.role === 'host') scheduleHost(); } }, secs * 1000 + 80);
+          }
+        } else delete S.offSince[id];
+        if (S.view === 'table' && S.prevOnline[id] !== undefined && id !== S.uid && !pl.bot && S.prevOnline[id] !== !off) toast(pl.name + (off ? ' is offline' : ' is weer terug'));
+        S.prevOnline[id] = !off;
+      });
       if (S.role === 'client' && S.meta && !S.players[S.uid] && S.view !== 'home') { leave(); toast('Je bent van de tafel gehaald.'); return; }
       render(); if (S.role === 'host') scheduleHost();
     }));
@@ -573,7 +615,7 @@
       if (best.m.host === S.uid) { return resumeHost({ code: best.code, kind: 'ring' }); }
       S.role = 'client';
       return db.get(base() + '/players/' + S.uid).then(function (me) {
-        return db.update(base() + '/players/' + S.uid, { name: S.name.trim(), joined: (me && me.joined) || Date.now(), online: true });
+        return db.update(base() + '/players/' + S.uid, { name: S.name.trim(), joined: (me && me.joined) || Date.now(), online: true, auto: false });
       }).then(function () {
         db.onDisconnect(base() + '/players/' + S.uid + '/online', false);
         subscribe(); S.rl = null; S.busy = false; S.view = 'table'; render();
@@ -686,7 +728,7 @@
     }).then(function (code) {
       S.code = code; S.role = 'host'; S.practice = practice;
       var c = S.create, mode = practice ? 'play' : c.mode, now = Date.now();
-      var meta = { host: S.uid, hostName: S.name.trim() || 'Tafelleider', mode: mode, limit: c.limit, rules: c.rules, status: 'lobby', created: now };
+      var meta = { host: S.uid, hostName: S.name.trim() || 'Tafelleider', mode: mode, limit: c.limit, rules: c.rules, takeover: window.ToepenPrefs ? ToepenPrefs.get().takeover : 45, status: 'lobby', created: now };
       var jobs = [S.db.set(base() + '/meta', meta)];
       if (mode === 'play') jobs.push(S.db.set(base() + '/players/' + S.uid, { name: S.name.trim(), joined: now, online: true }));
       var nb = practice ? Math.max(1, c.bots) : c.bots;
@@ -820,7 +862,13 @@
     scheduleHost();
   }
 
-  function autoFor(id) { var p = S.players[id]; return p && (p.bot || p.auto); }
+  // A player who has been offline for a while (phone locked, bad signal) is played by the computer until they are back.
+  function takeoverSecs() {
+    if (Q.get('takeover')) return +Q.get('takeover') / 1000;   // tests
+    var t = S.meta && S.meta.takeover; return t == null ? 45 : +t;
+  }
+  function offlineLong(id) { var secs = takeoverSecs(), p = S.players[id]; return !!(secs && p && !p.bot && p.online === false && S.offSince[id] && Date.now() - S.offSince[id] >= secs * 1000); }
+  function autoFor(id) { var p = S.players[id]; return !!(p && (p.bot || p.auto || offlineLong(id))); }
 
   function scheduleHost() {
     var G = S.G; if (!G || S.role !== 'host') return;
@@ -834,7 +882,14 @@
     if (r.was) actor = r.was.awaiting.filter(function (id) { return !r.was.answers[id] && autoFor(id); })[0];
     else if (r.pending) actor = r.pending.awaiting.filter(function (id) { return !r.pending.answers[id] && autoFor(id); })[0];
     else if (autoFor(r.turn)) actor = r.turn;
-    if (!actor) return;
+    if (!actor) {
+      // somebody we are waiting for is offline: look again when the wait is over
+      var waitIds = r.was ? r.was.awaiting.filter(function (id) { return !r.was.answers[id]; }) : r.pending ? r.pending.awaiting.filter(function (id) { return !r.pending.answers[id]; }) : [r.turn];
+      var soon = waitIds.filter(function (id) { var p = S.players[id]; return p && !p.bot && p.online === false && S.offSince[id]; })
+        .map(function (id) { return S.offSince[id] + takeoverSecs() * 1000 - Date.now(); });
+      if (soon.length && takeoverSecs()) S.hostTimer = setTimeout(scheduleHost, Math.max(100, Math.min.apply(null, soon)) + 50);
+      return;
+    }
     S.hostTimer = setTimeout(function () {
       var a = E.botAction(G, actor);
       if (a) hostHandle(actor, a);
@@ -889,6 +944,10 @@
       subscribe();
       S.busy = false; S.view = 'table';
       if (S.G) { S.lastHands = {}; publish(); } else render();
+      if (saved.kind === 'peer') {
+        // nobody is connected yet: show them as offline until their phone connects again (so the take-over timer works)
+        Object.keys(S.players).forEach(function (id) { var pl = S.players[id]; if (!pl.bot && id !== S.uid && pl.online !== false) S.db.update(base() + '/players/' + id, { online: false }); });
+      }
     }).catch(function (e) { S.busy = false; showError(e); });
   }
 
@@ -914,14 +973,19 @@
     S.busy = true; render();
     connect(kind, false).then(function () {
       S.code = code; S.kind = kind;
-      return kind === 'peer' ? S.db.joinHost(code).then(function () { return waitMeta(20); }) : S.db.get(base() + '/meta');
+      if (kind === 'peer') {
+        // a guest starts from the host's data, not from what this phone remembers (that is how old values could win)
+        var sv = ls(K.host); if (!(sv && sv.code === code) && S.db.reset) S.db.reset();
+        return S.db.joinHost(code).then(function () { return waitMeta(20); });
+      }
+      return S.db.get(base() + '/meta');
     }).then(function (m) {
       if (!m || m.status === 'closed') throw new Error('Tafel ' + code + ' bestaat niet (meer). Controleer de code.');
       S.meta = m;
       if (m.host === S.uid) { S.role = 'host'; return resumeHost({ code: code, kind: kind }); }
       S.role = 'client';
       return S.db.get(base() + '/players/' + S.uid).then(function (me) {
-        var p = { name: S.name.trim(), joined: (me && me.joined) || Date.now(), online: true };
+        var p = { name: S.name.trim(), joined: (me && me.joined) || Date.now(), online: true, auto: false };
         return S.db.update(base() + '/players/' + S.uid, p);
       }).then(function () {
         S.db.onDisconnect(base() + '/players/' + S.uid + '/online', false);
@@ -1246,7 +1310,7 @@
     if ((r.passed || {})[id] !== undefined) out += '<span class="chip">Gepast +' + r.passed[id] + '</span>';
     if (S.players[id] && S.players[id].bot) out += '<span class="chip">Computer</span>';
     else if (S.players[id] && S.players[id].auto) out += '<span class="chip">Computer speelt</span>';
-    else if (S.players[id] && S.players[id].online === false) out += '<span class="chip af">Offline</span>';
+    else if (S.players[id] && S.players[id].online === false) out += '<span class="chip af">' + (offlineLong(id) ? 'Offline · computer speelt' : 'Offline') + '</span>';
     return out;
   }
 
@@ -1255,11 +1319,13 @@
     if (!S.pub || !m.status || m.status === 'lobby') return renderLobby();
     var G = viewGame(), r = G.round, host = S.role === 'host', lead = host && m.mode === 'lead';
     var seated = G.seats.indexOf(S.uid) >= 0, html = '';
+    var mePl = S.players[S.uid] || {};
     var hideBtn = seated && G.phase === 'play' && !(G.players[S.uid] || {}).out
-      ? '<button class="btn ghost sm" data-act="hand-opts" aria-label="Je kaarten verbergen: opties">Kaarten' + (handMode() === 'zichtbaar' ? '' : ' ·' + (handMode() === 'auto' ? ' auto' : ' uit')) + '</button>' : '';
+      ? '<button class="btn ghost sm" data-act="hand-opts" aria-label="Je kaarten verbergen: opties">Kaarten</button>' : '';
     html += topbar('Ronde ' + r.n, 'Tafel ' + esc(S.code) + ' · af bij ' + G.limit,
       hideBtn + '<button class="btn ghost sm" data-act="menu">Menu</button>');
 
+    if (mePl.auto && seated && G.phase !== 'done') html += '<div class="notice" role="status" style="display:flex;gap:8px;align-items:center;justify-content:space-between"><span>De computer speelt voor jou.</span><button class="btn sm" data-act="auto-me">Zelf weer spelen</button></div>';
     if (G.phase === 'done') {
       var w = G.winner;
       html += '<div class="winner"><div class="label" style="color:inherit;opacity:.8">Winnaar</div><h2>' + esc(name(w)) + (w === S.uid ? ' (jij!)' : '') + '</h2>' +
@@ -1292,7 +1358,12 @@
       var p = G.players[id], cls = 'pl';
       if (r.turn === id && G.phase === 'play') cls += ' turn';
       if (p.out) cls += ' af'; else if ((r.passed || {})[id] !== undefined) cls += ' passed';
-      html += '<div class="' + cls + '"><div class="head">' + avatar(id, p.name) + '<div class="who"><b>' + esc(p.name) + (id === S.uid ? ' (jij)' : '') + '</b><div class="chips">' + chipsFor(G, id) + '</div></div>' +
+      var sp = S.players[id] || {}, takeBtn = '';
+      if (host && !sp.bot && id !== S.uid && G.phase !== 'done') {
+        if (sp.auto) takeBtn = '<button class="chip-btn" data-act="auto" data-id="' + esc(id) + '">Laat zelf spelen</button>';
+        else if (sp.online === false) takeBtn = '<button class="chip-btn" data-act="auto" data-id="' + esc(id) + '">Computer neemt over</button>';
+      }
+      html += '<div class="' + cls + '"><div class="head">' + avatar(id, p.name) + '<div class="who"><b>' + esc(p.name) + (id === S.uid ? ' (jij)' : '') + '</b><div class="chips">' + chipsFor(G, id) + takeBtn + '</div></div>' +
         '<div class="score num">' + p.score + '<small> / ' + G.limit + '</small></div></div>';
       if (lead && G.phase !== 'done' && S.G.round.hands[id] && S.G.round.hands[id].length) {
         html += '<div class="minis">' + S.G.round.hands[id].map(function (c) { return card(c, 'sm'); }).join('') + '</div>';
@@ -1334,37 +1405,32 @@
    * auto: hidden while the phone lies flat on the table, visible when you pick it up. */
   function handMode() {
     var m = window.ToepenPrefs ? ToepenPrefs.get().hand : 'zichtbaar';
-    if (m === 'zichtbaar' && ls('toepen-mp-hide') === true) { m = 'verborgen'; if (window.ToepenPrefs) ToepenPrefs.set('hand', m); ls('toepen-mp-hide', null); }  // from the old on/off button
+    if (m === 'auto') { m = 'verborgen'; if (window.ToepenPrefs) ToepenPrefs.set('hand', m); }   // the automatic mode is gone
+    if (m === 'zichtbaar' && ls('toepen-mp-hide') === true) { m = 'verborgen'; if (window.ToepenPrefs) ToepenPrefs.set('hand', m); ls('toepen-mp-hide', null); }
     return m;
   }
-  function handHidden() { var m = handMode(); return m === 'verborgen' || (m === 'auto' && S.flat); }
-  var sensorOn = false, flatTimer = 0, sensorSeen = false;
-  function onTilt(e) {
-    if (e.beta == null || e.gamma == null) return;
-    sensorSeen = true;
-    var flat = (Math.abs(e.beta) < 12 && Math.abs(e.gamma) < 12) || Math.abs(e.beta) > 168;  // screen up or screen down
-    clearTimeout(flatTimer);
-    flatTimer = setTimeout(function () { if (S.flat !== flat) { S.flat = flat; if (!flat) S.peek = false; if (S.view === 'table') render(); } }, flat ? 700 : 250);
-  }
-  function syncSensor() {
-    var want = handMode() === 'auto' && S.view === 'table';
-    if (want && !sensorOn) { sensorOn = true; window.addEventListener('deviceorientation', onTilt); }
-    else if (!want && sensorOn) { sensorOn = false; window.removeEventListener('deviceorientation', onTilt); S.flat = false; }
-  }
+  function handHidden() { return handMode() === 'verborgen'; }
   function setHandMode(m) {
     if (window.ToepenPrefs) ToepenPrefs.set('hand', m);
-    S.peek = false; S.flat = false; S.sheet = null;
-    var ask = m === 'auto' && window.DeviceOrientationEvent && typeof DeviceOrientationEvent.requestPermission === 'function' ? DeviceOrientationEvent.requestPermission().catch(function () {}) : Promise.resolve();
-    ask.then(function () { render(); });
-    if (m === 'auto') { sensorSeen = false; setTimeout(function () { if (handMode() === 'auto' && !sensorSeen) toast('Deze telefoon geeft de stand niet door. Kies "Verborgen".'); }, 3500); }
+    S.peek = false; S.sheet = null; render();
+  }
+  // Does the game need you right now? Returns a key for that moment ('' when it does not).
+  function needsMe(G) {
+    if (!G || G.phase !== 'play' || S.view !== 'table') return '';
+    var r = G.round, k = r.n + '/' + r.trickNo + '/' + (r.trick || []).length + '/' + ((r.toeps || []).length);
+    if (r.pending && (r.pending.awaiting || []).indexOf(S.uid) >= 0 && !(r.pending.answers || {})[S.uid]) return 'p' + k;
+    if (r.was && (r.was.awaiting || []).indexOf(S.uid) >= 0 && !(r.was.answers || {})[S.uid]) return 'w' + k;
+    return !r.pending && !r.was && r.turn === S.uid ? 't' + k : '';
   }
   function handSheet() {
     var m = handMode();
     var opt = function (v, t, d) { return '<button class="choice" data-act="hand-mode" data-v="' + v + '" aria-pressed="' + (m === v) + '"><b>' + t + '</b><span>' + d + '</span></button>'; };
     return '<h2>Je kaarten verbergen</h2>' +
+      '<p class="small muted" style="margin:0">Sneller kan het met de ronde knop 🙈 naast je kaarten: één tik.</p>' +
       opt('zichtbaar', 'Zichtbaar', 'Je kaarten zijn altijd te zien.') +
       opt('verborgen', 'Verborgen', 'Kaartruggen. Tik erop om ze even te zien; na het spelen zijn ze weer verborgen.') +
-      opt('auto', 'Automatisch', 'Verborgen zodra je telefoon plat op tafel ligt. Pak je hem op, dan zie je je kaarten weer.');
+      '<button class="btn big" data-act="black-on">Scherm zwart maken</button>' +
+      '<p class="small muted" style="margin:0">Zwart scherm: niemand ziet iets, het spel blijft gewoon doorlopen en spaart accu. Tik twee keer om terug te komen. Is het jouw beurt, dan komt het scherm vanzelf terug en trilt je telefoon.</p>';
   }
 
   function renderHand(G, seated) {
@@ -1416,7 +1482,8 @@
     var ignored = '<div>' +
       step('Aan tafel', ['De host tikt op <b>Tafel maken</b> en laat de QR-code zien.', 'Scan die met de camera van je telefoon, of vul de 4 letters in bij <b>Meedoen</b>.', 'Vul je naam in. De volgende keer onthoudt je telefoon die.']) +
       step('Spelen', ['Jouw kaarten staan onderin. Ben je aan de beurt, dan lichten de kaarten op die je mag spelen. Tik erop.', 'Wil je toepen? Tik op <b>Toep!</b> als je aan de beurt bent, vóór je een kaart speelt.', 'Toept een ander, dan vraagt je telefoon <b>Meegaan</b> of <b>Passen</b>. Je telefoon trilt.', 'Midden op tafel zie je de slag en wie er aan de beurt is.']) +
-      step('Kaarten verbergen', ['Tik rechtsboven op <b>Kaarten</b> en kies <b>Verborgen</b> of <b>Automatisch</b>.', 'Verborgen: je kaarten worden kaartruggen. Tik erop om ze even te zien en speel er een. Daarna zijn ze weer verborgen.', 'Automatisch: verborgen zodra je telefoon plat op tafel ligt, zichtbaar als je hem oppakt.']) +
+      step('Kaarten verbergen', ['Tik op de ronde knop 🙈 naast je kaarten: ze worden meteen kaartruggen, ook als de telefoon open op tafel ligt. Tik op 👁 om ze weer te tonen.', 'Aan de beurt? Tik op je kaarten om ze even te zien en speel er een. Daarna zijn ze weer verborgen.', 'Rechtsboven bij <b>Kaarten</b> kun je ook het <b>scherm zwart</b> maken. Tik twee keer om terug te komen. Ben jij aan de beurt, dan komt het scherm vanzelf terug en trilt je telefoon.']) +
+      step('Scherm vergrendeld?', ['Ben je per ongeluk op slot gegaan? Ontgrendel je telefoon en je zit weer aan tafel. De app maakt zelf opnieuw verbinding.', 'Ben je langer weg dan de host heeft ingesteld (standaard 45 seconden), dan speelt de computer even voor je. Zodra je terug bent, speel je weer zelf. Stop je met \u201cTafel verlaten\u201d, dan houdt de computer je plek vast.', 'De host moet het scherm aan laten staan, anders staat het spel stil voor iedereen.', 'Heeft de host de app per ongeluk afgesloten? Het spel is bewaard. Open de app opnieuw en tik in het hoofdmenu op <b>Verder met spelen</b>. De anderen maken vanzelf opnieuw verbinding en jullie gaan verder waar jullie waren.']) +
       step('Vuile was', ['Voor de eerste kaart kun je <b>Vuile was</b> melden, ook als je bluft.', 'De anderen kiezen <b>Ik geloof je</b> of <b>Controleren</b>. Bij controle beslist het spel en ziet iedereen je kaarten.', 'Klopt het, dan krijgt de controleur strafpunten. Blufte je, dan krijg jij ze.']) +
       step('Op afstand spelen', ['Zit je ver van je vrienden, bijvoorbeeld op vakantie? Maak een tafel met <b>PeerJS</b> of <b>Firebase</b>. De QR-ring werkt alleen bij elkaar in de buurt.', 'Tik in de wachtruimte op <b>Uitnodigen via WhatsApp</b>. Je vrienden tikken op de link en zitten aan tafel.', 'Kletsen kan met de 💬-knop. Je kunt ook bellen of videobellen terwijl jullie spelen.']) +
       step('Chat en meekijken', ['Tik op de ronde knop 💬 om te kletsen met de anderen aan tafel. Handig als jullie op afstand spelen.', 'Tik op 🎤 en praat: je woorden worden tekst. Dat werkt met internet. Daarna tik je op <b>Stuur</b>.', 'Wil je alleen kijken? Kies in de wachtruimte <b>Ik kijk alleen mee</b>. Wil je ook alle kaarten zien? Laat de host de tafel openen als <b>Tafelleider</b>.']) +
@@ -1430,7 +1497,7 @@
     reconcileHistory();
     var full = '';
     var html = '';
-    if (!S.connected && S.view === 'table') html += '<div class="conn" role="alert">Geen verbinding. Even geduld…</div>';
+    if (!S.connected && S.view === 'table') html += '<div class="conn" role="alert">' + (S.role === 'client' ? 'De host is even weg of heeft geen verbinding. Je verbindt vanzelf opnieuw, je plek blijft bewaard.' : 'Geen verbinding. Even geduld…') + '</div>';
     var sh = S.sheet, G = viewGame(), inner = '';
     var mustAnswer = G && G.phase === 'play' && G.round.pending && (G.round.pending.awaiting || []).indexOf(S.uid) >= 0 && !(G.round.pending.answers || {})[S.uid];
     var wasQ = G && G.phase === 'play' && G.round.was && (G.round.was.awaiting || []).indexOf(S.uid) >= 0 && !(G.round.was.answers || {})[S.uid];
@@ -1492,6 +1559,10 @@
             return '<div class="prow">' + avatar(id, name(id)) + '<b>' + esc(name(id)) + '</b>' +
               (id === S.uid ? '' : '<button class="btn sm ' + (p.auto ? '' : 'ghost') + '" data-act="auto" data-id="' + esc(id) + '">' + (p.auto ? 'Computer speelt' : 'Laat computer spelen') + '</button>') + '</div>';
           }).join('') + '<p class="small muted">Valt iemand weg? Laat de computer tijdelijk voor die speler spelen.</p>';
+          var tk = S.meta && S.meta.takeover != null ? +S.meta.takeover : 45;
+          inner += '<div class="label">Als iemand wegvalt</div><div class="seg">' + [[0, 'Wachten'], [15, '15 s'], [45, '45 s'], [120, '2 min']].map(function (o) {
+            return '<button data-act="takeover-set" data-v="' + o[0] + '" aria-pressed="' + (tk === o[0]) + '">' + o[1] + '</button>'; }).join('') + '</div>' +
+            '<p class="small muted" style="margin:0">Zo lang wachten we op wie offline is. Daarna speelt de computer voor die speler, tot hij of zij terug is. Je kunt het ook zelf doen met de knop bij de speler.</p>';
           inner += '<button class="btn danger" data-act="ask-close">Tafel sluiten</button>';
         } else {
           inner += '<button class="btn ghost" data-act="leave">Tafel verlaten</button><p class="small muted">Je kunt later weer meedoen met dezelfde code.</p>';
@@ -1526,7 +1597,12 @@
           '<button class="btn ghost" data-act="sheet-close">Sluiten</button></div></div>';
       }
     }
+    var qh = G && S.view === 'table' && G.phase === 'play' && G.seats.indexOf(S.uid) >= 0 && !(G.players[S.uid] || {}).out && !S.black;
+    if (qh && !(S.sheet && S.sheet.type === 'chat')) html += '<button class="handfab" data-act="hand-quick" aria-pressed="' + handHidden() + '" aria-label="' + (handHidden() ? 'Kaarten altijd tonen' : 'Kaarten verbergen') + '">' + (handHidden() ? '👁' : '🙈') + '</button>';
     if (chatAvailable() && !(S.sheet && S.sheet.type === 'chat')) html += '<button class="chatfab" data-act="chat-open" aria-label="Chat' + (S.chatUnread ? ', ' + S.chatUnread + ' nieuw' : '') + '">💬' + (S.chatUnread ? '<span class="badge">' + S.chatUnread + '</span>' : '') + '</button>';
+    var nm = S.black ? needsMe(G) : '';
+    if (S.black && nm && nm !== S.blackKey) { S.black = false; buzz([90, 60, 90]); }
+    if (S.black) html += '<div class="blackout" data-act="black-tap" role="button" aria-label="Zwart scherm. Tik twee keer om terug te komen."><span>Tik twee keer om terug te komen</span></div>';
     if (S.toast) html += '<div class="toast" role="status">' + esc(S.toast) + '</div>';
     var chatFocus = document.activeElement && document.activeElement.id === 'chattext' ? { a: document.activeElement.selectionStart, b: document.activeElement.selectionEnd } : null;
     var fpPrev = layer.querySelector('.fullpage'), fpTop = fpPrev ? fpPrev.scrollTop : 0;
@@ -1538,7 +1614,10 @@
     if (fp && fp.scrollHeight > fp.clientHeight + 1) fp.querySelectorAll('.navlist').forEach(function (l) { l.classList.add('cols2'); });  // still too long: two columns
     document.body.style.overflow = fp ? 'hidden' : '';
     var fab = layer.querySelector('.chatfab'), hd = app.querySelector('.hand');
-    if (fab) fab.style.bottom = ((hd ? hd.offsetHeight : 0) + 14) + 'px';
+    var fb = (hd ? hd.offsetHeight : 0) + 14;
+    var hf = layer.querySelector('.handfab');
+    if (fab) fab.style.bottom = fb + 'px';
+    if (hf) hf.style.bottom = (fb + (fab ? 62 : 0)) + 'px';
     var cl = document.getElementById('chatlist'); if (cl) cl.scrollTop = cl.scrollHeight;
     var ct = document.getElementById('chattext');
     if (ct && chatFocus) { ct.focus(); try { ct.setSelectionRange(chatFocus.a, chatFocus.b); } catch (e) {} }
@@ -1558,11 +1637,11 @@
       else if (S.view === 'ringjoin') html = renderRingJoin();
       else html = renderHome();
       app.innerHTML = html;
+      var hdEl = app.querySelector('.hand'); app.style.paddingBottom = hdEl ? (hdEl.offsetHeight + 16) + 'px' : '';   // room for your cards exactly
       if (document.documentElement.scrollHeight <= window.innerHeight + 1) break;
     }
     renderLayer();
     wake();
-    syncSensor();
   }
 
   var lock = null;
@@ -1571,7 +1650,10 @@
     if (want && !lock && navigator.wakeLock) navigator.wakeLock.request('screen').then(function (l) { lock = l; l.addEventListener('release', function () { lock = null; }); }).catch(function () {});
     else if (!want && lock) { lock.release().catch(function () {}); lock = null; }
   }
-  document.addEventListener('visibilitychange', wake);
+  document.addEventListener('visibilitychange', function () {
+    wake();
+    if (document.visibilityState === 'visible' && S.view === 'table' && S.db && S.db.nudge) S.db.nudge();   // woke up: connect again at once
+  });
 
   /* ---------- Events ---------- */
   document.addEventListener('input', function (e) {
@@ -1719,16 +1801,27 @@
       case 'again': hostStart(); break;
       case 'ask-close': S.sheet = { type: 'close' }; renderLayer(); break;
       case 'close': S.sheet = null; closeTable(); break;
-      case 'leave': S.sheet = null; leave(); break;
+      case 'leave':
+        S.sheet = null;
+        if (S.role === 'client' && S.G === null && S.pub && S.pub.phase !== 'done' && S.db && S.code) S.db.update(base() + '/players/' + S.uid, { auto: true });   // the computer keeps your seat
+        leave(); break;
       case 'auto': S.db.update(base() + '/players/' + id, { auto: !(S.players[id] && S.players[id].auto) }); S.sheet = null; renderLayer(); break;
       case 'play': S.peek = false; act({ type: 'play', card: v }); break;
       case 'hand-opts': S.sheet = { type: 'hand' }; renderLayer(); break;
       case 'hand-mode': setHandMode(v); break;
+      case 'hand-quick': setHandMode(handHidden() ? 'zichtbaar' : 'verborgen'); break;
+      case 'black-on':
+        S.sheet = null;
+        if (needsMe(viewGame())) { renderLayer(); toast('Je bent aan de beurt. Speel eerst, dan kan het scherm zwart.'); break; }
+        S.black = true; S.blackTap = 0; S.blackKey = ''; renderLayer(); break;
+      case 'black-tap': if (Date.now() - (S.blackTap || 0) < 600) { S.black = false; S.blackTap = 0; } else S.blackTap = Date.now(); renderLayer(); break;
       case 'hide-peek':
         S.peek = true; clearTimeout(S.peekTimer); S.peekTimer = setTimeout(function () { S.peek = false; render(); }, 20000); render(); break;
       case 'toep': act({ type: 'toep' }); buzz(40); break;
       case 'watch': S.db.update(base() + '/players/' + S.uid, { spectator: !(S.players[S.uid] && S.players[S.uid].spectator) }); break;
       case 'invite-open': S.sheet = { type: 'invite' }; renderLayer(); break;
+      case 'auto-me': S.db.update(base() + '/players/' + S.uid, { auto: false }); break;
+      case 'takeover-set': if (window.ToepenPrefs) ToepenPrefs.set('takeover', +v); S.db.update(base() + '/meta', { takeover: +v }); break;
       case 'chat-open': S.sheet = { type: 'chat' }; S.chatUnread = 0; renderLayer(); break;
       case 'chat-send': var ci = document.getElementById('chattext'); if (sendChat(ci ? ci.value : S.chatDraft)) { S.chatDraft = ''; stopListening(); renderLayer(); } break;
       case 'chat-quick': if (sendChat(v)) renderLayer(); break;
@@ -1746,6 +1839,7 @@
   S.urlCode = qcode ? qcode.toUpperCase() : null;
   // Coming from the main menu: go straight to the right screen, and Terug goes back to the menu
   var START = Q.get('start');
+  if (Q.get('debug') === '1') window.__dbg = { db: function () { return S.db; }, state: S };
   if (!qcode && START === 'firebase') {
     S.deep = true; S.view = 'fb'; S.fb = { text: '', parsed: null, cfg: null, checks: [], running: false, done: false };
     if (CFG && CFG_SRC !== 'app') S.fb.cfg = compactCfg(CFG);

@@ -158,7 +158,9 @@
     }
 
     function onMessage(link, text) {
+      link.seen = Date.now();
       var m; try { m = JSON.parse(text); } catch (e) { return; }
+      if (m.t === 'ping') return;
       if (m.t === 'hi') { link.peer = m.uid; if (opts.privateHands) syncTo(link); fireLinks(); return; }
       if (m.t === 'sync') {
         var ch = false;
@@ -202,7 +204,7 @@
     function attach(link, dc) {
       link.dc = dc;
       dc.onopen = function () {
-        link.open = true; everLinked = true;
+        link.open = true; everLinked = true; link.seen = Date.now();
         sendTo(link, { t: 'hi', uid: uid });
         syncTo(link);
         fireLinks();
@@ -220,6 +222,24 @@
       };
       return link;
     }
+
+    // Heartbeat: a phone that locks or loses signal does not close its connection politely, it just goes quiet.
+    // Both sides send a ping every few seconds; 8 seconds of silence counts as gone.
+    var lastTick = Date.now();
+    setInterval(function () {
+      var now = Date.now(), frozen = now - lastTick > 5000;   // this phone itself was asleep: do not blame the others
+      lastTick = now;
+      Object.keys(links).forEach(function (id) {
+        var l = links[id]; if (!l || !l.open) return;
+        if (frozen) { l.seen = now; return; }
+        if (now - (l.seen || now) > 8000) {
+          l.open = false; try { if (l.dc && l.dc.close) l.dc.close(); } catch (e) {}
+          if (l.auto) delete links[id];
+          fireLinks(); return;
+        }
+        sendTo(l, { t: 'ping' });
+      });
+    }, 2500);
 
     var api = {
       kind: opts.kind || 'ring',

@@ -34,7 +34,7 @@
   function peerBackend(options) {
     options = options || {};          // host/port/path/secure/iceServers: only for tests with an own server
     var api = root.ToepenNet.ring({ kind: 'peer', storeKey: 'toepen-peer-data', privateHands: true });
-    var peer = null, role = null, stopped = false;
+    var peer = null, role = null, stopped = false, redial = null, conns = [];
 
     function cfg() {
       var c = { debug: 0 };
@@ -43,6 +43,8 @@
       return c;
     }
     function adapt(conn) {
+      conns.push(conn);
+      conn.on('close', function () { conns = conns.filter(function (c) { return c !== conn; }); });
       var ch = { readyState: 'connecting', send: function (d) { conn.send(d); }, onopen: null, onclose: null, onmessage: null };
       conn.on('open', function () { ch.readyState = 'open'; if (ch.onopen) ch.onopen(); });
       conn.on('data', function (d) { if (ch.onmessage) ch.onmessage({ data: d }); });
@@ -76,13 +78,14 @@
           destroy(); role = 'client'; stopped = false;
           var first = true, hostId = 'toepen-' + code;
           function dial() {
-            if (stopped || !peer || peer.destroyed) return;
+            if (stopped || !peer || peer.destroyed || api.linkCount() > 0) return;
             if (peer.disconnected) { try { peer.reconnect(); } catch (e) {} setTimeout(dial, 1500); return; }
             var conn = peer.connect(hostId, { reliable: true });
             conn.on('open', function () { if (first) { first = false; res(); } });
             conn.on('close', function () { if (!stopped) setTimeout(dial, 2000); });
             adapt(conn);
           }
+          redial = dial;
           peer = new root.Peer(cfg());
           peer.on('open', dial);
           peer.on('error', function (e) {
@@ -93,7 +96,14 @@
         });
       });
     };
-    api.stop = function () { stopped = true; destroy(); };
+    api.stop = function () { stopped = true; destroy(); redial = null; };
+    // The phone woke up again (screen unlocked): connect right away instead of waiting for the next try.
+    api.nudge = function () {
+      if (stopped || !peer || peer.destroyed) return;
+      if (peer.disconnected) { try { peer.reconnect(); } catch (e) {} }
+      if (role === 'client' && redial && api.linkCount() === 0) setTimeout(redial, 300);
+    };
+    api._dropLinks = function () { conns.slice().forEach(function (c) { try { c.close(); } catch (e) {} }); };
     var baseOn = api.onConnection;
     api.onConnection = function (cb) { return baseOn(function (ok) { cb(role === 'host' ? true : ok); }); };
     return api;
