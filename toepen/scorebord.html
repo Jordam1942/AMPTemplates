@@ -22,6 +22,7 @@
     --fg: #1d2620;
     --muted: #5f6b62;
     --line: #d5dbd0;
+    --blue: #2563eb; --blue-soft: #dbe7fd; --orange: #e8590c; --orange-soft: #fde5d4; --purple: #7c3aed; --purple-soft: #eadffd; --gold: #b7791f; --gold-soft: #f8ecc9;
     --accent: #1f6b4a;
     --accent-fg: #ffffff;
     --accent-soft: #dcebe2;
@@ -38,6 +39,7 @@
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
       --bg: #121a15; --surface: #1b251f; --sunken: #16201a; --fg: #e8eee8; --muted: #9eaba1; --line: #2c3a31;
+      --blue: #7aa7ff; --blue-soft: #1c2a4a; --orange: #ff9a5c; --orange-soft: #3d2512; --purple: #b79cff; --purple-soft: #2c2147; --gold: #ebbd4d; --gold-soft: #38300f;
       --accent: #4fbf89; --accent-fg: #0d1a13; --accent-soft: #1f3a2b;
       --warn: #f0a160; --warn-soft: #3a2817; --danger: #f2b8b5; --danger-soft: #4a1f1c;
       --ink: #dfe9e1; --ink-fg: #121a15; --scrim: rgba(0, 0, 0, 0.6);
@@ -46,6 +48,7 @@
   }
   :root[data-theme="dark"] {
     --bg: #121a15; --surface: #1b251f; --sunken: #16201a; --fg: #e8eee8; --muted: #9eaba1; --line: #2c3a31;
+    --blue: #7aa7ff; --blue-soft: #1c2a4a; --orange: #ff9a5c; --orange-soft: #3d2512; --purple: #b79cff; --purple-soft: #2c2147; --gold: #ebbd4d; --gold-soft: #38300f;
     --accent: #4fbf89; --accent-fg: #0d1a13; --accent-soft: #1f3a2b;
     --warn: #f0a160; --warn-soft: #3a2817; --danger: #f2b8b5; --danger-soft: #4a1f1c;
     --ink: #dfe9e1; --ink-fg: #121a15; --scrim: rgba(0, 0, 0, 0.6);
@@ -144,7 +147,7 @@
   .stake .txt { flex: 1; min-width: 0; }
   .stake .txt .label { color: inherit; opacity: 0.7; }
   .stake .txt div:last-child { font-size: 0.85rem; opacity: 0.85; }
-  .stake .btn.toep { background: var(--accent); color: var(--accent-fg); font-size: 1.1rem; padding: 0 16px; }
+  .stake .btn.toep { background: var(--orange); color: #fff; font-size: 1.1rem; padding: 0 16px; }
   .stake-row { display: flex; gap: 8px; }
   .stake .btn.finish { background: transparent; color: inherit; border: 1.5px solid currentColor; flex: 2; min-height: 44px; padding: 0 10px; }
   .stake .btn.wit { background: transparent; color: inherit; border: 1.5px dashed currentColor; flex: 1; min-height: 44px; padding: 0 10px; opacity: 0.9; }
@@ -257,11 +260,13 @@
   .dock .in { max-width: 560px; margin: 0 auto; display: grid; gap: 8px; }
   .dock-main { display: flex; gap: 8px; }
   .dock-main .btn { min-height: 56px; font-size: 1.05rem; }
-  .dock .btn.toep { background: var(--accent); color: var(--accent-fg); flex: 1; }
-  .dock .btn.finish { background: var(--ink); color: var(--ink-fg); flex: 2; }
+  .dock .btn.toep { background: var(--orange); color: #fff; flex: 1; }
+  .dock .btn.toep:disabled { background: var(--ink); color: var(--ink-fg); }
+  .dock .btn.finish { background: var(--accent); color: var(--accent-fg); flex: 2; }
   .dock-row { display: flex; gap: 8px; }
   .dock-row .btn { flex: 1; min-width: 0; min-height: 42px; font-size: 0.85rem; padding: 0 6px; white-space: nowrap; }
-  .dock-row .btn.wit { border: 1.5px dashed var(--line); background: transparent; color: var(--fg); }
+  .dock-row .btn.wit { border: 1.5px solid var(--purple); background: var(--purple-soft); color: var(--purple); }
+  .dock-row .btn[data-act=undo]:not(:disabled), .dock-row .btn[data-act=redo]:not(:disabled) { border-color: var(--gold); background: var(--gold-soft); color: var(--gold); }
   .history-bar { display: flex; gap: 8px; margin: -4px 0 12px; }
   .history-bar .btn { flex: 1; min-width: 0; min-height: 40px; font-size: 0.85rem; padding: 0 6px; white-space: nowrap; }
   .topbar.game h1 { font-size: clamp(1.3rem, 5.6vw, 1.6rem); overflow: hidden; text-overflow: ellipsis; }
@@ -438,7 +443,7 @@
 (function () {
   'use strict';
   var KEY = 'toepen-scorebord-v2';
-  var VERSION = '34 (instellingen en vaste hoogte)';
+  var VERSION = '35 (kleur en hoogste inzet)';
   var COLORS = ['#2f7d5b', '#c2571a', '#3b6fb6', '#a63d6b', '#7a5bb5', '#a67c12', '#1f8a8f', '#5d6b1f'];
   var app = document.getElementById('app');
   var layer = document.getElementById('layer');

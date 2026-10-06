@@ -18,7 +18,7 @@
   :root {
     --bg: #eef1ea; --surface: #fbfcf8; --sunken: #e3e8df; --fg: #1d2620; --muted: #5f6b62; --line: #d5dbd0;
     --accent: #1f6b4a; --accent-fg: #ffffff; --accent-soft: #dcebe2;
-    --warn: #b4540f; --warn-soft: #fbe7d6; --danger: #b3261e; --danger-soft: #f9dedc;
+    --warn: #b4540f; --warn-soft: #fbe7d6; --danger: #b3261e; --danger-soft: #f9dedc; --blue: #2563eb; --blue-soft: #dbe7fd; --orange: #e8590c; --orange-soft: #fde5d4; --purple: #7c3aed; --purple-soft: #eadffd; --gold: #b7791f; --gold-soft: #f8ecc9;
     --ink: #253a2e; --ink-fg: #eef1ea; --felt: #1d5c40; --felt-line: #2f7354;
     --card: #ffffff; --card-red: #c62828; --card-black: #1b1f1d; --scrim: rgba(18, 26, 21, 0.5);
     --font-display: "Bricolage Grotesque", "Arial Rounded MT Bold", system-ui, sans-serif;
@@ -28,7 +28,7 @@
     :root:not([data-theme="light"]) {
       --bg: #121a15; --surface: #1b251f; --sunken: #16201a; --fg: #e8eee8; --muted: #9eaba1; --line: #2c3a31;
       --accent: #4fbf89; --accent-fg: #0d1a13; --accent-soft: #1f3a2b;
-      --warn: #f0a160; --warn-soft: #3a2817; --danger: #f2b8b5; --danger-soft: #4a1f1c;
+      --warn: #f0a160; --warn-soft: #3a2817; --danger: #f2b8b5; --danger-soft: #4a1f1c; --blue: #7aa7ff; --blue-soft: #1c2a4a; --orange: #ff9a5c; --orange-soft: #3d2512; --purple: #b79cff; --purple-soft: #2c2147; --gold: #ebbd4d; --gold-soft: #38300f;
       --ink: #dfe9e1; --ink-fg: #121a15; --felt: #17432f; --felt-line: #24573f; --scrim: rgba(0, 0, 0, 0.65);
       color-scheme: dark;
     }
@@ -36,7 +36,7 @@
   :root[data-theme="dark"] {
     --bg: #121a15; --surface: #1b251f; --sunken: #16201a; --fg: #e8eee8; --muted: #9eaba1; --line: #2c3a31;
     --accent: #4fbf89; --accent-fg: #0d1a13; --accent-soft: #1f3a2b;
-    --warn: #f0a160; --warn-soft: #3a2817; --danger: #f2b8b5; --danger-soft: #4a1f1c;
+    --warn: #f0a160; --warn-soft: #3a2817; --danger: #f2b8b5; --danger-soft: #4a1f1c; --blue: #7aa7ff; --blue-soft: #1c2a4a; --orange: #ff9a5c; --orange-soft: #3d2512; --purple: #b79cff; --purple-soft: #2c2147; --gold: #ebbd4d; --gold-soft: #38300f;
     --ink: #dfe9e1; --ink-fg: #121a15; --felt: #17432f; --felt-line: #24573f; --scrim: rgba(0, 0, 0, 0.65);
     color-scheme: dark;
   }
@@ -81,6 +81,10 @@
   input.code { text-transform: uppercase; letter-spacing: 0.3em; font-weight: 800; font-family: var(--font-display); text-align: center; font-size: 1.4rem; }
   .choice { display: grid; gap: 4px; text-align: left; padding: 14px; border-radius: 14px; border: 1.5px solid var(--line); background: var(--surface); }
   .choice b { font-size: 1.05rem; } .choice span { color: var(--muted); font-size: 0.9rem; }
+  .choice.ic { grid-template-columns: 52px minmax(0, 1fr); column-gap: 14px; align-items: center; padding: 13px 14px; border-color: color-mix(in srgb, var(--t) 40%, var(--line)); background: linear-gradient(120deg, var(--ts), var(--surface) 85%); }
+  .choice.ic .i { grid-row: 1 / 3; width: 52px; height: 52px; border-radius: 15px; display: grid; place-items: center; font-size: 1.7rem; font-style: normal; background: var(--t); box-shadow: 0 3px 8px color-mix(in srgb, var(--t) 40%, transparent); }
+  .fit3 .choice.ic .i { width: 40px; height: 40px; font-size: 1.3rem; border-radius: 12px; } .fit3 .choice.ic { grid-template-columns: 40px minmax(0, 1fr); }
+  .t-green { --t: var(--accent); --ts: var(--accent-soft); } .t-blue { --t: var(--blue); --ts: var(--blue-soft); } .t-orange { --t: var(--orange); --ts: var(--orange-soft); } .t-purple { --t: var(--purple); --ts: var(--purple-soft); } .t-gold { --t: var(--gold); --ts: var(--gold-soft); }
   .choice[aria-pressed="true"] { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); background: var(--accent-soft); }
   .seg { display: flex; gap: 6px; flex-wrap: wrap; }
   .seg button { min-height: 44px; min-width: 56px; padding: 0 14px; border-radius: 10px; font-weight: 700; border: 1.5px solid var(--line); }
@@ -147,7 +151,9 @@
   .hand.myturn button.pc:disabled { opacity: 0.4; box-shadow: none; }
   .hand .acts { display: flex; gap: 8px; }
   .hand .acts .btn { flex: 1; }
-  .btn.toep { background: var(--ink); color: var(--ink-fg); font-size: 1.15rem; }
+  .btn.toep { background: var(--orange); color: #fff; font-size: 1.15rem; }
+  .btn.toep:disabled { background: var(--ink); color: var(--ink-fg); }
+  .hand .acts .btn.warn { background: var(--purple); color: #fff; }
 
   .players { display: grid; gap: 8px; margin-top: 14px; }
   .pl { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 10px 12px; display: grid; gap: 8px; }
@@ -249,12 +255,12 @@
   .fit3 .qr { width: 130px; padding: 8px; }
   .fit3 .bigcode { font-size: 1.6rem; }
   .fit3 .lobby-line { display: none; }
-  .undofab { position: fixed; right: 14px; bottom: 138px; z-index: 12; width: 52px; height: 52px; border-radius: 50%; background: var(--warn-soft); color: var(--warn); border: 1.5px solid var(--warn); font-size: 1.5rem; font-weight: 800; box-shadow: 0 6px 16px -4px rgba(0,0,0,0.35); display: grid; place-items: center; }
+  .undofab { position: fixed; right: 14px; bottom: 138px; z-index: 12; width: 52px; height: 52px; border-radius: 50%; background: var(--gold-soft); color: var(--gold); border: 1.5px solid var(--gold); font-size: 1.5rem; font-weight: 800; box-shadow: 0 6px 16px -4px rgba(0,0,0,0.35); display: grid; place-items: center; }
   .handfab { position: fixed; right: 14px; bottom: 76px; z-index: 12; width: 52px; height: 52px; border-radius: 50%; background: var(--surface); color: var(--fg); border: 1.5px solid var(--line); font-size: 1.5rem; box-shadow: 0 6px 16px -4px rgba(0,0,0,0.35); display: grid; place-items: center; }
   .handfab[aria-pressed="true"] { background: var(--ink); color: var(--ink-fg); }
   .blackout { position: fixed; inset: 0; z-index: 70; background: #000; display: flex; align-items: flex-end; justify-content: center; padding: 24px; }
   .blackout span { color: #2a2a2a; font-size: 0.8rem; }
-  .chatfab { position: fixed; right: 14px; bottom: 14px; z-index: 12; width: 52px; height: 52px; border-radius: 50%; background: var(--accent); color: var(--accent-fg); font-size: 1.5rem; box-shadow: 0 6px 16px -4px rgba(0,0,0,0.45); display: grid; place-items: center; }
+  .chatfab { position: fixed; right: 14px; bottom: 14px; z-index: 12; width: 52px; height: 52px; border-radius: 50%; background: var(--blue); color: #fff; font-size: 1.5rem; box-shadow: 0 6px 16px -4px rgba(0,0,0,0.45); display: grid; place-items: center; }
   .chatfab .badge { position: absolute; top: -4px; right: -4px; min-width: 22px; height: 22px; padding: 0 5px; border-radius: 11px; background: var(--warn); color: #fff; font-size: 0.75rem; font-weight: 800; display: grid; place-items: center; }
   .chatlist { display: flex; flex-direction: column; gap: 6px; height: 34vh; height: 34%; min-height: 120px; max-height: 300px; overflow-y: auto; padding: 6px; background: var(--bg); border-radius: 12px; }
   .cmsg { align-self: flex-start; max-width: 85%; background: var(--surface); border: 1px solid var(--line); border-radius: 14px 14px 14px 4px; padding: 6px 10px; display: grid; gap: 0; overflow-wrap: anywhere; }
@@ -499,7 +505,7 @@
     var html = topbar('Multiplayer', 'Kies hoe jullie verbinden', (S.deep ? '<a class="btn ghost sm" href="index.html">← Terug</a>' : '<button class="btn ghost sm" data-act="home">Terug</button>'));
     ['peer', 'ring', 'firebase'].forEach(function (k) {
       var m = METHODS[k];
-      html += '<button class="choice" data-act="mp-method" data-v="' + k + '"><b>' + m.t + (k === 'firebase' && !NET ? ' <span class="chip">Nog niet ingesteld</span>' : '') + '</b><span>' + m.d + '</span></button>';
+      html += '<button class="choice ic ' + ({ peer: 't-blue', ring: 't-orange', firebase: 't-gold' })[k] + '" data-act="mp-method" data-v="' + k + '"><i class="i" aria-hidden="true">' + ({ peer: '🌍', ring: '📡', firebase: '🔥' })[k] + '</i><b>' + m.t + (k === 'firebase' && !NET ? ' <span class="chip">Nog niet ingesteld</span>' : '') + '</b><span>' + m.d + '</span></button>';
     });
     return '<div class="stack">' + html + '</div>';
   }
@@ -512,8 +518,8 @@
       : k === 'ring' ? 'Je toont een QR aan je buurman en scant daarna zijn antwoord.'
       : 'Je opent de tafel en nodigt vrienden uit via WhatsApp of een QR. Ze mogen overal zijn.';
     var guestD = k === 'ring' ? 'Scan de QR van de host of van je buurman in de kring.' : 'Scan de QR van de host, of vul de tafelcode in.';
-    html += '<button class="choice" data-act="mp-host"><b>Ik ben de host</b><span>' + hostD + '</span></button>';
-    html += '<button class="choice" data-act="mp-guest"><b>Ik doe mee</b><span>' + guestD + '</span></button>';
+    html += '<button class="choice ic t-green" data-act="mp-host"><i class="i" aria-hidden="true">👑</i><b>Ik ben de host</b><span>' + hostD + '</span></button>';
+    html += '<button class="choice ic t-blue" data-act="mp-guest"><i class="i" aria-hidden="true">🙋</i><b>Ik doe mee</b><span>' + guestD + '</span></button>';
     if (needSetup) html += '<p class="small muted lobby-hint" style="text-align:center">Doe je alleen mee? Dan hoef je niets in te stellen. Scan de QR van de host, dan wordt alles vanzelf ingesteld.</p>';
     return '<div class="stack">' + html + '</div>';
   }
@@ -1112,8 +1118,8 @@
       html += '<div class="panel"><b>Je tafel ' + esc(saved.code) + ' is nog open' + (saved.practice ? ' (oefenen)' : '') + '.</b>' +
         '<div class="row"><button class="btn primary" style="flex:1" data-act="resume">Verder spelen</button><button class="btn ghost" data-act="forget">Sluiten</button></div></div>';
     }
-    html += '<button class="choice" data-act="go-mp"><b>Multiplayer</b><span>Speel met vrienden, ieder op de eigen telefoon. Kies PeerJS, QR-ring of Firebase.</span></button>';
-    html += '<button class="choice" data-act="go-practice"><b>Oefenen tegen de computer</b><span>Speel alleen op deze telefoon tegen computerspelers. Werkt zonder internet.</span></button>';
+    html += '<button class="choice ic t-blue" data-act="go-mp"><i class="i" aria-hidden="true">🌍</i><b>Multiplayer</b><span>Speel met vrienden, ieder op de eigen telefoon. Kies PeerJS, QR-ring of Firebase.</span></button>';
+    html += '<button class="choice ic t-orange" data-act="go-practice"><i class="i" aria-hidden="true">🤖</i><b>Oefenen tegen de computer</b><span>Speel alleen op deze telefoon tegen computerspelers. Werkt zonder internet.</span></button>';
     html += '<button class="btn ghost" data-act="help">Spelregels en uitleg</button>';
     if (NET === 'firebase' && CFG_SRC !== 'app') html += '<button class="btn ghost sm" data-act="go-fb">Firebase-instellingen</button>';
     return '<div class="stack">' + html + '</div>';

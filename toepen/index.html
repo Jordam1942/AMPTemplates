@@ -18,6 +18,7 @@
     --bg: #eef1ea; --surface: #fbfcf8; --fg: #1d2620; --muted: #5f6b62; --line: #d5dbd0;
     --accent: #1f6b4a; --accent-fg: #ffffff; --accent-soft: #dcebe2;
     --warn: #b4540f; --warn-soft: #fbe7d6; --danger: #b3261e; --danger-soft: #f9dedc; --scrim: rgba(18, 26, 21, 0.5);
+    --blue: #2563eb; --blue-soft: #dbe7fd; --orange: #e8590c; --orange-soft: #fde5d4; --purple: #7c3aed; --purple-soft: #eadffd; --gold: #b7791f; --gold-soft: #f8ecc9;
     --font-display: "Bricolage Grotesque", "Arial Rounded MT Bold", system-ui, sans-serif;
     --font-body: "Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
   }
@@ -26,6 +27,7 @@
       --bg: #121a15; --surface: #1b251f; --fg: #e8eee8; --muted: #9eaba1; --line: #2c3a31;
       --accent: #4fbf89; --accent-fg: #0d1a13; --accent-soft: #1f3a2b;
       --warn: #f0a160; --warn-soft: #3a2817; --danger: #f2b8b5; --danger-soft: #4a1f1c; --scrim: rgba(0, 0, 0, 0.65);
+      --blue: #7aa7ff; --blue-soft: #1c2a4a; --orange: #ff9a5c; --orange-soft: #3d2512; --purple: #b79cff; --purple-soft: #2c2147; --gold: #ebbd4d; --gold-soft: #38300f;
       color-scheme: dark;
     }
   }
@@ -33,6 +35,7 @@
     --bg: #121a15; --surface: #1b251f; --fg: #e8eee8; --muted: #9eaba1; --line: #2c3a31;
     --accent: #4fbf89; --accent-fg: #0d1a13; --accent-soft: #1f3a2b;
     --warn: #f0a160; --warn-soft: #3a2817; --danger: #f2b8b5; --danger-soft: #4a1f1c; --scrim: rgba(0, 0, 0, 0.65);
+    --blue: #7aa7ff; --blue-soft: #1c2a4a; --orange: #ff9a5c; --orange-soft: #3d2512; --purple: #b79cff; --purple-soft: #2c2147; --gold: #ebbd4d; --gold-soft: #38300f;
     color-scheme: dark;
   }
   * { box-sizing: border-box; }
@@ -59,6 +62,15 @@
   .stack { display: grid; gap: 12px; }
   .choice { display: grid; gap: 3px; width: 100%; padding: 16px; border-radius: 16px; border: 1.5px solid var(--line); background: var(--surface); color: var(--fg); text-decoration: none; }
   .choice b { font-size: 1.15rem; font-family: var(--font-display); } .choice span { color: var(--muted); font-size: 0.92rem; }
+  .suits .r { color: #d6362b; } :root[data-theme="dark"] .suits .r { color: #ff7a6e; }
+  .fan { display: flex; align-items: flex-end; height: 74px; padding-right: 10px; flex: none; }
+  .pc { width: 46px; height: 64px; margin-left: -16px; border-radius: 8px; background: #fff; color: #1d2620; border: 1.5px solid #cfd6cb; box-shadow: 0 3px 8px rgba(0,0,0,.18); display: grid; place-items: center; font: 800 1.15rem/1 var(--font-display); transform-origin: 50% 120%; }
+  .pc.r { color: #d6362b; } .pc:nth-child(1) { transform: rotate(-14deg); } .pc:nth-child(2) { transform: rotate(0deg) translateY(-4px); } .pc:nth-child(3) { transform: rotate(14deg); }
+  .choice.ic { grid-template-columns: 52px minmax(0, 1fr); column-gap: 14px; align-items: center; padding: 13px 14px; border-color: color-mix(in srgb, var(--t) 40%, var(--line)); background: linear-gradient(120deg, var(--ts), var(--surface) 85%); }
+  .choice.ic .i { grid-row: 1 / 3; width: 52px; height: 52px; border-radius: 15px; display: grid; place-items: center; font-size: 1.7rem; font-style: normal; background: var(--t); box-shadow: 0 3px 8px color-mix(in srgb, var(--t) 40%, transparent); }
+  .choice.ic .go { color: var(--t); }
+  .t-green { --t: var(--accent); --ts: var(--accent-soft); } .t-blue { --t: var(--blue); --ts: var(--blue-soft); } .t-orange { --t: var(--orange); --ts: var(--orange-soft); } .t-purple { --t: var(--purple); --ts: var(--purple-soft); } .t-gold { --t: var(--gold); --ts: var(--gold-soft); }
+  .choice.ic.main { border-width: 2px; border-color: var(--t); }
   .choice.main { border-color: var(--accent); background: var(--accent-soft); }
   .choice .go { float: right; color: var(--accent); }
   .row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 8px; width: 100%; padding: 12px 14px; border-radius: 14px; border: 1.5px solid var(--line); background: var(--surface); }
@@ -130,20 +142,20 @@
   }
   function renderMenu() {
     var cur = S.current(), h = '', ot = openTable();
-    h += '<div class="topbar"><div class="meta"><h1>Toepen</h1><div class="suits" aria-hidden="true">♠ ♥ ♣ ♦</div></div></div><div class="stack down">';
+    h += '<div class="topbar"><div class="meta"><h1>Toepen</h1><div class="suits" aria-hidden="true">♠ <span class="r">♥</span> ♣ <span class="r">♦</span></div></div><div class="fan" aria-hidden="true"><div class="pc">A♠</div><div class="pc r">10♥</div><div class="pc">K♣</div></div></div><div class="stack down">';
     if (ot) {
-      h += '<a class="choice main" href="spelen.html?start=verder"><b>Verder met spelen <span class="go">→</span></b><span>' +
+      h += '<a class="choice main ic t-green" href="spelen.html?start=verder"><i class="i" aria-hidden="true">▶️</i><b>Verder met spelen <span class="go">→</span></b><span>' +
         (ot.practice ? 'Tegen de computer. Waar je gebleven was.' : ot.host ? 'Je tafel ' + esc(ot.code) + '. Verbind opnieuw, dan gaan jullie verder waar je was.' : 'Tafel ' + esc(ot.code) + '. Terug naar je plek.') + '</span></a>';
     }
     if (cur && cur.sum.players.length && !cur.sum.done) {
-      h += '<a class="choice main" href="scorebord.html"><b>Verder met je scorebord <span class="go">→</span></b><span>Ronde ' + cur.sum.round + ' · ' + esc(who(cur.sum)) + '</span></a>';
+      h += '<a class="choice main ic t-green" href="scorebord.html"><i class="i" aria-hidden="true">📝</i><b>Verder met je scorebord <span class="go">→</span></b><span>Ronde ' + cur.sum.round + ' · ' + esc(who(cur.sum)) + '</span></a>';
     }
-    h += '<a class="choice" href="spelen.html?start=oefenen"><b>Alleen spelen</b><span>Tegen computerspelers, op deze telefoon. Werkt zonder internet.</span></a>';
-    h += '<a class="choice" href="spelen.html?start=multi"><b>Multiplayer</b><span>Met vrienden, ook op afstand. Nodig ze uit via WhatsApp.</span></a>';
-    h += '<a class="choice" href="scorebord.html"><b>Scores bijhouden</b><span>Het scorebord voor aan tafel, met echte kaarten.</span></a>';
+    h += '<a class="choice ic t-orange" href="spelen.html?start=oefenen"><i class="i" aria-hidden="true">🤖</i><b>Alleen spelen</b><span>Tegen computerspelers, op deze telefoon. Werkt zonder internet.</span></a>';
+    h += '<a class="choice ic t-blue" href="spelen.html?start=multi"><i class="i" aria-hidden="true">🌍</i><b>Multiplayer</b><span>Met vrienden, ook op afstand. Nodig ze uit via WhatsApp.</span></a>';
+    h += '<a class="choice ic t-purple" href="scorebord.html"><i class="i" aria-hidden="true">🧮</i><b>Scores bijhouden</b><span>Het scorebord voor aan tafel, met echte kaarten.</span></a>';
     var n = S.count();
-    h += '<button class="choice" data-act="saves"><b>Opgeslagen spellen en scores <span class="go">→</span></b><span>' + (n ? n + ' opgeslagen. Open er een, of bewaar je spel onder een naam.' : 'Bewaar een spel met de ranglijst onder een naam.') + '</span></button>' +
-      '<button class="btn ghost" data-act="settings">Instellingen</button></div>';
+    h += '<button class="choice ic t-gold" data-act="saves"><i class="i" aria-hidden="true">💾</i><b>Opgeslagen spellen <span class="go">→</span></b><span>' + (n ? n + ' opgeslagen. Open er een, of bewaar je spel onder een naam.' : 'Bewaar een spel met de ranglijst onder een naam.') + '</span></button>' +
+      '<button class="btn ghost" data-act="settings">⚙️ Instellingen</button></div>';
     return h;
   }
   function toggle(act, on, title, sub) {
