@@ -142,7 +142,7 @@
   }
   function renderMenu() {
     var cur = S.current(), h = '', ot = openTable();
-    h += '<div class="topbar"><div class="meta"><h1>Toepen</h1><div class="suits" aria-hidden="true">♠ <span class="r">♥</span> ♣ <span class="r">♦</span></div></div></div><div class="stack down">';
+    h += '<div class="topbar"><div class="meta"><h1>Toepen</h1><div class="suits" aria-hidden="true">♠ <span class="r">♥</span> ♣ <span class="r">♦</span></div></div><a class="btn ghost sm" href="handleiding.html">Handleiding</a></div><div class="stack down">';
     if (ot) {
       h += '<a class="choice main ic t-green" href="spelen.html?start=verder"><i class="i" aria-hidden="true"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="7 4 20 12 7 20"/></svg></i><b>Verder met spelen <span class="go">→</span></b><span>' +
         (ot.practice ? 'Tegen de computer. Waar je gebleven was.' : ot.host ? 'Je tafel ' + esc(ot.code) + '. Verbind opnieuw, dan gaan jullie verder waar je was.' : 'Tafel ' + esc(ot.code) + '. Terug naar je plek.') + '</span></a>';

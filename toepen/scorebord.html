@@ -353,6 +353,8 @@
   .fp-tight .fp-body { gap: 10px; padding-top: 10px; }
   .fp-tight2 .toggle-row .txt div:last-child { display: none; }
   .fp-tight2 .sub-opt .small { display: none; }
+  .hlink { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 46px; padding: 8px 10px; border-radius: 14px; background: var(--accent-soft); border: 1px solid var(--accent); color: var(--accent); font-weight: 700; font-size: 0.9rem; text-decoration: none; }
+  .hlink::after { content: "›"; margin-left: auto; font-size: 1.4rem; }
   .navrow { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 54px; padding: 8px 14px; border-radius: 14px; background: var(--surface); border: 1px solid var(--line); text-align: left; }
   .navrow b { flex: none; font-size: 1rem; }
   .navrow .sub { flex: 1; min-width: 0; color: var(--muted); font-size: 0.85rem; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -1601,7 +1603,7 @@
     switch (pg.id) {
       case 'help':
         var T = rulesTopics();
-        return { title: 'Spelregels en uitleg', body: paged('help', T.map(function (t, i) { return navRow('pg-open', t.t, '', ' data-v="topic" data-i="' + i + '"'); })
+        return { title: 'Spelregels en uitleg', body: paged('help', ['<a class="hlink" href="handleiding.html"><b>Handleiding met plaatjes</b></a>'].concat(T.map(function (t, i) { return navRow('pg-open', t.t, '', ' data-v="topic" data-i="' + i + '"'); }))
           .concat([navRow('pg-open', 'Uitleg van de app', 'stap voor stap', ' data-v="guide"'), navRow('pg-open', 'Eigen afspraken', esc((state.setup.notes || '').slice(0, 30)), ' data-v="notes"')])) };
       case 'topic':
         var T2 = rulesTopics(), t = T2[pg.i];

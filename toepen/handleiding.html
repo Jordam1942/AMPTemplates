@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1f6b4a">
+<title>Toepen: handleiding</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<style>
+  :root {
+    --bg: #eef1ea; --surface: #fbfcf8; --fg: #1d2620; --muted: #5f6b62; --line: #d5dbd0;
+    --accent: #1f6b4a; --accent-fg: #ffffff; --accent-soft: #dcebe2;
+    --blue: #34638f; --blue-soft: #e3ebf3; --orange: #b4602a; --orange-soft: #f4e8de; --purple: #6a4f8c; --purple-soft: #ece6f2; --gold: #9a7a1f; --gold-soft: #f3ecd6;
+    --red: #c23a30; --ink: #1d2e25;
+    --font-display: "Bricolage Grotesque", "Arial Rounded MT Bold", system-ui, sans-serif;
+    --font-body: "Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
+    color-scheme: light dark;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #121a15; --surface: #1b251f; --fg: #e8eee8; --muted: #9eaba1; --line: #2c3a31;
+      --accent: #4fbf89; --accent-fg: #0d1a13; --accent-soft: #1f3a2b;
+      --blue: #86abd3; --blue-soft: #1d2a38; --orange: #e09a63; --orange-soft: #33241a; --purple: #b6a0d6; --purple-soft: #2a2336; --gold: #d6b659; --gold-soft: #2f2a15; --ink: #e8eee8;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #121a15; --surface: #1b251f; --fg: #e8eee8; --muted: #9eaba1; --line: #2c3a31;
+    --accent: #4fbf89; --accent-fg: #0d1a13; --accent-soft: #1f3a2b;
+    --blue: #86abd3; --blue-soft: #1d2a38; --orange: #e09a63; --orange-soft: #33241a; --purple: #b6a0d6; --purple-soft: #2a2336; --gold: #d6b659; --gold-soft: #2f2a15; --ink: #e8eee8;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body { background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 16px; line-height: 1.4; -webkit-tap-highlight-color: transparent; overflow: hidden; }
+  button, a { font: inherit; color: inherit; cursor: pointer; }
+  .app { height: 100%; max-width: 560px; margin: 0 auto; display: flex; flex-direction: column; padding: calc(10px + env(safe-area-inset-top, 0px)) 16px calc(12px + env(safe-area-inset-bottom, 0px)); gap: 10px; }
+  .bar { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .bar h1 { font-family: var(--font-display); font-size: 1.25rem; margin: 0; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; min-height: 48px; padding: 0 18px; border-radius: 12px; font-weight: 700; border: 0; text-decoration: none; background: var(--accent-soft); color: var(--accent); }
+  .btn.primary { background: var(--accent); color: var(--accent-fg); }
+  .btn.ghost { background: transparent; border: 1.5px solid var(--line); color: var(--fg); }
+  .btn.sm { min-height: 40px; padding: 0 12px; font-size: 0.9rem; }
+  .btn:disabled { opacity: 0.4; cursor: default; }
+  .dots { display: flex; gap: 6px; justify-content: center; }
+  .dots i { width: 8px; height: 8px; border-radius: 50%; background: var(--line); }
+  .dots i.on { background: var(--accent); width: 22px; border-radius: 4px; }
+  .art { flex: 1 1 auto; min-height: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 18px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 12px; overflow: hidden; }
+  .txt h2 { font-family: var(--font-display); font-size: 1.45rem; margin: 0 0 4px; letter-spacing: -0.01em; }
+  .txt p { margin: 0; color: var(--muted); font-size: 1rem; }
+  .txt p b { color: var(--fg); }
+  .nav { display: flex; gap: 10px; }
+  .nav .btn { flex: 1; min-height: 54px; font-size: 1.05rem; }
+  .nav .btn.next { flex: 2; }
+
+  /* cards */
+  .c { width: 46px; height: 66px; border-radius: 8px; background: #fff; color: #1d2620; border: 1.5px solid #cfd6cb; box-shadow: 0 2px 6px rgba(0,0,0,.14); display: flex; flex-direction: column; justify-content: space-between; align-items: flex-start; padding: 4px 5px; flex: none; position: relative; }
+  .c b { font: 800 1rem/1 var(--font-display); } .c i { font-style: normal; font-size: 1.5rem; line-height: 1; align-self: center; margin-bottom: 4px; }
+  .c.r { color: #c23a30; }
+  .c.sm { width: 34px; height: 50px; padding: 3px 4px; border-radius: 6px; } .c.sm b { font-size: 0.82rem; } .c.sm i { font-size: 1.1rem; margin-bottom: 2px; }
+  .c.win { box-shadow: 0 0 0 3px var(--accent), 0 4px 10px rgba(0,0,0,.25); }
+  .c.dim { opacity: 0.45; }
+  .c.back { background: repeating-linear-gradient(45deg, #1f6b4a 0 6px, #2a8a60 6px 12px); border-color: #fff; }
+  .row { display: flex; gap: 6px; align-items: center; justify-content: center; }
+  .tag { font-size: 0.78rem; font-weight: 800; padding: 3px 10px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); text-align: center; }
+  .tag.o { background: var(--orange-soft); color: var(--orange); } .tag.g { background: var(--gold-soft); color: var(--gold); } .tag.p { background: var(--purple-soft); color: var(--purple); } .tag.b { background: var(--blue-soft); color: var(--blue); }
+  .cap { font-size: 0.82rem; color: var(--muted); text-align: center; }
+  .fan { display: flex; justify-content: center; height: 100px; align-items: flex-end; }
+  .fan .c { width: 58px; height: 84px; margin-left: -20px; transform-origin: 50% 130%; }
+  .fan .c:nth-child(1) { transform: rotate(-18deg); } .fan .c:nth-child(2) { transform: rotate(-6deg); } .fan .c:nth-child(3) { transform: rotate(6deg); } .fan .c:nth-child(4) { transform: rotate(18deg); }
+  .arrow { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 0.82rem; font-weight: 700; width: 100%; }
+  .arrow::before, .arrow::after { content: ""; flex: 1; height: 2px; background: var(--line); }
+  .table { display: grid; grid-template-columns: auto auto auto; grid-template-rows: auto auto auto; gap: 6px 14px; align-items: center; justify-items: center; }
+  .table .who { font-size: 0.78rem; color: var(--muted); font-weight: 700; text-align: center; }
+  .slot { display: grid; justify-items: center; gap: 3px; }
+  .felt { width: 100%; max-width: 330px; border-radius: 16px; background: var(--accent); background: linear-gradient(160deg, #24785a, #1b5a40); padding: 12px; color: #fff; display: grid; place-items: center; }
+  .slags { display: flex; gap: 8px; width: 100%; justify-content: center; }
+  .slag { flex: 1; max-width: 76px; border-radius: 12px; border: 1.5px solid var(--line); padding: 8px 4px; text-align: center; display: grid; gap: 4px; justify-items: center; opacity: .6; }
+  .slag .n { font: 800 1.5rem/1 var(--font-display); } .slag .m { font-size: 0.7rem; font-weight: 700; color: var(--muted); }
+  .slag.on { opacity: 1; border-color: var(--gold); background: var(--gold-soft); } .slag.on .m { color: var(--gold); }
+  .stake { display: flex; align-items: center; gap: 14px; }
+  .chip { width: 78px; height: 78px; border-radius: 50%; display: grid; place-items: center; font: 800 2.2rem/1 var(--font-display); background: var(--ink); color: var(--bg); border: 4px solid var(--surface); box-shadow: 0 0 0 2px var(--line); }
+  .chip.o { background: var(--orange); color: #fff; }
+  .mock { padding: 10px 16px; border-radius: 12px; font-weight: 800; min-width: 120px; text-align: center; }
+  .mock.ok { background: var(--accent); color: var(--accent-fg); } .mock.no { background: transparent; border: 1.5px solid var(--line); } .mock.to { background: var(--orange); color: #fff; } .mock.wa { background: var(--purple); color: #fff; }
+  .list { width: 100%; max-width: 340px; display: grid; gap: 6px; }
+  .li { display: flex; align-items: center; gap: 10px; background: var(--bg); border-radius: 12px; padding: 8px 10px; font-size: 0.92rem; }
+  .li b { min-width: 52px; } .li span { flex: 1; color: var(--muted); } .li .pt { font-weight: 800; border-radius: 8px; padding: 2px 8px; background: var(--orange-soft); color: var(--orange); } .li .pt.z { background: var(--accent-soft); color: var(--accent); }
+  .bartrack { height: 14px; background: var(--line); border-radius: 7px; overflow: hidden; width: 100%; } .bartrack i { display: block; height: 100%; background: var(--accent); }
+  .score { width: 100%; max-width: 330px; display: grid; gap: 6px; }
+  .score .h { display: flex; justify-content: space-between; align-items: baseline; font-weight: 800; } .score .h small { color: var(--muted); font-weight: 700; }
+  .phone { width: 190px; height: 340px; border-radius: 20px; border: 3px solid var(--ink); background: var(--bg); position: relative; display: flex; flex-direction: column; padding: 8px; gap: 6px; overflow: hidden; }
+  .phone .pb { background: #1f6b4a; color: #fff; border-radius: 10px; padding: 6px 8px; font-size: 0.7rem; display: flex; justify-content: space-between; align-items: center; } .phone .pb b { font: 800 1.3rem/1 var(--font-display); }
+  .phone .pl { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 4px 8px; font-size: 0.68rem; font-weight: 700; display: flex; justify-content: space-between; }
+  .phone .pt { margin-top: auto; background: var(--orange); color: #fff; border-radius: 8px; text-align: center; padding: 6px; font-weight: 800; font-size: 0.8rem; }
+  .phone .ph { display: flex; justify-content: center; gap: 4px; }
+  .phone .c { width: 30px; height: 44px; padding: 2px 3px; border-radius: 5px; } .phone .c b { font-size: 0.7rem; } .phone .c i { font-size: 0.95rem; margin: 0; }
+  .eye { position: absolute; right: 8px; bottom: 74px; width: 28px; height: 28px; border-radius: 50%; background: var(--ink); color: var(--bg); display: grid; place-items: center; }
+  .eye svg { width: 16px; height: 16px; }
+  .pin { position: absolute; width: 22px; height: 22px; border-radius: 50%; background: var(--gold); color: #fff; font: 800 0.8rem/22px var(--font-display); text-align: center; box-shadow: 0 0 0 3px var(--surface); }
+  .legend { display: grid; gap: 6px; font-size: 0.88rem; width: 100%; max-width: 340px; } .legend div { display: flex; gap: 8px; align-items: center; } .legend .pin { position: static; flex: none; box-shadow: none; }
+  .inapp { display: flex; gap: 14px; align-items: center; width: 100%; justify-content: center; }
+  .inapp .legend { max-width: 150px; font-size: 0.8rem; }
+  @media (max-height: 700px) { .phone { height: 270px; } .txt p { font-size: 0.92rem; } .c { width: 40px; height: 58px; } .fan .c { width: 50px; height: 72px; } .art { gap: 8px; } }
+</style>
+</head>
+<body>
+<div class="app" id="app"></div>
+<script>
+(function () {
+  'use strict';
+  var RED = { '♥': 1, '♦': 1 };
+  function card(r, s, cls) { return '<div class="c ' + (RED[s] ? 'r ' : '') + (cls || '') + '"><b>' + r + '</b><i>' + s + '</i></div>'; }
+  function row(h) { return '<div class="row">' + h + '</div>'; }
+  var EYE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3l18 18M10.6 5.1A10 10 0 0 1 12 5c6.4 0 10 7 10 7a17 17 0 0 1-3.2 4M6.6 6.7C3.9 8.5 2 12 2 12s3.6 7 10 7a9.7 9.7 0 0 0 4.2-.9"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>';
+
+  var steps = [
+    { t: 'Wat is Toepen?', p: 'Een kaartspel voor <b>2 tot 8 spelers</b>. Iedereen krijgt <b>4 kaarten</b>. Je wilt zo weinig mogelijk <b>strafpunten</b> halen.',
+      art: '<div class="fan">' + card('10', '♥') + card('A', '♠') + card('H', '♦') + card('7', '♣') + '</div>' +
+        '<div class="row"><span class="tag">32 kaarten</span><span class="tag b">4 per speler</span><span class="tag g">4 slagen</span></div>' },
+    { t: 'De kaarten', p: 'Van laag naar hoog. De <b>10 is het hoogst</b>, de <b>boer het laagst</b>. Er is geen troef.',
+      art: row(['B', 'V', 'H', 'A', '7', '8', '9', '10'].map(function (r) { return card(r, '♠', 'sm'); }).join('')) +
+        '<div class="arrow">laagste &nbsp;→&nbsp; hoogste</div>' +
+        '<div class="cap">B = boer · V = vrouw · H = heer · A = aas</div>' },
+    { t: 'Een slag spelen', p: 'Iedereen legt één kaart. Je moet dezelfde <b>kleur bekennen</b>. De hoogste kaart van die kleur wint de slag.',
+      art: '<div class="felt"><div class="table">' +
+        '<span></span><div class="slot">' + card('7', '♥') + '</div><span></span>' +
+        '<div class="slot">' + card('9', '♥', 'win') + '</div><span style="font-size:.7rem;opacity:.8">tafel</span><div class="slot">' + card('10', '♠', 'dim') + '</div>' +
+        '<span></span><div class="slot">' + card('B', '♥') + '</div><span></span></div></div>' +
+        '<div class="row"><span class="tag">♥ gevraagd</span><span class="tag g">♥9 wint</span></div>' +
+        '<div class="cap">De ♠10 heeft geen ♥ om te volgen en wordt opgegooid: die kan niet winnen.</div>' },
+    { t: 'Vier slagen per ronde', p: 'Een ronde heeft 4 slagen. Alleen de <b>laatste slag</b> telt: wie die wint, wint de ronde.',
+      art: '<div class="slags">' + [1, 2, 3, 4].map(function (n) { return '<div class="slag' + (n === 4 ? ' on' : '') + '"><span class="n">' + n + '</span>' + card(['8', '9', 'A', '10'][n - 1], ['♣', '♦', '♠', '♥'][n - 1], 'sm') + '<span class="m">' + (n === 4 ? 'TELT' : 'telt niet') + '</span></div>'; }).join('') + '</div>' +
+        '<div class="cap">Bewaar dus je hoogste kaart voor het einde.</div>' },
+    { t: 'Toepen', p: 'Denk je dat je wint? Zeg <b>Toep!</b> Dan gaat de inzet omhoog. De anderen kiezen: <b>meegaan</b> of <b>passen</b>.',
+      art: '<div class="stake"><div class="chip">1</div><span style="font-size:1.6rem;color:var(--muted)">→</span><div class="chip o">2</div></div>' +
+        '<div class="cap">De inzet begint op 1 en gaat bij elke toep 1 omhoog (standaard tot 4).</div>' +
+        '<div class="row"><div class="mock to">Toep!</div></div>' +
+        '<div class="row"><div class="mock ok">Meegaan</div><div class="mock no">Passen</div></div>' },
+    { t: 'Meegaan of passen?', p: 'Passen kost <b>weinig</b>. Meegaan en verliezen kost <b>de hele inzet</b>. Wie wint, krijgt niets.',
+      art: '<div class="list">' +
+        '<div class="li"><b>Anna</b><span>toept: inzet wordt 2</span></div>' +
+        '<div class="li"><b>Bram</b><span>past, zit nu uit de ronde</span><em class="pt" style="font-style:normal">+1</em></div>' +
+        '<div class="li"><b>Cas</b><span>gaat mee</span><em class="pt z" style="font-style:normal">0</em></div>' +
+        '<div class="li"><b>Anna</b><span>wint de laatste slag</span><em class="pt z" style="font-style:normal">0</em></div>' +
+        '<div class="li"><b>Cas</b><span>verliest de slag</span><em class="pt" style="font-style:normal">+2</em></div></div>' +
+        '<div class="cap">Wie past krijgt de inzet van <b>vóór</b> de toep (hier 1).</div>' },
+    { t: 'Strafpunten en af', p: 'Bij je grens (bijvoorbeeld 15) lig je <b>eruit</b>. Eén punt eronder sta je <b>op scherp</b>. Wie overblijft, wint.',
+      art: '<div class="score"><div class="h"><span>Anna</span><small>4 / 15</small></div><div class="bartrack"><i style="width:27%"></i></div></div>' +
+        '<div class="score"><div class="h"><span>Bram</span><small>14 / 15 <span class="tag o">op scherp</span></small></div><div class="bartrack"><i style="width:93%;background:var(--orange)"></i></div></div>' +
+        '<div class="score"><div class="h"><span>Cas</span><small>15 / 15 <span class="tag">af</span></small></div><div class="bartrack"><i style="width:100%;background:var(--muted)"></i></div></div>' },
+    { t: 'Vuile was', p: 'Alleen boeren, vrouwen, heren en azen? Meld <b>Vuile was</b> vóór de eerste kaart en neem 4 nieuwe. Bluffen mag: de anderen kunnen <b>controleren</b>.',
+      art: row(card('B', '♣') + card('V', '♥') + card('H', '♠') + card('A', '♦')) +
+        '<div class="row"><div class="mock wa">Vuile was</div></div>' +
+        '<div class="cap">Klopt het, dan krijgt de controleur een punt. Bluf je, dan krijg jij het punt.</div>' },
+    { t: 'Zo ziet het eruit', p: 'Onderin staan jouw kaarten. Lichten ze op, dan mag je ze spelen. Tik erop.',
+      art: '<div class="inapp"><div class="phone"><div class="pb"><span>Ronde 2</span><b>2</b></div><div class="pl"><span>Jij</span><span>3 / 15</span></div><div class="pl"><span>Kees</span><span>1 / 15</span></div>' +
+        '<div class="pt">Toep! → 3</div><div class="ph">' + card('10', '♥') + card('B', '♠') + card('7', '♦') + card('A', '♣') + '</div>' +
+        '<div class="eye">' + EYE + '</div>' +
+        '<span class="pin" style="left:6px;top:96px">1</span><span class="pin" style="right:4px;bottom:112px">2</span><span class="pin" style="left:6px;bottom:6px">3</span></div>' +
+        '<div class="legend"><div><span class="pin">1</span>Toep! (oranje)</div><div><span class="pin">2</span>Kaarten verbergen of tonen</div><div><span class="pin">3</span>Jouw kaarten: tik om te spelen</div></div></div>' },
+    { t: 'Klaar om te beginnen', p: 'Het makkelijkst leer je het door een potje te spelen tegen de computer. De app laat zien welke kaarten mogen.',
+      art: '<a class="btn primary" href="spelen.html?start=oefenen" style="width:100%;max-width:300px;min-height:60px">Oefenen tegen de computer</a>' +
+        '<a class="btn ghost" href="index.html" style="width:100%;max-width:300px">Naar het hoofdmenu</a>' }
+  ];
+
+  var i = 0;
+  try { var q = parseInt(new URLSearchParams(location.search).get('s'), 10); if (q >= 1 && q <= steps.length) i = q - 1; } catch (e) {}
+  try { var th = JSON.parse(localStorage.getItem('toepen-prefs-v1') || '{}').theme; if (th === 'light' || th === 'dark') document.documentElement.dataset.theme = th; } catch (e) {}
+  var app = document.getElementById('app');
+  function draw() {
+    var s = steps[i], last = i === steps.length - 1;
+    app.innerHTML =
+      '<div class="bar"><h1>Handleiding</h1><a class="btn ghost sm" href="index.html">Sluiten</a></div>' +
+      '<div class="dots" aria-hidden="true">' + steps.map(function (_, k) { return '<i class="' + (k === i ? 'on' : '') + '"></i>'; }).join('') + '</div>' +
+      '<div class="art">' + s.art + '</div>' +
+      '<div class="txt"><h2>' + (i + 1) + '. ' + s.t + '</h2><p>' + s.p + '</p></div>' +
+      '<div class="nav"><button class="btn ghost" data-d="-1"' + (i === 0 ? ' disabled' : '') + '>‹ Vorige</button>' +
+      (last ? '<a class="btn primary next" href="spelen.html?start=oefenen">Start oefenen</a>' : '<button class="btn primary next" data-d="1">Volgende ›</button>') + '</div>';
+  }
+  app.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-d]'); if (!b) return;
+    i = Math.max(0, Math.min(steps.length - 1, i + +b.dataset.d)); draw();
+  });
+  draw();
+})();
+</script>
+</body>
+</html>

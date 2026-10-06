@@ -231,6 +231,8 @@
   .fp-body { flex: 1 0 auto; width: 100%; display: flex; flex-direction: column; }
   .fp-body > .page-nav, .wrap > .stack > .page-nav { margin-top: auto; }
   .navlist { display: grid; gap: 8px; }
+  .hlink { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 46px; padding: 8px 10px; border-radius: 14px; background: var(--accent-soft); border: 1px solid var(--accent); color: var(--accent); font-weight: 700; font-size: 0.9rem; text-decoration: none; }
+  .hlink::after { content: "›"; margin-left: auto; font-size: 1.4rem; }
   .navrow { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 52px; padding: 8px 14px; border-radius: 14px; background: var(--surface); border: 1px solid var(--line); text-align: left; }
   .navrow b { flex: 1; min-width: 0; }
   .navrow::after { content: "›"; color: var(--muted); font-size: 1.4rem; flex: none; }
@@ -1600,7 +1602,7 @@
         var hp = sh.stack[sh.stack.length - 1], RT = rulesTopics(), GS = guideSteps();
         if (hp.v === 'menu') {
           full = 'Spelregels en uitleg';
-          inner = '<div class="label">Spelregels</div><div class="navlist">' + RT.map(function (t, i) {
+          inner = '<div class="label">Spelregels</div><div class="navlist"><a class="hlink" href="handleiding.html"><b>Handleiding met plaatjes</b></a>' + RT.map(function (t, i) {
             return '<button class="navrow" data-act="hp-open" data-v="topic" data-i="' + i + '"><b>' + t.t + '</b></button>'; }).join('') + '</div>' +
             '<div class="label">Zo speel je in de app</div><div class="navlist">' + GS.map(function (t, i) {
             return '<button class="navrow" data-act="hp-open" data-v="step" data-i="' + i + '"><b>' + t.t + '</b></button>'; }).join('') + '</div>';
