@@ -136,7 +136,7 @@
   .pc.back { background: repeating-linear-gradient(45deg, #2f7354 0 6px, #24573f 6px 12px); border-color: rgba(255,255,255,0.3); }
   .minis { display: flex; gap: 4px; flex-wrap: wrap; }
   .hand { position: fixed; left: 0; right: 0; bottom: 0; z-index: 8; background: var(--surface); border-top: 1px solid var(--line); padding: 10px 16px calc(12px + env(safe-area-inset-bottom, 0px)); box-shadow: 0 -8px 24px -16px rgba(0,0,0,0.5); }
-  .hand .inner { max-width: 560px; margin: 0 auto; display: grid; gap: 10px; }
+  .hand .inner { max-width: 560px; margin: 0 auto; display: grid; gap: 14px; }   /* room between the buttons and the cards, so a card tap never hits Toep */
   .hand .cards { display: flex; gap: 10px; justify-content: center; }
   .hand .pc { width: 72px; height: 104px; } .hand .pc .r { font-size: 1.3rem; } .hand .pc .s2 { font-size: 2.3rem; }
   .hand button.pc { cursor: pointer; transition: transform 0.12s; }
@@ -249,6 +249,7 @@
   .fit3 .qr { width: 130px; padding: 8px; }
   .fit3 .bigcode { font-size: 1.6rem; }
   .fit3 .lobby-line { display: none; }
+  .undofab { position: fixed; right: 14px; bottom: 138px; z-index: 12; width: 52px; height: 52px; border-radius: 50%; background: var(--warn-soft); color: var(--warn); border: 1.5px solid var(--warn); font-size: 1.5rem; font-weight: 800; box-shadow: 0 6px 16px -4px rgba(0,0,0,0.35); display: grid; place-items: center; }
   .handfab { position: fixed; right: 14px; bottom: 76px; z-index: 12; width: 52px; height: 52px; border-radius: 50%; background: var(--surface); color: var(--fg); border: 1.5px solid var(--line); font-size: 1.5rem; box-shadow: 0 6px 16px -4px rgba(0,0,0,0.35); display: grid; place-items: center; }
   .handfab[aria-pressed="true"] { background: var(--ink); color: var(--ink-fg); }
   .blackout { position: fixed; inset: 0; z-index: 70; background: #000; display: flex; align-items: flex-end; justify-content: center; padding: 24px; }
@@ -460,6 +461,7 @@
 
   function onPub(st) {
     var prevPending = S.pub && S.pub.round && S.pub.round.pending;
+    if (st && st.round && S.pub && (st.round.undone || 0) > (S.pub.round.undone || 0) && S.role !== 'host') toast('De host heeft de laatste actie ongedaan gemaakt.');
     S.pub = st;
     if (st && st.lastResult && st.phase !== 'play') {
       var key = st.round.n + '-' + st.lastResult.n;
@@ -837,7 +839,7 @@
     var dealer = prev ? (prev.dealer + 1) % seats.length : Math.floor(Math.random() * seats.length);
     S.G = E.newGame({ seats: seats, limit: S.meta.limit, rules: S.meta.rules, dealer: dealer });
     S.G.recorded = false;
-    S.lastHands = {};
+    S.lastHands = {}; S.snaps = [];
     S.db.update(base() + '/meta', { status: 'playing' });
     publish();
   }
@@ -896,10 +898,41 @@
     }, DELAY.bot * (r.pending || r.was ? 0.6 : 1));
   }
 
+  /* ---------- Undo (host only): snapshots of the game before every action ---------- */
+  function cardText(c) { return E.rankOf(c) + SUIT[E.suitOf(c)]; }
+  function actionLabel(uid, a) {
+    var n = name(uid);
+    if (a.type === 'play') return n + ' speelde ' + cardText(a.card);
+    if (a.type === 'toep') return n + ' toepte';
+    if (a.type === 'answer') return n + (a.mee ? ' ging mee' : ' paste');
+    if (a.type === 'was') return n + ' meldde vuile was';
+    if (a.type === 'wascheck') return n + (a.check ? ' controleerde de vuile was' : ' geloofde de vuile was');
+    return n + ' deed iets';
+  }
+  // Undo goes back to just before the last move of a person (moves by computer players are undone along with it).
+  function undoTarget() {
+    var sn = S.snaps || [];
+    for (var i = sn.length - 1; i >= 0; i--) if (!sn[i].auto) return { idx: i, label: sn[i].label };
+    return null;
+  }
+  function undoLast() {
+    var t = undoTarget(); if (!t || !S.G) return;
+    var cur = S.G, wasDone = cur.phase === 'done' && cur.recorded, wname = wasDone && cur.players[cur.winner] ? cur.players[cur.winner].name : null, seq = cur.seq || 0, undone = (cur.undone || 0) + 1;
+    S.G = JSON.parse(S.snaps[t.idx].json); S.snaps = S.snaps.slice(0, t.idx);
+    S.G.seq = seq + 1; S.G.undone = undone; S.lastHands = {};
+    if (wasDone && S.G.phase !== 'done' && !S.practice) {
+      var sb = ls(K.sb);
+      if (sb && sb.archive && sb.archive.length) { sb.archive.pop(); if (wname && sb.wins && sb.wins[wname]) sb.wins[wname]--; ls(K.sb, sb); }
+      S.db.update(base() + '/meta', { status: 'playing' });
+    }
+    S.sheet = null; clearTimeout(S.hostTimer); publish(); toast('Ongedaan gemaakt: ' + t.label);
+  }
   function hostHandle(uid, a, remote) {
     if (!S.G) return { ok: false };
+    var snap = JSON.stringify(S.G), label = actionLabel(uid, a), wasAuto = autoFor(uid);
     var res = E.apply(S.G, uid, a);
     if (res.ok) {
+      S.snaps = S.snaps || []; S.snaps.push({ json: snap, by: uid, label: label, auto: wasAuto }); if (S.snaps.length > 80) S.snaps.shift();
       res.events.forEach(function (ev) {
         if (ev.t === 'toep' && ev.by !== S.uid) toastIfLeader(name(ev.by) + ' toept! Inzet ' + ev.to);
       });
@@ -1013,7 +1046,7 @@
     S.err = (e && e.message) || 'Er ging iets mis.';
     if (/permission|PERMISSION/.test(S.err)) S.err = 'Geen toegang tot de database. Kloppen de Firebase-regels?';
     if (/network|offline/i.test(S.err)) S.err = 'Geen verbinding. Controleer je internet en probeer opnieuw.';
-    S.view = 'home'; render();
+    S.view = S.urlCode && !S.code ? 'invite' : 'home'; render();
   }
 
   /* ---------- Actions from this phone ---------- */
@@ -1054,6 +1087,16 @@
       '<div class="tools"><button class="btn ghost sm icon-round" data-act="help" aria-label="Spelregels en uitleg">?</button>' + (extra || '') + '</div></div>';
   }
 
+  // What somebody sees who scans the QR code or taps the WhatsApp link without the app: just a name and one button.
+  function renderInvite() {
+    var code = S.urlCode || S.pendingJoin || '';
+    var html = '<div class="topbar"><div class="meta"><h1>Je bent uitgenodigd!</h1><div class="small muted">Toepen · tafel ' + esc(code) + '</div></div></div>';
+    if (S.err) html += '<div class="notice" role="alert">' + esc(S.err) + '</div>';
+    html += '<div class="panel"><label class="label" for="myname">Hoe heet je?</label><input class="text" id="myname" maxlength="18" autocomplete="given-name" autocapitalize="words" value="' + esc(S.name) + '" placeholder="Typ je naam"></div>';
+    html += '<button class="btn primary big" data-act="join" data-v="' + esc(code) + '"' + (S.busy ? ' disabled' : '') + '>' + (S.busy ? 'Even geduld…' : 'Meedoen aan tafel ' + esc(code)) + '</button>';
+    html += '<p class="small muted" style="text-align:center;margin:0">Je hoeft niets te installeren: je speelt gewoon in je browser. Wil je de volgende keer sneller starten? Tik op ⋮ en kies <b>Toevoegen aan startscherm</b>.</p>';
+    return '<div class="stack">' + html + '</div>';
+  }
   function renderHome() {
     var saved = ls(K.host), html = '';
     html += topbar('Multiplayer', 'Toepen, ieder op de eigen telefoon', '<a class="btn ghost sm" href="index.html" aria-label="Terug naar het hoofdmenu">← Terug</a>');
@@ -1442,7 +1485,7 @@
     var html = '<div class="hand' + (myTurn ? ' myturn' : '') + '"><div class="inner">';
     if (folded) html += '<div class="small muted" style="text-align:center">Je hebt gepast en doet deze ronde niet meer mee.</div>';
     var acts = '';
-    if (E.canToep(G, S.uid)) acts += '<button class="btn toep" data-act="toep">Toep! → ' + (r.stake + 1) + '</button>';
+    if (E.canToep(G, S.uid)) acts += '<button class="btn toep" data-act="' + (window.ToepenPrefs && !ToepenPrefs.get().confirmToep ? 'toep' : 'toep-ask') + '">Toep! → ' + (r.stake + 1) + '</button>';
     var shown = !handHidden() || S.peek;
     if (E.canWas(G, S.uid)) acts += '<button class="btn warn" data-act="was-ask">Vuile was</button>';
     if (acts) html += '<div class="acts">' + acts + '</div>';
@@ -1553,6 +1596,8 @@
         var host = S.role === 'host';
         inner = '<h2>Menu</h2>';
         if (host && S.G) {
+          var ut = undoTarget();
+          inner += '<button class="btn ' + (ut ? 'warn' : 'ghost') + '" data-act="undo-ask"' + (ut ? '' : ' disabled') + '>↶ Ongedaan maken' + (ut ? ': ' + esc(ut.label) : '') + '</button>';
           inner += '<div class="label">Spelers</div>' + S.G.seats.map(function (id) {
             var p = S.players[id] || {};
             if (p.bot) return '';
@@ -1578,6 +1623,14 @@
           '<p class="small muted" style="margin:0">Wie later binnenkomt, kijkt mee en speelt mee vanaf het volgende potje.</p>';
       } else if (sh.type === 'chat') {
         inner = chatSheet();
+      } else if (sh.type === 'toepask') {
+        var tg = viewGame(), tstake = tg ? tg.round.stake : 1;
+        inner = '<h2>Toepen?</h2><p class="muted">De inzet gaat van <b>' + tstake + '</b> naar <b>' + (tstake + 1) + '</b>. De anderen kiezen dan: meegaan of passen.</p>' +
+          '<button class="btn primary big" data-act="toep">Ja, ik toep!</button>';
+      } else if (sh.type === 'undoask') {
+        var us = undoTarget();
+        inner = us ? '<h2>Ongedaan maken?</h2><p class="muted">Het spel gaat terug naar vlak voor: <b>' + esc(us.label) + '</b>. Alle telefoons krijgen weer de oude stand en kaarten.</p><button class="btn warn big" data-act="undo-do">Ja, ongedaan maken</button>'
+          : '<h2>Ongedaan maken</h2><p class="muted">Er is niets om ongedaan te maken.</p>';
       } else if (sh.type === 'wasask') {
         var wp = (S.meta && S.meta.rules && S.meta.rules.wasStraf) || 1;
         inner = '<h2>Vuile was melden?</h2><p class="muted">Je meldt dat je alleen boeren, vrouwen, heren en azen hebt. De anderen mogen controleren. Klopt het niet, dan krijg je ' + plural(wp, 'strafpunt', 'strafpunten') + '. Controleert niemand, dan neem je 4 nieuwe kaarten.</p>' +
@@ -1597,8 +1650,10 @@
           '<button class="btn ghost" data-act="sheet-close">Sluiten</button></div></div>';
       }
     }
+    var uq = S.role === 'host' && S.G && S.view === 'table' && !S.black && undoTarget();
     var qh = G && S.view === 'table' && G.phase === 'play' && G.seats.indexOf(S.uid) >= 0 && !(G.players[S.uid] || {}).out && !S.black;
     if (qh && !(S.sheet && S.sheet.type === 'chat')) html += '<button class="handfab" data-act="hand-quick" aria-pressed="' + handHidden() + '" aria-label="' + (handHidden() ? 'Kaarten altijd tonen' : 'Kaarten verbergen') + '">' + (handHidden() ? '👁' : '🙈') + '</button>';
+    if (uq && !(S.sheet && S.sheet.type === 'chat')) html += '<button class="undofab" data-act="undo-ask" aria-label="Laatste actie ongedaan maken">↶</button>';
     if (chatAvailable() && !(S.sheet && S.sheet.type === 'chat')) html += '<button class="chatfab" data-act="chat-open" aria-label="Chat' + (S.chatUnread ? ', ' + S.chatUnread + ' nieuw' : '') + '">💬' + (S.chatUnread ? '<span class="badge">' + S.chatUnread + '</span>' : '') + '</button>';
     var nm = S.black ? needsMe(G) : '';
     if (S.black && nm && nm !== S.blackKey) { S.black = false; buzz([90, 60, 90]); }
@@ -1615,9 +1670,10 @@
     document.body.style.overflow = fp ? 'hidden' : '';
     var fab = layer.querySelector('.chatfab'), hd = app.querySelector('.hand');
     var fb = (hd ? hd.offsetHeight : 0) + 14;
-    var hf = layer.querySelector('.handfab');
+    var hf = layer.querySelector('.handfab'), uf = layer.querySelector('.undofab');
     if (fab) fab.style.bottom = fb + 'px';
     if (hf) hf.style.bottom = (fb + (fab ? 62 : 0)) + 'px';
+    if (uf) uf.style.bottom = (fb + (fab ? 62 : 0) + (hf ? 62 : 0)) + 'px';
     var cl = document.getElementById('chatlist'); if (cl) cl.scrollTop = cl.scrollHeight;
     var ct = document.getElementById('chattext');
     if (ct && chatFocus) { ct.focus(); try { ct.setSelectionRange(chatFocus.a, chatFocus.b); } catch (e) {} }
@@ -1626,11 +1682,12 @@
   // Tighten the layout step by step until the screen fits without scrolling.
   function render() {
     for (var lvl = 0; lvl <= 4; lvl++) {
-      app.className = 'wrap' + (lvl ? ' fit1' : '') + (lvl > 1 ? ' fit2' : '') + (lvl > 2 ? ' fit3' : '') + (lvl > 3 ? ' fit4' : '') + (S.view === 'home' ? ' home' : '') + (/^(home|mp0|mp1|mpjoin|ringjoin)$/.test(S.view) ? ' menuview' : '') + (S.view === 'fb' ? ' fbwrap' : '');
+      app.className = 'wrap' + (lvl ? ' fit1' : '') + (lvl > 1 ? ' fit2' : '') + (lvl > 2 ? ' fit3' : '') + (lvl > 3 ? ' fit4' : '') + (S.view === 'home' ? ' home' : '') + (/^(home|invite|mp0|mp1|mpjoin|ringjoin)$/.test(S.view) ? ' menuview' : '') + (S.view === 'fb' ? ' fbwrap' : '');
       var html;
       if (S.view === 'table') html = renderTable();
       else if (S.view === 'create' || S.view === 'practice') html = renderCreate();
       else if (S.view === 'fb') html = renderFb();
+      else if (S.view === 'invite') html = renderInvite();
       else if (S.view === 'mp0') html = renderMp0();
       else if (S.view === 'mp1') html = renderMp1();
       else if (S.view === 'mpjoin') html = renderMpJoin();
@@ -1695,6 +1752,7 @@
 
   document.addEventListener('keydown', function (e) {
     if (e.key === 'Enter' && e.target.id === 'joincode') joinTable(e.target.value);
+    if (e.key === 'Enter' && e.target.id === 'myname' && S.view === 'invite') { S.err = ''; joinTable(S.urlCode || S.pendingJoin); }
     if (e.key === 'Enter' && e.target.id === 'chattext') { if (sendChat(e.target.value)) { S.chatDraft = ''; stopListening(); renderLayer(); } }
     if (e.key === 'Escape' && S.sheet) { if (S.sheet.type === 'help' && history.state && history.state.toepenPage) history.back(); else { S.sheet = null; renderLayer(); } }
   });
@@ -1817,7 +1875,10 @@
       case 'black-tap': if (Date.now() - (S.blackTap || 0) < 600) { S.black = false; S.blackTap = 0; } else S.blackTap = Date.now(); renderLayer(); break;
       case 'hide-peek':
         S.peek = true; clearTimeout(S.peekTimer); S.peekTimer = setTimeout(function () { S.peek = false; render(); }, 20000); render(); break;
-      case 'toep': act({ type: 'toep' }); buzz(40); break;
+      case 'undo-ask': S.sheet = { type: 'undoask' }; renderLayer(); break;
+      case 'undo-do': undoLast(); break;
+      case 'toep-ask': S.sheet = { type: 'toepask' }; renderLayer(); break;
+      case 'toep': S.sheet = null; act({ type: 'toep' }); buzz(40); break;
       case 'watch': S.db.update(base() + '/players/' + S.uid, { spectator: !(S.players[S.uid] && S.players[S.uid].spectator) }); break;
       case 'invite-open': S.sheet = { type: 'invite' }; renderLayer(); break;
       case 'auto-me': S.db.update(base() + '/players/' + S.uid, { auto: false }); break;
@@ -1861,7 +1922,7 @@
   else {
     var j = ls(K.join);
     if (!qcode && !START && j && j.code && S.name.trim() && (j.kind === 'peer' || NET)) joinTable(j.code, j.kind === 'peer' ? 'peer' : undefined);
-    else render();
+    else { if (qcode) S.view = 'invite'; render(); }
   }
 })();
 </script>

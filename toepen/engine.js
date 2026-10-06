@@ -335,7 +335,7 @@
       lastResult: G.results.length ? G.results[G.results.length - 1] : null,
       round: {
         n: r.n, stake: r.stake, toeps: r.toeps, passed: r.passed, trick: r.trick, trickNo: r.trickNo,
-        leader: r.leader, turn: r.turn, pending: r.pending, lastTrick: r.lastTrick, wasDone: r.wasDone, was: r.was, wasResult: r.wasResult,
+        leader: r.leader, turn: r.turn, pending: r.pending, lastTrick: r.lastTrick, wasDone: r.wasDone, was: r.was, wasResult: r.wasResult, undone: G.undone || 0,
         dealer: r.dealer, handCounts: counts, stockCount: r.stock.length
       }
     };

@@ -161,6 +161,7 @@
       return '<button data-act="pref-takeover" data-v="' + o[0] + '" aria-pressed="' + (pr.takeover === o[0]) + '">' + o[1] + '</button>'; }).join('') + '</div>' +
       '<p class="small muted" style="margin:0">' + (pr.takeover ? 'Na ' + (pr.takeover >= 60 ? pr.takeover / 60 + ' min' : pr.takeover + ' seconden') + ' offline speelt de computer voor die speler, tot hij of zij terug is.' : 'Het spel wacht tot de speler terug is. De host kan zelf de computer laten overnemen.') + '</p></div>';
     h += '<div class="panel">' + toggle('pref-sound', pr.sound, 'Geluid', 'Korte tonen bij toepen, rondes en de winnaar.') +
+      toggle('pref-confirmToep', pr.confirmToep, 'Toep bevestigen', 'Je moet de toep nog een keer bevestigen. Zo toep je niet per ongeluk.') +
       toggle('pref-vibrate', pr.vibrate, 'Trillen', 'Voelbare tik bij elke actie.') +
       toggle('pref-wake', pr.wake, 'Scherm aan houden', 'Je telefoon gaat niet op slot tijdens het spel.') + '</div>';
     h += '<a class="btn ghost" href="spelen.html?start=firebase">Firebase koppelen (multiplayer)</a>';
@@ -269,7 +270,7 @@
       case 'pref-takeover': window.ToepenPrefs.set('takeover', +el.dataset.v); draw(); break;
       case 'pref-hand': window.ToepenPrefs.set('hand', el.dataset.v); draw(); break;
       case 'pref-theme': window.ToepenPrefs.set('theme', el.dataset.v); window.ToepenPrefs.apply(); draw(); break;
-      case 'pref-sound': case 'pref-vibrate': case 'pref-wake':
+      case 'pref-confirmToep': case 'pref-sound': case 'pref-vibrate': case 'pref-wake':
         var pk = a.slice(5); window.ToepenPrefs.set(pk, !window.ToepenPrefs.get()[pk]); if (pk === 'vibrate' && navigator.vibrate) { try { navigator.vibrate(30); } catch (er2) {} } draw(); break;
       case 'menu': ui.view = 'menu'; ui.sheet = null; draw(); break;
       case 'page': ui.page += +el.dataset.v; draw(); break;
