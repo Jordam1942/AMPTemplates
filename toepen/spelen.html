@@ -419,7 +419,7 @@
     var k = S.method || 'peer', m = METHODS[k], needSetup = k === 'firebase' && !NET;
     var html = topbar(m.t, 'Ben je de host?', '<button class="btn ghost sm" data-act="mp0">Terug</button>');
     if (S.err) html += '<div class="notice" role="alert">' + esc(S.err) + '</div>';
-    html += '<div class="panel"><label class="label" for="myname">Jouw naam</label><input class="text" id="myname" maxlength="18" autocomplete="off" value="' + esc(S.name) + '" placeholder="Bijvoorbeeld Anna"></div>';
+    html += '<div class="panel"><label class="label" for="myname">Jouw naam</label><input class="text" id="myname" maxlength="18" autocomplete="off" value="' + esc(S.name) + '" placeholder="Typ je naam"></div>';
     var hostD = needSetup ? 'Jij stelt Firebase eenmalig in, stap voor stap (ongeveer 10 minuten). Daarna maak je een tafel.'
       : k === 'ring' ? 'Je toont een QR aan je buurman en scant daarna zijn antwoord.'
       : 'Je opent de tafel. Je vrienden scannen jouw QR en zitten direct aan tafel.';
@@ -433,11 +433,11 @@
     var k = S.method || 'peer', m = METHODS[k], needSetup = k === 'firebase' && !NET;
     var html = topbar('Meedoen', m.t, '<button class="btn ghost sm" data-act="mp1">Terug</button>');
     if (S.err) html += '<div class="notice" role="alert">' + esc(S.err) + '</div>';
-    html += '<div class="panel"><label class="label" for="myname">Jouw naam</label><input class="text" id="myname" maxlength="18" autocomplete="off" value="' + esc(S.name) + '" placeholder="Bijvoorbeeld Anna"></div>';
+    html += '<div class="panel"><label class="label" for="myname">Jouw naam</label><input class="text" id="myname" maxlength="18" autocomplete="off" value="' + esc(S.name) + '" placeholder="Typ je naam"></div>';
     html += '<div class="panel" style="text-align:center"><b>Scan de QR van de host</b><p class="small muted lobby-hint">' + (needSetup ? 'Hierdoor wordt alles vanzelf voor je ingesteld.' : 'Je zit dan meteen aan tafel.') + '</p>' +
       '<button class="btn primary big" data-act="mp-scanqr">QR scannen</button></div>';
     html += '<div class="panel"><b>Of vul de tafelcode in</b>' +
-      '<div class="row"><input class="text code" id="joincode" maxlength="4" autocomplete="off" placeholder="KLAV" style="flex:1;min-width:0"' + (needSetup ? ' disabled' : '') + '>' +
+      '<div class="row"><input class="text code" id="joincode" maxlength="4" autocomplete="off" placeholder="Tafelcode" style="flex:1;min-width:0"' + (needSetup ? ' disabled' : '') + '>' +
       '<button class="btn primary" data-act="join"' + (!needSetup && !S.busy ? '' : ' disabled') + '>Meedoen</button></div>' +
       (needSetup ? '<p class="small muted">Met een code werkt het pas als Firebase is ingesteld. Scan daarom eerst de QR van de host.</p>' : '') + '</div>';
     return '<div class="stack">' + html + '</div>';
@@ -856,7 +856,7 @@
     var saved = ls(K.host), html = '';
     html += topbar('Multiplayer', 'Toepen, ieder op de eigen telefoon', '<a class="btn ghost sm" href="index.html">Scorebord</a>');
     if (S.err) html += '<div class="notice" role="alert">' + esc(S.err) + '</div>';
-    html += '<div class="panel"><label class="label" for="myname">Jouw naam</label><input class="text" id="myname" maxlength="18" autocomplete="off" value="' + esc(S.name) + '" placeholder="Bijvoorbeeld Anna"></div>';
+    html += '<div class="panel"><label class="label" for="myname">Jouw naam</label><input class="text" id="myname" maxlength="18" autocomplete="off" value="' + esc(S.name) + '" placeholder="Typ je naam"></div>';
     if (S.pendingJoin || S.urlCode) {
       var pc = S.pendingJoin || S.urlCode;
       html += '<div class="panel"><h2>Meedoen aan tafel ' + esc(pc.toUpperCase()) + '</h2><p class="muted small">Vul je naam in en tik op Meedoen.</p>' +

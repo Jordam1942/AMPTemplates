@@ -422,7 +422,7 @@
 (function () {
   'use strict';
   var KEY = 'toepen-scorebord-v2';
-  var VERSION = '27 (vensters boven pagina’s)';
+  var VERSION = '28 (voorbeeldteksten weg)';
   var COLORS = ['#2f7d5b', '#c2571a', '#3b6fb6', '#a63d6b', '#7a5bb5', '#a67c12', '#1f8a8f', '#5d6b1f'];
   var app = document.getElementById('app');
   var layer = document.getElementById('layer');
@@ -1418,7 +1418,7 @@
 
   function notesHtml() {
     return '<label class="label" for="notes">Eigen afspraken van jullie tafel</label>' +
-      '<textarea id="notes" style="min-height:40vh" placeholder="Bijvoorbeeld: armoede telt ook, bij 3 azen mag je ruilen…">' + esc(state.setup.notes || '') + '</textarea>' +
+      '<textarea id="notes" style="min-height:40vh" placeholder="Typ hier jullie eigen afspraken">' + esc(state.setup.notes || '') + '</textarea>' +
       '<p class="small muted">Wordt automatisch bewaard en staat hier elke keer weer.</p>';
   }
 
