@@ -4,7 +4,7 @@
  */
 (function (root) {
   'use strict';
-  var KEY = 'toepen-prefs-v1', DEFAULTS = { theme: 'system', sound: true, vibrate: true, wake: true };
+  var KEY = 'toepen-prefs-v1', DEFAULTS = { theme: 'system', sound: true, vibrate: true, wake: true, hand: 'zichtbaar' };  // hand: zichtbaar | verborgen | auto (plat op tafel)
   function read() {
     try { var o = JSON.parse(localStorage.getItem(KEY)); return o && typeof o === 'object' ? o : null; } catch (e) { return null; }
   }

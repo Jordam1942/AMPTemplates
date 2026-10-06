@@ -115,9 +115,23 @@
   }
 
   /* ---------- Views ---------- */
+  // A table (practice game, or a multiplayer table) that is still open on this phone
+  function openTable() {
+    try {
+      var hst = JSON.parse(localStorage.getItem('toepen-mp-host'));
+      if (hst && hst.code && (!hst.practice || localStorage.getItem('toepen-mp-game-' + hst.code))) return { practice: !!hst.practice, code: hst.code, host: true };
+      var jn = JSON.parse(localStorage.getItem('toepen-mp-join'));
+      if (jn && jn.code) return { code: jn.code, host: false };
+    } catch (e) {}
+    return null;
+  }
   function renderMenu() {
-    var cur = S.current(), h = '';
+    var cur = S.current(), h = '', ot = openTable();
     h += '<div class="topbar"><div class="meta"><h1>Toepen</h1><div class="suits" aria-hidden="true">♠ ♥ ♣ ♦</div></div></div><div class="stack down">';
+    if (ot) {
+      h += '<a class="choice main" href="spelen.html?start=verder"><b>' + (ot.practice ? 'Verder met je oefenspel' : ot.host ? 'Verder met je tafel ' + esc(ot.code) : 'Terug naar tafel ' + esc(ot.code)) + ' <span class="go">→</span></b><span>' +
+        (ot.practice ? 'Tegen de computer. Waar je gebleven was.' : 'Je zit nog aan tafel.') + '</span></a>';
+    }
     if (cur && cur.sum.players.length && !cur.sum.done) {
       h += '<a class="choice main" href="scorebord.html"><b>Verder met je spel <span class="go">→</span></b><span>Ronde ' + cur.sum.round + ' · ' + esc(who(cur.sum)) + '</span></a>';
     }
@@ -137,6 +151,9 @@
     h += '<div class="topbar"><div class="meta"><h1>Instellingen</h1><div class="small muted">Geldt voor het hele spel</div></div><button class="btn ghost sm" data-act="menu">← Terug</button></div><div class="stack down">';
     h += '<div class="panel"><div class="label">Thema</div><div class="seg">' + [['system', 'Systeem'], ['light', 'Licht'], ['dark', 'Donker']].map(function (o) {
       return '<button data-act="pref-theme" data-v="' + o[0] + '" aria-pressed="' + (pr.theme === o[0]) + '">' + o[1] + '</button>'; }).join('') + '</div></div>';
+    h += '<div class="panel"><div class="label">Je kaarten verbergen</div><div class="seg">' + [['zichtbaar', 'Zichtbaar'], ['verborgen', 'Verborgen'], ['auto', 'Plat op tafel']].map(function (o) {
+      return '<button data-act="pref-hand" data-v="' + o[0] + '" aria-pressed="' + (pr.hand === o[0]) + '">' + o[1] + '</button>'; }).join('') + '</div>' +
+      '<p class="small muted" style="margin:0">' + ({ zichtbaar: 'Je kaarten zijn altijd te zien.', verborgen: 'Kaartruggen. Tik erop om ze even te zien.', auto: 'Verborgen zodra je telefoon plat op tafel ligt. Pak je hem op, dan zie je ze weer.' }[pr.hand] || '') + '</p></div>';
     h += '<div class="panel">' + toggle('pref-sound', pr.sound, 'Geluid', 'Korte tonen bij toepen, rondes en de winnaar.') +
       toggle('pref-vibrate', pr.vibrate, 'Trillen', 'Voelbare tik bij elke actie.') +
       toggle('pref-wake', pr.wake, 'Scherm aan houden', 'Je telefoon gaat niet op slot tijdens het spel.') + '</div>';
@@ -243,6 +260,7 @@
     switch (a) {
       case 'saves': ui.view = 'saves'; ui.page = 0; draw(); break;
       case 'settings': ui.view = 'settings'; draw(); break;
+      case 'pref-hand': window.ToepenPrefs.set('hand', el.dataset.v); draw(); break;
       case 'pref-theme': window.ToepenPrefs.set('theme', el.dataset.v); window.ToepenPrefs.apply(); draw(); break;
       case 'pref-sound': case 'pref-vibrate': case 'pref-wake':
         var pk = a.slice(5); window.ToepenPrefs.set(pk, !window.ToepenPrefs.get()[pk]); if (pk === 'vibrate' && navigator.vibrate) { try { navigator.vibrate(30); } catch (er2) {} } draw(); break;

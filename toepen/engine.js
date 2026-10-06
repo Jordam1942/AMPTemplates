@@ -41,7 +41,7 @@
     return arr;
   }
 
-  var DEFAULT_RULES = { dubbelToep: false, scherpPassen: true, wittewas: true, hoogsteDeelt: false };
+  var DEFAULT_RULES = { dubbelToep: false, scherpPassen: true, wittewas: true, wasStraf: 1, hoogsteDeelt: false };
 
   /* ---------- Game setup ---------- */
 
@@ -102,7 +102,7 @@
     G.round = {
       n: G.roundNo, stake: 1, toeps: [], passed: {}, hands: hands, stock: deck,
       trick: [], trickNo: 1, leader: order[0], turn: order[0], pending: null,
-      lastTrick: null, wasDone: {}, dealer: dealerId
+      lastTrick: null, wasDone: {}, was: null, wasResult: null, dealer: dealerId
     };
     G.phase = 'play';
     G.seq++;
@@ -132,7 +132,7 @@
 
   function canToep(G, id) {
     var r = G.round;
-    return G.phase === 'play' && !r.pending && r.turn === id && inRound(G, id) &&
+    return G.phase === 'play' && !r.pending && !r.was && r.turn === id && inRound(G, id) &&
       inRoundIds(G).length > 1 && (G.rules.dubbelToep || lastToeper(G) !== id);
   }
 
@@ -140,11 +140,13 @@
     return hand.length === 4 && hand.every(function (c) { return FACES.indexOf(rankOf(c)) >= 0; });
   }
 
+  // Anyone may claim a dirty-laundry hand before the first card is played, also when bluffing.
+  // The others may then check: the game looks at the real hand and decides.
   function canWas(G, id) {
     var r = G.round;
-    return G.phase === 'play' && G.rules.wittewas && !r.pending && inRound(G, id) &&
+    return G.phase === 'play' && G.rules.wittewas && !r.pending && !r.was && inRound(G, id) &&
       r.trickNo === 1 && r.trick.length === 0 && r.toeps.length === 0 &&
-      !r.wasDone[id] && r.stock.length >= 4 && isWitteWas(r.hands[id] || []);
+      !r.wasDone[id] && r.stock.length >= 4 && (r.hands[id] || []).length === 4;
   }
 
   function mustPlay(G, id) { return !G.rules.scherpPassen && isScherp(G, id); }
@@ -178,18 +180,26 @@
 
       case 'was':
         if (!canWas(G, id)) return fail('Vuile was kan nu niet.');
-        var old = r.hands[id];
-        r.hands[id] = r.stock.splice(r.stock.length - 4, 4);
-        r.stock = shuffle(r.stock.concat(old));
         r.wasDone[id] = true;
-        ev.push({ t: 'was', by: id });
+        r.wasResult = null;
+        r.was = { by: id, awaiting: inRoundIds(G).filter(function (o) { return o !== id; }), answers: {} };
+        ev.push({ t: 'wasClaim', by: id });
+        if (!r.was.awaiting.length) resolveWas(G, null, ev);
+        break;
+
+      case 'wascheck':
+        if (!r.was || r.was.awaiting.indexOf(id) < 0 || r.was.answers[id]) return fail('Er wordt nu niets gevraagd.');
+        if (a.check) { resolveWas(G, id, ev); break; }
+        r.was.answers[id] = 'geloof';
+        if (r.was.awaiting.every(function (o) { return r.was.answers[o]; })) resolveWas(G, null, ev);
         break;
 
       case 'play':
-        if (r.pending) return fail('Wacht tot iedereen gekozen heeft.');
+        if (r.pending || r.was) return fail('Wacht tot iedereen gekozen heeft.');
         if (r.turn !== id) return fail('Je bent niet aan de beurt.');
         if (legalCards(G, id).indexOf(a.card) < 0) return fail('Die kaart mag je nu niet spelen.');
         r.hands[id].splice(r.hands[id].indexOf(a.card), 1);
+        r.wasResult = null;
         r.trick.push({ id: id, card: a.card });
         ev.push({ t: 'play', by: id, card: a.card });
         afterPlay(G, id, ev);
@@ -203,6 +213,34 @@
   }
 
   function fail(msg) { return { ok: false, error: msg }; }
+
+  function swapHand(G, id) {
+    var r = G.round, old = r.hands[id];
+    r.hands[id] = r.stock.splice(r.stock.length - 4, 4);
+    r.stock = shuffle(r.stock.concat(old));
+  }
+  // Nobody checked: the claimer swaps four cards (even when it was a bluff).
+  // Someone checked: the real hand decides. Right claim: the checker gets the penalty. Bluff: the claimer does.
+  function resolveWas(G, checkerId, ev) {
+    var r = G.round, w = r.was, id = w.by, pts = G.rules.wasStraf || 1;
+    r.was = null;
+    if (!checkerId) {
+      swapHand(G, id);
+      r.wasResult = { by: id, checker: null };
+      ev.push({ t: 'was', by: id, checker: null });
+      return;
+    }
+    var honest = isWitteWas(r.hands[id] || []), victim = honest ? checkerId : id;
+    r.wasResult = { by: id, checker: checkerId, ok: honest, hand: r.hands[id].slice(), pts: pts, victim: victim };
+    G.players[victim].score += pts;
+    if (G.players[victim].score >= G.limit) G.players[victim].out = true;
+    if (honest) swapHand(G, id);
+    ev.push({ t: 'was', by: id, checker: checkerId, ok: honest, pts: pts, victim: victim });
+    var left = inRoundIds(G);
+    if (left.length <= 1) { endRound(G, left.length ? left[0] : id, ev); return; }
+    if (!inRound(G, r.turn)) r.turn = nextFrom(G, r.turn, function (o) { return inRound(G, o); });
+    if (!inRound(G, r.leader)) r.leader = r.turn;
+  }
 
   function resolvePending(G, ev) {
     var r = G.round, p = r.pending;
@@ -297,7 +335,7 @@
       lastResult: G.results.length ? G.results[G.results.length - 1] : null,
       round: {
         n: r.n, stake: r.stake, toeps: r.toeps, passed: r.passed, trick: r.trick, trickNo: r.trickNo,
-        leader: r.leader, turn: r.turn, pending: r.pending, lastTrick: r.lastTrick, wasDone: r.wasDone,
+        leader: r.leader, turn: r.turn, pending: r.pending, lastTrick: r.lastTrick, wasDone: r.wasDone, was: r.was, wasResult: r.wasResult,
         dealer: r.dealer, handCounts: counts, stockCount: r.stock.length
       }
     };
@@ -312,6 +350,10 @@
   function botAction(G, id) {
     var r = G.round;
     if (G.phase !== 'play' || !inRound(G, id)) return null;
+    if (r.was) {
+      if (r.was.awaiting.indexOf(id) < 0 || r.was.answers[id]) return null;
+      return { type: 'wascheck', check: Math.random() < 0.3 };   // a computer player doubts now and then
+    }
     if (r.pending) {
       if (r.pending.awaiting.indexOf(id) < 0 || r.pending.answers[id]) return null;
       var hand = r.hands[id], cost = r.pending.to - 1, p = G.players[id];
@@ -321,7 +363,7 @@
       return { type: 'answer', mee: mee };
     }
     if (r.turn !== id) return null;
-    if (canWas(G, id)) return { type: 'was' };
+    if (canWas(G, id) && isWitteWas(r.hands[id])) return { type: 'was' };
     var legal = legalCards(G, id).sort(function (a, b) { return power(a) - power(b); });
     var hi = legal[legal.length - 1];
     if (canToep(G, id) && r.stake < 4 && power(hi) >= 6 && r.hands[id].length <= 2 && Math.random() < 0.6) return { type: 'toep' };

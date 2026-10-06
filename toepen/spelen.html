@@ -318,14 +318,15 @@
   var S = {
     view: 'home', name: ls(K.name) || '', db: null, uid: null, code: null, role: null, practice: false,
     meta: null, players: {}, pub: null, hand: [], subs: [], G: null, sheet: null, toast: '', connected: true,
-    lastHands: {}, lastResultKey: '', hostTimer: null, err: '', busy: false, kind: null, method: null, rl: null, hide: ls('toepen-mp-hide') === true, peek: false,
+    lastHands: {}, lastResultKey: '', hostTimer: null, err: '', busy: false, kind: null, method: null, rl: null, peek: false, flat: false,
     create: {
       mode: 'play', limit: sbRules.limit || 10, bots: 0,
       rules: {
         wittewas: sbRules.rules ? sbRules.rules.wittewas !== false : true,
         dubbelToep: sbRules.rules ? !!sbRules.rules.dubbelToep : false,
         scherpPassen: sbRules.rules ? sbRules.rules.scherpPassen !== false : true,
-        hoogsteDeelt: sbRules.rules ? !!sbRules.rules.hoogsteDeelt : false
+        hoogsteDeelt: sbRules.rules ? !!sbRules.rules.hoogsteDeelt : false,
+        wasStraf: sbRules.rules && sbRules.rules.wasStraf === 2 ? 2 : 1
       }
     }
   };
@@ -751,13 +752,14 @@
     }
     if (G.phase !== 'play') return;
     var r = G.round, actor = null;
-    if (r.pending) actor = r.pending.awaiting.filter(function (id) { return !r.pending.answers[id] && autoFor(id); })[0];
+    if (r.was) actor = r.was.awaiting.filter(function (id) { return !r.was.answers[id] && autoFor(id); })[0];
+    else if (r.pending) actor = r.pending.awaiting.filter(function (id) { return !r.pending.answers[id] && autoFor(id); })[0];
     else if (autoFor(r.turn)) actor = r.turn;
     if (!actor) return;
     S.hostTimer = setTimeout(function () {
       var a = E.botAction(G, actor);
       if (a) hostHandle(actor, a);
-    }, DELAY.bot * (r.pending ? 0.6 : 1));
+    }, DELAY.bot * (r.pending || r.was ? 0.6 : 1));
   }
 
   function hostHandle(uid, a, remote) {
@@ -883,6 +885,7 @@
     var hands = {}; hands[S.uid] = S.hand || [];
     var round = Object.assign({}, p.round, { hands: hands, stock: new Array(p.round.stockCount || 0), passed: p.round.passed || {}, trick: p.round.trick || [], toeps: p.round.toeps || [], wasDone: p.round.wasDone || {} });
     if (round.pending) round.pending = Object.assign({ answers: {} }, round.pending, { answers: round.pending.answers || {}, awaiting: round.pending.awaiting || [] });
+    if (round.was) round.was = Object.assign({}, round.was, { answers: round.was.answers || {}, awaiting: round.was.awaiting || [] });
     return { phase: p.phase, rules: p.rules, players: p.players, seats: p.seats, limit: p.limit, round: round, dealer: p.dealer, winner: p.winner };
   }
 
@@ -1081,7 +1084,9 @@
       return '<button data-act="limit" data-v="' + l + '" aria-pressed="' + (c.limit === l) + '">' + l + '</button>';
     }).join('') + '</div></div>';
     html += '<div class="panel"><div class="label">Huisregels</div>' +
-      toggleRow('rule-wittewas', c.rules.wittewas, 'Vuile was', 'Wie alleen boeren, vrouwen, heren en azen heeft, mag 4 nieuwe kaarten nemen. De app controleert het.') +
+      toggleRow('rule-wittewas', c.rules.wittewas, 'Vuile was', 'Wie alleen boeren, vrouwen, heren en azen heeft, mag 4 nieuwe kaarten nemen. Je mag ook bluffen: de anderen kunnen controleren en het spel beslist.') +
+      (c.rules.wittewas ? '<div class="row" style="padding:0 2px 6px"><span class="small muted" style="flex:1">Straf bij fout melden of onterecht controleren</span><div class="seg">' + [1, 2].map(function (n) {
+        return '<button data-act="was-straf" data-v="' + n + '" aria-pressed="' + ((c.rules.wasStraf || 1) === n) + '">' + n + ' ' + (n === 1 ? 'punt' : 'punten') + '</button>'; }).join('') + '</div></div>' : '') +
       toggleRow('rule-dubbelToep', c.rules.dubbelToep, 'Twee keer achter elkaar toepen', 'Uit: na jouw toep moet eerst iemand anders toepen.') +
       toggleRow('rule-scherpPassen', c.rules.scherpPassen, 'Passen als je op scherp staat', 'Uit: wie op scherp staat, moet mee.') +
       toggleRow('rule-hoogsteDeelt', c.rules.hoogsteDeelt, 'Hoogste stand deelt', 'Wie de meeste strafpunten heeft, deelt. Bij gelijke stand: op volgorde van de tafel. Uit: de deler schuift door.') + '</div>';
@@ -1157,7 +1162,7 @@
     var G = viewGame(), r = G.round, host = S.role === 'host', lead = host && m.mode === 'lead';
     var seated = G.seats.indexOf(S.uid) >= 0, html = '';
     var hideBtn = seated && G.phase === 'play' && !(G.players[S.uid] || {}).out
-      ? '<button class="btn ghost sm" data-act="hide-toggle" aria-pressed="' + !!S.hide + '" aria-label="' + (S.hide ? 'Kaarten altijd tonen' : 'Kaarten verbergen, zodat je de telefoon op tafel kunt leggen') + '">' + (S.hide ? 'Toon' : 'Verberg') + '</button>' : '';
+      ? '<button class="btn ghost sm" data-act="hand-opts" aria-label="Je kaarten verbergen: opties">Kaarten' + (handMode() === 'zichtbaar' ? '' : ' ·' + (handMode() === 'auto' ? ' auto' : ' uit')) + '</button>' : '';
     html += topbar('Ronde ' + r.n, 'Tafel ' + esc(S.code) + ' · af bij ' + G.limit,
       hideBtn + '<button class="btn ghost sm" data-act="menu">Menu</button>');
 
@@ -1215,6 +1220,12 @@
   function statusText(G) {
     var r = G.round;
     if (G.phase === 'roundEnd') return 'Volgende ronde begint zo…';
+    if (r.was) {
+      var wWait = (r.was.awaiting || []).filter(function (id) { return !(r.was.answers || {})[id]; });
+      if (r.was.by === S.uid) return 'Je hebt vuile was gemeld. Wachten op: ' + wWait.map(name).join(', ');
+      if (wWait.indexOf(S.uid) >= 0) return name(r.was.by) + ' meldt vuile was! Geloof je dat?';
+      return name(r.was.by) + ' meldt vuile was. Wachten op: ' + wWait.map(name).join(', ');
+    }
     if (r.pending) {
       var waiting = (r.pending.awaiting || []).filter(function (id) { return !(r.pending.answers || {})[id]; });
       if (waiting.indexOf(S.uid) >= 0) return name(r.pending.by) + ' toept! Ga je mee?';
@@ -1222,6 +1233,44 @@
     }
     if (r.turn === S.uid) return (r.trick || []).length ? 'Jij bent aan de beurt. Beken kleur als je kunt.' : 'Jij komt uit. Kies een kaart.';
     return name(r.turn) + ' is aan de beurt';
+  }
+
+  /* ---------- Hiding your cards ----------
+   * zichtbaar: always visible. verborgen: card backs, tap to peek until you play (or 20 s).
+   * auto: hidden while the phone lies flat on the table, visible when you pick it up. */
+  function handMode() {
+    var m = window.ToepenPrefs ? ToepenPrefs.get().hand : 'zichtbaar';
+    if (m === 'zichtbaar' && ls('toepen-mp-hide') === true) { m = 'verborgen'; if (window.ToepenPrefs) ToepenPrefs.set('hand', m); ls('toepen-mp-hide', null); }  // from the old on/off button
+    return m;
+  }
+  function handHidden() { var m = handMode(); return m === 'verborgen' || (m === 'auto' && S.flat); }
+  var sensorOn = false, flatTimer = 0, sensorSeen = false;
+  function onTilt(e) {
+    if (e.beta == null || e.gamma == null) return;
+    sensorSeen = true;
+    var flat = (Math.abs(e.beta) < 12 && Math.abs(e.gamma) < 12) || Math.abs(e.beta) > 168;  // screen up or screen down
+    clearTimeout(flatTimer);
+    flatTimer = setTimeout(function () { if (S.flat !== flat) { S.flat = flat; if (!flat) S.peek = false; if (S.view === 'table') render(); } }, flat ? 700 : 250);
+  }
+  function syncSensor() {
+    var want = handMode() === 'auto' && S.view === 'table';
+    if (want && !sensorOn) { sensorOn = true; window.addEventListener('deviceorientation', onTilt); }
+    else if (!want && sensorOn) { sensorOn = false; window.removeEventListener('deviceorientation', onTilt); S.flat = false; }
+  }
+  function setHandMode(m) {
+    if (window.ToepenPrefs) ToepenPrefs.set('hand', m);
+    S.peek = false; S.flat = false; S.sheet = null;
+    var ask = m === 'auto' && window.DeviceOrientationEvent && typeof DeviceOrientationEvent.requestPermission === 'function' ? DeviceOrientationEvent.requestPermission().catch(function () {}) : Promise.resolve();
+    ask.then(function () { render(); });
+    if (m === 'auto') { sensorSeen = false; setTimeout(function () { if (handMode() === 'auto' && !sensorSeen) toast('Deze telefoon geeft de stand niet door. Kies "Verborgen".'); }, 3500); }
+  }
+  function handSheet() {
+    var m = handMode();
+    var opt = function (v, t, d) { return '<button class="choice" data-act="hand-mode" data-v="' + v + '" aria-pressed="' + (m === v) + '"><b>' + t + '</b><span>' + d + '</span></button>'; };
+    return '<h2>Je kaarten verbergen</h2>' +
+      opt('zichtbaar', 'Zichtbaar', 'Je kaarten zijn altijd te zien.') +
+      opt('verborgen', 'Verborgen', 'Kaartruggen. Tik erop om ze even te zien; na het spelen zijn ze weer verborgen.') +
+      opt('auto', 'Automatisch', 'Verborgen zodra je telefoon plat op tafel ligt. Pak je hem op, dan zie je je kaarten weer.');
   }
 
   function renderHand(G, seated) {
@@ -1234,8 +1283,8 @@
     if (folded) html += '<div class="small muted" style="text-align:center">Je hebt gepast en doet deze ronde niet meer mee.</div>';
     var acts = '';
     if (E.canToep(G, S.uid)) acts += '<button class="btn toep" data-act="toep">Toep! → ' + (r.stake + 1) + '</button>';
-    var shown = !S.hide || S.peek;
-    if (shown && E.canWas(G, S.uid)) acts += '<button class="btn warn" data-act="was">Vuile was</button>';
+    var shown = !handHidden() || S.peek;
+    if (E.canWas(G, S.uid)) acts += '<button class="btn warn" data-act="was-ask">Vuile was</button>';
     if (acts) html += '<div class="acts">' + acts + '</div>';
     if (!shown && hand.length) {
       html += '<div class="cards hiddencards" data-act="hide-peek" role="button" tabindex="0" aria-label="Je kaarten zijn verborgen. Tik om ze te tonen.">' +
@@ -1263,7 +1312,7 @@
         (R.dubbelToep ? '<li>Je mag meerdere keren achter elkaar toepen.</li>' : '<li>Na jouw toep moet eerst een ander toepen.</li>') +
         (R.scherpPassen ? '' : '<li>Sta je <b>op scherp</b>, dan moet je mee.</li>') + '<li>Gaat niemand mee, dan wint de toeper de ronde.</li></ul>') +
       sec('Strafpunten', '<p>Wie aan het eind nog meedoet en de laatste slag niet haalt, krijgt de inzet.</p>') +
-      (R.wittewas ? sec('Vuile was', '<p>Heb je alleen boeren, vrouwen, heren en azen, dan verschijnt de knop <b>Vuile was</b> voordat er een kaart is gespeeld. Je krijgt 4 nieuwe kaarten van de stapel. Bluffen kan niet: de app controleert het. Bij 8 spelers is er geen stapel, dan kan het niet.</p>') : '') +
+      (R.wittewas ? sec('Vuile was', '<ul><li>Voordat er een kaart is gespeeld kun je <b>Vuile was</b> melden. Eigenlijk heb je dan alleen boeren, vrouwen, heren en azen. Je mag ook <b>bluffen</b>.</li><li>De anderen kiezen <b>Ik geloof je</b> of <b>Controleren</b>. Controleert niemand, dan neem je 4 nieuwe kaarten.</li><li>Controleert iemand, dan kijkt het spel naar je echte kaarten en laat ze aan iedereen zien. <b>Klopt het</b>, dan krijgt de controleur ' + (R.wasStraf === 2 ? '2 strafpunten' : '1 strafpunt') + ' en neem jij 4 nieuwe kaarten. <b>Was het gebluft</b>, dan krijg jij ' + (R.wasStraf === 2 ? '2 strafpunten' : '1 strafpunt') + '.</li><li>Dat kan één keer per ronde per speler. Bij 8 spelers is er geen stapel, dan kan het niet.</li></ul>') : '') +
       '</div>';
     return T;
   }
@@ -1273,7 +1322,8 @@
     var ignored = '<div>' +
       step('Aan tafel', ['De host tikt op <b>Tafel maken</b> en laat de QR-code zien.', 'Scan die met de camera van je telefoon, of vul de 4 letters in bij <b>Meedoen</b>.', 'Vul je naam in. De volgende keer onthoudt je telefoon die.']) +
       step('Spelen', ['Jouw kaarten staan onderin. Ben je aan de beurt, dan lichten de kaarten op die je mag spelen. Tik erop.', 'Wil je toepen? Tik op <b>Toep!</b> als je aan de beurt bent, vóór je een kaart speelt.', 'Toept een ander, dan vraagt je telefoon <b>Meegaan</b> of <b>Passen</b>. Je telefoon trilt.', 'Midden op tafel zie je de slag en wie er aan de beurt is.']) +
-      step('Telefoon op tafel', ['Tik rechtsboven op <b>Verberg</b>: je kaarten worden kaartruggen, ook als de telefoon open op tafel ligt.', 'Aan de beurt? Tik op je kaarten om ze even te zien en speel er een. Daarna zijn ze weer verborgen.', 'Met <b>Toon</b> zie je ze weer altijd.']) +
+      step('Kaarten verbergen', ['Tik rechtsboven op <b>Kaarten</b> en kies <b>Verborgen</b> of <b>Automatisch</b>.', 'Verborgen: je kaarten worden kaartruggen. Tik erop om ze even te zien en speel er een. Daarna zijn ze weer verborgen.', 'Automatisch: verborgen zodra je telefoon plat op tafel ligt, zichtbaar als je hem oppakt.']) +
+      step('Vuile was', ['Voor de eerste kaart kun je <b>Vuile was</b> melden, ook als je bluft.', 'De anderen kiezen <b>Ik geloof je</b> of <b>Controleren</b>. Bij controle beslist het spel en ziet iedereen je kaarten.', 'Klopt het, dan krijgt de controleur strafpunten. Blufte je, dan krijg jij ze.']) +
       step('Punten', ['De punten worden automatisch bijgehouden. Na elke ronde zie je wie er wat kreeg.', 'Aan het eind komt de uitslag op de ranglijst van de host.']) +
       step('Goed om te weten', ['Iedereen heeft internet nodig. Valt je verbinding weg, open dan de app opnieuw: je zit weer aan tafel.', 'Is er een <b>tafelleider</b>, dan speelt die niet mee en kan die alle kaarten zien.', 'Laat je scherm aan staan; de app probeert dat zelf te regelen.']) +
       '</div>';
@@ -1287,10 +1337,33 @@
     if (!S.connected && S.view === 'table') html += '<div class="conn" role="alert">Geen verbinding. Even geduld…</div>';
     var sh = S.sheet, G = viewGame(), inner = '';
     var mustAnswer = G && G.phase === 'play' && G.round.pending && (G.round.pending.awaiting || []).indexOf(S.uid) >= 0 && !(G.round.pending.answers || {})[S.uid];
-    if (mustAnswer && S.view === 'table') {
+    var wasQ = G && G.phase === 'play' && G.round.was && (G.round.was.awaiting || []).indexOf(S.uid) >= 0 && !(G.round.was.answers || {})[S.uid];
+    var wr = G && G.round.wasResult, wrKey = wr ? G.round.n + ':' + wr.by + ':' + (wr.checker || '') : '';
+    var wasSheet = false;
+    if (wasQ && S.view === 'table') {
+      wasSheet = true;
+      var wq = G.round.was, wpts = G.rules.wasStraf || 1;
+      html += '<div class="scrim"><div class="sheet" role="dialog" aria-modal="true" aria-label="Vuile was"><div class="grip"></div>' +
+        '<h2>' + esc(name(wq.by)) + ' meldt vuile was!</h2>' +
+        '<p class="muted">Geloof je het niet? Dan kijkt het spel naar de echte kaarten. Klopt het wel, dan krijg jij ' + plural(wpts, 'strafpunt', 'strafpunten') + '. Was het gebluft, dan krijgt ' + esc(name(wq.by)) + ' ' + plural(wpts, 'strafpunt', 'strafpunten') + '.</p>' +
+        '<button class="btn primary big" data-act="was-answer" data-v="geloof">Ik geloof je</button>' +
+        '<button class="btn warn big" data-act="was-answer" data-v="check">Controleren</button></div></div>';
+    } else if (wr && wr.checker && S.wasSeen !== wrKey && S.view === 'table') {
+      wasSheet = true;
+      var wok = wr.ok;
+      html += '<div class="scrim"><div class="sheet" role="dialog" aria-modal="true" aria-label="Uitkomst controle"><div class="grip"></div>' +
+        '<h2>' + (wok ? 'Echte vuile was' : 'Gebluft!') + '</h2>' +
+        '<p class="muted">' + esc(name(wr.checker)) + ' controleerde ' + esc(name(wr.by)) + '. ' + (wok ? 'Het klopte: ' + esc(name(wr.victim)) + ' krijgt ' : esc(name(wr.by)) + ' blufte en krijgt ') + plural(wr.pts, 'strafpunt', 'strafpunten') + '.' + (wok ? ' ' + esc(name(wr.by)) + ' neemt 4 nieuwe kaarten.' : '') + '</p>' +
+        '<div class="hand-peek minis" style="justify-content:center">' + (wr.hand || []).map(function (c) { return card(c); }).join('') + '</div>' +
+        '<button class="btn primary big" data-act="was-seen" data-v="' + wrKey + '">OK</button></div></div>';
+    } else if (wr && !wr.checker && S.wasSeen !== wrKey && S.view === 'table') {
+      S.wasSeen = wrKey; var wmsg = name(wr.by) + ' had vuile was en neemt 4 nieuwe kaarten. Niemand controleerde.'; setTimeout(function () { toast(wmsg); }, 0);
+    }
+    if (wasSheet) { /* a vuile-was window is open */ }
+    else if (mustAnswer && S.view === 'table') {
       var pd = G.round.pending, cost = pd.to - 1, must = E.mustPlay(G, S.uid);
       inner = '<h2>' + esc(name(pd.by)) + ' toept!</h2><p class="muted">De inzet gaat naar <b>' + pd.to + '</b>. Ga je mee, dan speel je door voor ' + plural(pd.to, 'punt', 'punten') + '. Pas je, dan krijg je nu ' + plural(cost, 'strafpunt', 'strafpunten') + '.</p>' +
-        (S.hide && !S.peek
+        (handHidden() && !S.peek
           ? '<button class="btn ghost" data-act="hide-peek">Toon mijn kaarten</button>'
           : '<div class="hand-peek minis" style="justify-content:center">' + (S.hand || []).map(function (c) { return card(c); }).join('') + '</div>') +
         '<button class="btn primary big" data-act="answer" data-v="mee">Meegaan</button>' +
@@ -1328,7 +1401,13 @@
           inner += '<button class="btn ghost" data-act="leave">Tafel verlaten</button><p class="small muted">Je kunt later weer meedoen met dezelfde code.</p>';
         }
         if (S.kind === 'ring') inner += '<button class="btn" data-act="ring-open">Telefoons koppelen (QR)</button>';
-        inner += '<a class="btn ghost" href="index.html">Naar het hoofdmenu</a>';
+        inner += '<a class="btn ghost" href="index.html">Naar het hoofdmenu <span class="small muted">(je spel blijft open)</span></a>';
+      } else if (sh.type === 'wasask') {
+        var wp = (S.meta && S.meta.rules && S.meta.rules.wasStraf) || 1;
+        inner = '<h2>Vuile was melden?</h2><p class="muted">Je meldt dat je alleen boeren, vrouwen, heren en azen hebt. De anderen mogen controleren. Klopt het niet, dan krijg je ' + plural(wp, 'strafpunt', 'strafpunten') + '. Controleert niemand, dan neem je 4 nieuwe kaarten.</p>' +
+          '<button class="btn warn big" data-act="was">Ja, ik meld vuile was</button>';
+      } else if (sh.type === 'hand') {
+        inner = handSheet();
       } else if (sh.type === 'ring') {
         inner = ringSheet();
       } else if (sh.type === 'close') {
@@ -1370,6 +1449,7 @@
     }
     renderLayer();
     wake();
+    syncSensor();
   }
 
   var lock = null;
@@ -1496,6 +1576,7 @@
       case 'go-practice': S.err = ''; S.view = 'practice'; c.bots = Math.max(c.bots, 3); render(); break;
       case 'mode': c.mode = v; render(); break;
       case 'limit': c.limit = +v; render(); break;
+      case 'was-straf': c.rules.wasStraf = +v; render(); break;
       case 'bots': c.bots = Math.max(0, Math.min(7, c.bots + +v)); render(); break;
       case 'rule-wittewas': case 'rule-dubbelToep': case 'rule-scherpPassen': case 'rule-hoogsteDeelt':
         var k = a.slice(5); c.rules[k] = !c.rules[k]; render(); break;
@@ -1526,11 +1607,15 @@
       case 'leave': S.sheet = null; leave(); break;
       case 'auto': S.db.update(base() + '/players/' + id, { auto: !(S.players[id] && S.players[id].auto) }); S.sheet = null; renderLayer(); break;
       case 'play': S.peek = false; act({ type: 'play', card: v }); break;
-      case 'hide-toggle': S.hide = !S.hide; S.peek = false; ls('toepen-mp-hide', S.hide); render(); break;
+      case 'hand-opts': S.sheet = { type: 'hand' }; renderLayer(); break;
+      case 'hand-mode': setHandMode(v); break;
       case 'hide-peek':
         S.peek = true; clearTimeout(S.peekTimer); S.peekTimer = setTimeout(function () { S.peek = false; render(); }, 20000); render(); break;
       case 'toep': act({ type: 'toep' }); buzz(40); break;
-      case 'was': act({ type: 'was' }); break;
+      case 'was-ask': S.sheet = { type: 'wasask' }; renderLayer(); break;
+      case 'was': S.sheet = null; act({ type: 'was' }); break;
+      case 'was-answer': act({ type: 'wascheck', check: v === 'check' }); break;
+      case 'was-seen': S.wasSeen = v; renderLayer(); break;
       case 'answer': act({ type: 'answer', mee: v === 'mee' }); break;
     }
   });
@@ -1548,10 +1633,19 @@
     S.deep = true; S.view = START === 'oefenen' ? 'practice' : 'mp0';
     if (START === 'oefenen') S.create.bots = Math.max(S.create.bots, 3);
   }
-  if (qcode && S.name.trim() && (VIA || NET)) joinTable(qcode);
+  var resumed = false;
+  if (!qcode && START === 'verder') {
+    S.deep = true; resumed = true;
+    var sv0 = ls(K.host), jn0 = ls(K.join);
+    if (sv0 && sv0.code) resumeHost(sv0);
+    else if (jn0 && jn0.code && S.name.trim() && (jn0.kind === 'peer' || NET)) joinTable(jn0.code, jn0.kind === 'peer' ? 'peer' : undefined);
+    else { S.view = 'mp0'; render(); }
+  }
+  if (resumed) { /* handled above */ }
+  else if (qcode && S.name.trim() && (VIA || NET)) joinTable(qcode);
   else {
     var j = ls(K.join);
-    if (!qcode && j && j.code && S.name.trim() && (j.kind === 'peer' || NET)) joinTable(j.code, j.kind === 'peer' ? 'peer' : undefined);
+    if (!qcode && !START && j && j.code && S.name.trim() && (j.kind === 'peer' || NET)) joinTable(j.code, j.kind === 'peer' ? 'peer' : undefined);
     else render();
   }
 })();

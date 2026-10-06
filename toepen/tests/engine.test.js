@@ -40,7 +40,10 @@ function runGame(n, rules, botsOnly) {
     const before = {}; G.seats.forEach(id => before[id] = G.players[id].score);
     const r = G.round;
     let actor, action;
-    if (r.pending) {
+    if (r.was) {
+      actor = r.was.awaiting.find(id => !r.was.answers[id]);
+      action = botsOnly ? E.botAction(G, actor) : { type: 'wascheck', check: Math.random() < 0.4 };
+    } else if (r.pending) {
       actor = r.pending.awaiting.find(id => !r.pending.answers[id]);
       action = botsOnly ? E.botAction(G, actor) : { type: 'answer', mee: E.mustPlay(G, actor) ? true : Math.random() < 0.6 };
     } else {
@@ -49,7 +52,7 @@ function runGame(n, rules, botsOnly) {
       else {
         const opts = [];
         if (E.canToep(G, actor) && Math.random() < 0.25) opts.push({ type: 'toep' });
-        if (E.canWas(G, actor)) opts.push({ type: 'was' });
+        if (E.canWas(G, actor) && Math.random() < 0.5) opts.push({ type: 'was' });  // also with a normal hand: a bluff
         if (!opts.length) opts.push({ type: 'play', card: pick(E.legalCards(G, actor)) });
         action = pick(opts);
       }
@@ -68,7 +71,8 @@ function runGame(n, rules, botsOnly) {
     res.events.forEach(e => {
       if (e.t === 'toep') stats.toeps++;
       if (e.t === 'pass') stats.passes++;
-      if (e.t === 'was') stats.was++;
+      if (e.t === 'wasClaim') stats.was++;
+      if (e.t === 'was' && e.checker) stats.wasChecked = (stats.wasChecked || 0) + 1;
       if (e.t === 'round') {
         stats.rounds++;
         const rr = e.result;
@@ -80,7 +84,8 @@ function runGame(n, rules, botsOnly) {
     deltas.forEach(d => assert(d >= 0, 'score went down'));
     const roundEv = res.events.find(e => e.t === 'round');
     const passEv = res.events.filter(e => e.t === 'pass');
-    const expected = passEv.reduce((s, e) => s + e.pts, 0) + (roundEv ? roundEv.result.stake * roundEv.result.losers.length : 0);
+    const wasPts = res.events.filter(e => e.t === 'was' && e.checker).reduce((s, e) => s + e.pts, 0);
+    const expected = passEv.reduce((s, e) => s + e.pts, 0) + wasPts + (roundEv ? roundEv.result.stake * roundEv.result.losers.length : 0);
     assert.strictEqual(deltas.reduce((a, b) => a + b, 0), expected, 'score bookkeeping');
     // a player who is out never holds the turn
     if (G.phase === 'play' && G.round.turn) assert(!G.players[G.round.turn].out && E.inRound(G, G.round.turn), 'turn held by player not in round');
@@ -96,8 +101,60 @@ function runGame(n, rules, botsOnly) {
 const t0 = Date.now();
 for (let i = 0; i < 6000; i++) {
   const n = 2 + (i % 7);
-  const rules = { dubbelToep: Math.random() < 0.5, scherpPassen: Math.random() < 0.5, wittewas: Math.random() < 0.7, hoogsteDeelt: Math.random() < 0.5 };
+  const rules = { dubbelToep: Math.random() < 0.5, scherpPassen: Math.random() < 0.5, wittewas: Math.random() < 0.7, wasStraf: Math.random() < 0.5 ? 1 : 2, hoogsteDeelt: Math.random() < 0.5 };
   runGame(n, rules, i % 3 === 0);
+}
+// ---- vuile was: claim, check, bluff ----
+function wasGame(handA) {
+  const g = E.newGame({ seats: [{ id: 'a', name: 'A' }, { id: 'b', name: 'B' }, { id: 'c', name: 'C' }], rules: { wittewas: true, wasStraf: 2 }, dealer: 0 });
+  g.round.hands.a = handA.slice(); g.round.turn = 'a'; g.round.leader = 'a';
+  return g;
+}
+const CLEAN = ['Bh', 'Vh', 'Hs', 'Ak'], NORMAL = ['7h', '8s', '9k', '10r'];
+{ // 1. honest claim, nobody checks -> swaps four cards, no penalty
+  const g = wasGame(CLEAN); assert(E.canWas(g, 'a'));
+  assert(E.apply(g, 'a', { type: 'was' }).ok);
+  assert(!E.apply(g, 'a', { type: 'play', card: 'Bh' }).ok, 'no playing while others decide');
+  assert(!E.canToep(g, 'a'), 'no toep during claim');
+  assert(E.apply(g, 'b', { type: 'wascheck', check: false }).ok); assert(g.round.was, 'still waiting for c');
+  assert(E.apply(g, 'c', { type: 'wascheck', check: false }).ok);
+  assert(!g.round.was && g.round.hands.a.join() !== CLEAN.join() && g.round.hands.a.length === 4, 'hand swapped');
+  assert.strictEqual(g.players.a.score + g.players.b.score + g.players.c.score, 0);
+}
+{ // 2. honest claim, b checks -> b is wrong and gets 2 points; a swaps
+  const g = wasGame(CLEAN); E.apply(g, 'a', { type: 'was' });
+  assert(E.apply(g, 'b', { type: 'wascheck', check: true }).ok);
+  assert.strictEqual(g.players.b.score, 2); assert.strictEqual(g.players.a.score, 0);
+  assert(g.round.wasResult.ok && g.round.wasResult.victim === 'b' && g.round.wasResult.hand.join() === CLEAN.join());
+  assert(!g.round.was && g.round.hands.a.join() !== CLEAN.join(), 'honest claimer swaps');
+  assert(E.apply(g, 'a', { type: 'play', card: g.round.hands.a[0] }).ok, 'play continues');
+  assert.strictEqual(g.round.wasResult, null, 'result cleared after the next card');
+}
+{ // 3. bluff, c checks -> a gets 2 points and keeps the hand
+  const g = wasGame(NORMAL); assert(E.canWas(g, 'a'), 'bluffing is allowed');
+  E.apply(g, 'a', { type: 'was' }); assert(E.apply(g, 'c', { type: 'wascheck', check: true }).ok);
+  assert.strictEqual(g.players.a.score, 2); assert.strictEqual(g.players.c.score, 0);
+  assert(!g.round.wasResult.ok && g.round.hands.a.join() === NORMAL.join(), 'bluffer keeps cards');
+}
+{ // 4. bluff nobody checks -> the bluff works: swap, no penalty
+  const g = wasGame(NORMAL); E.apply(g, 'a', { type: 'was' });
+  E.apply(g, 'b', { type: 'wascheck', check: false }); E.apply(g, 'c', { type: 'wascheck', check: false });
+  assert.strictEqual(g.players.a.score, 0); assert(g.round.hands.a.join() !== NORMAL.join());
+}
+{ // 5. only once per round, only before the first card, not twice at once; public state hides the hand
+  const g = wasGame(NORMAL); E.apply(g, 'a', { type: 'was' });
+  assert(!E.apply(g, 'b', { type: 'was' }).ok, 'second claim while open'); 
+  E.apply(g, 'b', { type: 'wascheck', check: false }); E.apply(g, 'c', { type: 'wascheck', check: false });
+  assert(!E.canWas(g, 'a'), 'only once per round');
+  assert(!/"hands"/.test(JSON.stringify(E.publicState(g))));
+  const g2 = wasGame(NORMAL); assert(E.apply(g2, 'a', { type: 'play', card: '7h' }).ok); assert(!E.canWas(g2, 'b'), 'not after a card was played');
+  assert(!E.apply(g2, 'b', { type: 'wascheck', check: true }).ok, 'nothing to check');
+}
+{ // 6. a penalty that reaches the limit puts the player out and the round ends cleanly
+  const g = E.newGame({ seats: [{ id: 'a', name: 'A' }, { id: 'b', name: 'B' }], rules: { wittewas: true, wasStraf: 2 }, limit: 10, dealer: 0 });
+  g.round.hands.a = NORMAL.slice(); g.players.a.score = 9; g.round.turn = 'a';
+  E.apply(g, 'a', { type: 'was' }); assert(E.apply(g, 'b', { type: 'wascheck', check: true }).ok);
+  assert(g.players.a.out && g.phase === 'done' && g.winner === 'b', 'bluffer who hits the limit loses');
 }
 // specific: witte was must be impossible with 8 players (no stock)
 const G8 = E.newGame({ seats: Array.from({ length: 8 }, (_, i) => ({ id: 'p' + i, name: 'P' + i })), rules: { wittewas: true } });
