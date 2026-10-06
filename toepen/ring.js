@@ -14,7 +14,7 @@
 (function (root) {
   'use strict';
 
-  var STORE = 'toepen-ring-data', UIDKEY = 'toepen-ring-uid';
+  var STORE_DEFAULT = 'toepen-ring-data', UIDKEY = 'toepen-ring-uid';
   function clean(v) { return v === undefined ? null : JSON.parse(JSON.stringify(v)); }
   function rnd() { return Math.random().toString(36).slice(2, 10); }
   function parts(p) { return p.split('/').filter(Boolean); }
@@ -62,6 +62,7 @@
 
   function ringBackend(opts) {
     opts = opts || {};
+    var STORE = opts.storeKey || STORE_DEFAULT;
     var store = opts.session ? root.sessionStorage : root.localStorage;
     var uid = null;
     try { uid = store.getItem(UIDKEY); } catch (e) {}
@@ -122,8 +123,23 @@
     function sendTo(link, msg) {
       if (link.open && link.dc.readyState === 'open') { try { link.dc.send(JSON.stringify(msg)); } catch (e) {} }
     }
+    // With privateHands (star topology via the host) a player's hand only goes to that player.
+    function visible(link, path) {
+      if (!opts.privateHands) return true;
+      var m = /(?:^|\/)hands\/([^/]+)/.exec(path);
+      return !m || link.peer === m[1];
+    }
     function flood(msg, exceptId) {
-      Object.keys(links).forEach(function (id) { if (id !== exceptId) sendTo(links[id], msg); });
+      Object.keys(links).forEach(function (id) {
+        if (id === exceptId) return;
+        var link = links[id], out = msg;
+        if (opts.privateHands && msg.t === 'w') {
+          var w = msg.w.filter(function (it) { return visible(link, it[0]); });
+          if (!w.length) return;
+          out = { t: 'w', id: msg.id, s: msg.s, f: msg.f, w: w };
+        }
+        sendTo(link, out);
+      });
     }
     function write(items) {
       var s = ++clock, id = uid + ':' + (++counter) + rnd();
@@ -138,7 +154,7 @@
 
     function onMessage(link, text) {
       var m; try { m = JSON.parse(text); } catch (e) { return; }
-      if (m.t === 'hi') { link.peer = m.uid; fireLinks(); return; }
+      if (m.t === 'hi') { link.peer = m.uid; if (opts.privateHands) syncTo(link); fireLinks(); return; }
       if (m.t === 'sync') {
         var ch = false;
         (m.w || []).sort(function (a, b) { return a[2] - b[2] || (a[3] < b[3] ? -1 : 1); }).forEach(function (e) {
@@ -159,7 +175,7 @@
       }
     }
     function syncTo(link) {
-      var w = Object.keys(W).map(function (k) { return [k, W[k].v, W[k].s, W[k].f]; });
+      var w = Object.keys(W).filter(function (k) { return visible(link, k); }).map(function (k) { return [k, W[k].v, W[k].s, W[k].f]; });
       sendTo(link, { t: 'sync', w: w });
     }
 
@@ -186,13 +202,14 @@
         syncTo(link);
         fireLinks();
       };
-      dc.onclose = function () { link.open = false; fireLinks(); };
+      dc.onclose = function () { link.open = false; if (link.auto) delete links[link.id]; fireLinks(); };
       dc.onmessage = function (e) { onMessage(link, e.data); };
     }
-    function newLink() {
+    function newLink(noPc) {
       var id = rnd();
-      var pc = new root.RTCPeerConnection({ iceServers: [] });
+      var pc = noPc ? null : new root.RTCPeerConnection({ iceServers: [] });
       var link = links[id] = { id: id, pc: pc, dc: null, open: false, peer: null };
+      if (noPc) return link;
       pc.onconnectionstatechange = function () {
         if (pc.connectionState === 'failed' || pc.connectionState === 'closed') { link.open = false; fireLinks(); }
       };
@@ -200,7 +217,7 @@
     }
 
     var api = {
-      kind: 'ring',
+      kind: opts.kind || 'ring',
       uid: uid,
       ready: function () { return Promise.resolve(uid); },
       get: function (p) { return Promise.resolve(clean(getAt(tree, p))); },
@@ -275,6 +292,12 @@
         if (!pending) return Promise.reject(new Error('Maak eerst een QR voor je buurman.'));
         var link = pending; pending = null;
         return link.pc.setRemoteDescription({ type: 'answer', sdp: o.sdp });
+      },
+      // Any other transport (PeerJS) hands in a channel: { send, readyState, onopen, onclose, onmessage }.
+      addChannel: function (chan) {
+        var link = newLink(true); link.auto = true;
+        attach(link, chan);
+        return link;
       },
       reset: function () { W = {}; tree = {}; try { store.removeItem(STORE); } catch (e) {} }
     };
