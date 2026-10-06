@@ -422,7 +422,7 @@
 (function () {
   'use strict';
   var KEY = 'toepen-scorebord-v2';
-  var VERSION = '29 (terugknop van de telefoon)';
+  var VERSION = '30 (opgeschoond)';
   var COLORS = ['#2f7d5b', '#c2571a', '#3b6fb6', '#a63d6b', '#7a5bb5', '#a67c12', '#1f8a8f', '#5d6b1f'];
   var app = document.getElementById('app');
   var layer = document.getElementById('layer');
@@ -952,7 +952,6 @@
 
     var br = boardRows();
 
-    var many = s.roster.length > 8;
     app.innerHTML =
       '<div class="stack" style="gap:12px">' +
         '<div class="topbar" style="padding-top:4px;margin-bottom:0"><div class="meta"><h1>Toepen</h1></div><div class="tools">' +
@@ -1650,11 +1649,6 @@
   }
 
   // Sections fold open one at a time so the page fits the screen.
-  function msec(key, title, sum, body) {
-    var open = ui.open && ui.open[key];
-    return '<details class="msec" data-sec="' + key + '"' + (open ? ' open' : '') + '><summary><span class="t">' + title + '</span>' +
-      (sum ? '<span class="sum">' + sum + '</span>' : '') + '</summary><div class="body">' + body + '</div></details>';
-  }
 
   function renderMeer() {
     var st = state.settings, g = G(), html = '<div class="topbar"><h1>Meer</h1></div><div class="navlist">';
@@ -1670,7 +1664,6 @@
     html += '<p class="small muted" style="text-align:center;margin-top:10px">Toepen Scorebord · versie ' + VERSION + '</p>';
     return html;
   }
-  function rule(t, body) { return '<details class="rule"><summary>' + t + '</summary><p>' + body + '</p></details>'; }
 
   // The game screen should fit the phone without scrolling: if it does not,
   // drop the first-round hint, then the tally marks, then switch to compact
@@ -1806,7 +1799,7 @@
       }
     }
     if (ui.pages.length) {
-      var top = ui.pages[ui.pages.length - 1], pc = pageContent(top);
+      var topPg = ui.pages[ui.pages.length - 1], pc = pageContent(topPg);
       html = '<div class="fullpage" role="dialog" aria-modal="true" aria-label="' + esc(pc.title) + '"><div class="fp-bar"><div class="in">' +
         '<button class="btn ghost sm" data-act="back">← Terug</button><h2>' + pc.title + '</h2></div></div>' +
         '<div class="fp-body">' + pc.body + '</div></div>' + html;

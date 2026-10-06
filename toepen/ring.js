@@ -44,7 +44,7 @@
     return 'TP1' + (kind === 'o' ? 'o' : 'a') + '.' + [ufrag, pwd, b64u(fpBytes), cands.slice(0, 3).join(',')].join('.');
   }
   function unpackSdp(code) {
-    var m = /^TP1([oa])\.([^.]+)\.([^.]+)\.([^.]+)\.(.+)$/.exec((code || '').trim());
+    var m = /^TP1([oa])\.([A-Za-z0-9+\/]+)\.([A-Za-z0-9+\/]+)\.([A-Za-z0-9_-]+)\.([0-9A-Za-z:.,\/_-]+)$/.exec((code || '').trim());
     if (!m) throw new Error('Dit is geen geldige koppelcode.');
     var fp = unb64u(m[4]).map(function (b) { return ('0' + b.toString(16)).slice(-2).toUpperCase(); }).join(':');
     var lines = [
@@ -84,7 +84,12 @@
     var saveTimer;
     function save() {
       clearTimeout(saveTimer);
-      saveTimer = setTimeout(function () { try { store.setItem(STORE, JSON.stringify({ W: W, clock: clock })); } catch (e) {} }, 300);
+      saveTimer = setTimeout(function () {
+        // 'removed' markers only need to outlive late copies of the write; drop old ones so the table does not grow all evening
+        var old = Date.now() - 30 * 60 * 1000;
+        Object.keys(W).forEach(function (k) { if (W[k].v === null && (W[k].t || 0) < old) delete W[k]; });
+        try { store.setItem(STORE, JSON.stringify({ W: W, clock: clock })); } catch (e) {}
+      }, 300);
     }
 
     /* ----- data ----- */
@@ -109,7 +114,7 @@
       for (i = 0; i < ps.length - 1; i++) { anc += (i ? '/' : '') + ps[i]; if (W[anc] && !newer(s, f, W[anc])) return false; }
       var key = ps.join('/');
       Object.keys(W).forEach(function (k) { if (k.indexOf(key + '/') === 0 && !newer(W[k].s, W[k].f, { s: s, f: f })) delete W[k]; });
-      W[key] = { s: s, f: f, v: v };
+      W[key] = { s: s, f: f, v: v, t: Date.now() };
       setTree(key, v);
       return true;
     }
@@ -298,6 +303,16 @@
         var link = newLink(true); link.auto = true;
         attach(link, chan);
         return link;
+      },
+      // Leave the table: close every link (the data stays, so a host can come back).
+      stop: function () {
+        Object.keys(links).forEach(function (id) {
+          var l = links[id]; l.open = false;
+          try { if (l.dc && l.dc.close) l.dc.close(); } catch (e) {}
+          try { if (l.pc) l.pc.close(); } catch (e) {}
+          delete links[id];
+        });
+        pending = null; fireLinks();
       },
       reset: function () { W = {}; tree = {}; try { store.removeItem(STORE); } catch (e) {} }
     };
