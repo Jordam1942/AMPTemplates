@@ -446,9 +446,9 @@
       '<p class="small muted" style="margin:0"><b>QR tonen:</b> je buurman scant jouw QR. <b>QR scannen:</b> jij scant de QR van je buurman.</p></div>';
   }
   var METHODS = {
-    peer: { t: 'PeerJS, via internet', d: 'Gratis, zonder account of instellen. Iedereen heeft internet (wifi of 4G/5G). Eén QR scannen.' },
-    ring: { t: 'Zonder internet, QR-ring', d: 'Telefoons koppelen met QR-codes op dezelfde wifi of hotspot. Internet is niet nodig.' },
-    firebase: { t: 'Firebase', d: 'Het stabielst. De host stelt het eenmalig in (ongeveer 10 minuten).' }
+    peer: { t: 'PeerJS, via internet', d: 'Ook op afstand. Gratis, zonder account of instellen. Nodig vrienden uit via WhatsApp of een QR.' },
+    ring: { t: 'Zonder internet, QR-ring', d: 'Alleen voor vrienden bij je in de buurt: zelfde wifi of hotspot. Internet is niet nodig.' },
+    firebase: { t: 'Firebase', d: 'Ook op afstand en het stabielst. De host stelt het eenmalig in (ongeveer 10 minuten).' }
   };
   function renderMp0() {
     var html = topbar('Multiplayer', 'Kies hoe jullie verbinden', (S.deep ? '<a class="btn ghost sm" href="index.html">← Terug</a>' : '<button class="btn ghost sm" data-act="home">Terug</button>'));
@@ -465,7 +465,7 @@
     html += '<div class="panel"><label class="label" for="myname">Jouw naam</label><input class="text" id="myname" maxlength="18" autocomplete="off" value="' + esc(S.name) + '" placeholder="Typ je naam"></div>';
     var hostD = needSetup ? 'Jij stelt Firebase eenmalig in, stap voor stap (ongeveer 10 minuten). Daarna maak je een tafel.'
       : k === 'ring' ? 'Je toont een QR aan je buurman en scant daarna zijn antwoord.'
-      : 'Je opent de tafel. Je vrienden scannen jouw QR en zitten direct aan tafel.';
+      : 'Je opent de tafel en nodigt vrienden uit via WhatsApp of een QR. Ze mogen overal zijn.';
     var guestD = k === 'ring' ? 'Scan de QR van de host of van je buurman in de kring.' : 'Scan de QR van de host, of vul de tafelcode in.';
     html += '<button class="choice" data-act="mp-host"><b>Ik ben de host</b><span>' + hostD + '</span></button>';
     html += '<button class="choice" data-act="mp-guest"><b>Ik doe mee</b><span>' + guestD + '</span></button>';
@@ -1187,6 +1187,15 @@
     return u;
   }
 
+  /* ---------- Inviting friends who are not nearby ---------- */
+  function inviteText() {
+    return 'Doe mee met Toepen! 🃏 Open deze link en je zit aan mijn tafel: ' + joinUrl() + '\n(Tafelcode: ' + S.code + '. Je hebt alleen internet nodig, je mag overal zijn.)';
+  }
+  function waUrl() { return 'https://wa.me/?text=' + encodeURIComponent(inviteText()); }
+  function inviteButtons() {
+    return '<div class="row" style="flex-wrap:nowrap"><a class="btn primary" style="flex:2" href="' + esc(waUrl()) + '" target="_blank" rel="noopener">Uitnodigen via WhatsApp</a>' +
+      '<button class="btn ghost" style="flex:1" data-act="share-link">Link</button></div>';
+  }
   function playerRows(withRemove) {
     var list = memberList();
     if (!list.length) return '<p class="muted small">Nog niemand aan tafel.</p>';
@@ -1208,14 +1217,14 @@
     html += topbar('Tafel ' + esc(S.code), host ? (m.mode === 'lead' ? 'Jij bent tafelleider' : 'Jij bent de host') : 'Host: ' + esc(m.hostName || ''), '<button class="btn ghost sm" data-act="' + (host ? 'ask-close' : 'leave') + '">' + (host ? 'Sluiten' : 'Verlaten') + '</button>');
     if (S.kind === 'ring') {
       if (!host) html += '<div class="panel" style="text-align:center"><h2>Je zit aan tafel!</h2><p class="muted">Wachten tot ' + esc(m.hostName || 'de host') + ' het spel start…</p>' + watchToggle() + '</div>';
-      html += ringPanel();
+      html += ringPanel() + '<p class="small muted" style="text-align:center">Vrienden niet bij je in de buurt? Maak een tafel met <b>PeerJS</b> of <b>Firebase</b>.</p>';
     } else if (host) {
       var qr = '';
       try { var q = qrcode(0, 'M'); q.addData(joinUrl()); q.make(); qr = q.createSvgTag({ cellSize: 6, margin: 2, scalable: true }); } catch (e) { qr = ''; }
       html += '<div class="panel" style="text-align:center"><b>Laat je vrienden deze code scannen</b>' +
         '<div class="qr" id="qr">' + qr + '</div><div class="bigcode" aria-label="Tafelcode ' + esc(S.code) + '">' + esc(S.code) + '</div>' +
         '<p class="small muted lobby-line" style="margin:0">Met de gewone camera, of in de app: <b>Multiplayer → ' + (S.kind === 'peer' ? 'PeerJS' : 'Firebase') + ' → Ik doe mee</b>.</p>' +
-        '<button class="btn ghost" data-act="share-link">Link delen</button></div>';
+        inviteButtons() + '</div>';
     } else {
       html += '<div class="panel" style="text-align:center"><h2>Je zit aan tafel!</h2><p class="muted">Wachten tot ' + esc(m.hostName || 'de host') + ' het spel start…</p>' + watchToggle() +
         (m.mode === 'lead' ? '<p class="small muted">Er is een tafelleider. Die speelt niet mee en kan alle kaarten zien.</p>' : '') + '</div>';
@@ -1409,6 +1418,7 @@
       step('Spelen', ['Jouw kaarten staan onderin. Ben je aan de beurt, dan lichten de kaarten op die je mag spelen. Tik erop.', 'Wil je toepen? Tik op <b>Toep!</b> als je aan de beurt bent, vóór je een kaart speelt.', 'Toept een ander, dan vraagt je telefoon <b>Meegaan</b> of <b>Passen</b>. Je telefoon trilt.', 'Midden op tafel zie je de slag en wie er aan de beurt is.']) +
       step('Kaarten verbergen', ['Tik rechtsboven op <b>Kaarten</b> en kies <b>Verborgen</b> of <b>Automatisch</b>.', 'Verborgen: je kaarten worden kaartruggen. Tik erop om ze even te zien en speel er een. Daarna zijn ze weer verborgen.', 'Automatisch: verborgen zodra je telefoon plat op tafel ligt, zichtbaar als je hem oppakt.']) +
       step('Vuile was', ['Voor de eerste kaart kun je <b>Vuile was</b> melden, ook als je bluft.', 'De anderen kiezen <b>Ik geloof je</b> of <b>Controleren</b>. Bij controle beslist het spel en ziet iedereen je kaarten.', 'Klopt het, dan krijgt de controleur strafpunten. Blufte je, dan krijg jij ze.']) +
+      step('Op afstand spelen', ['Zit je ver van je vrienden, bijvoorbeeld op vakantie? Maak een tafel met <b>PeerJS</b> of <b>Firebase</b>. De QR-ring werkt alleen bij elkaar in de buurt.', 'Tik in de wachtruimte op <b>Uitnodigen via WhatsApp</b>. Je vrienden tikken op de link en zitten aan tafel.', 'Kletsen kan met de 💬-knop. Je kunt ook bellen of videobellen terwijl jullie spelen.']) +
       step('Chat en meekijken', ['Tik op de ronde knop 💬 om te kletsen met de anderen aan tafel. Handig als jullie op afstand spelen.', 'Tik op 🎤 en praat: je woorden worden tekst. Dat werkt met internet. Daarna tik je op <b>Stuur</b>.', 'Wil je alleen kijken? Kies in de wachtruimte <b>Ik kijk alleen mee</b>. Wil je ook alle kaarten zien? Laat de host de tafel openen als <b>Tafelleider</b>.']) +
       step('Punten', ['De punten worden automatisch bijgehouden. Na elke ronde zie je wie er wat kreeg.', 'Aan het eind komt de uitslag op de ranglijst van de host.']) +
       step('Goed om te weten', ['Iedereen heeft internet nodig. Valt je verbinding weg, open dan de app opnieuw: je zit weer aan tafel.', 'Is er een <b>tafelleider</b>, dan speelt die niet mee en kan die alle kaarten zien.', 'Laat je scherm aan staan; de app probeert dat zelf te regelen.']) +
@@ -1487,7 +1497,14 @@
           inner += '<button class="btn ghost" data-act="leave">Tafel verlaten</button><p class="small muted">Je kunt later weer meedoen met dezelfde code.</p>';
         }
         if (S.kind === 'ring') inner += '<button class="btn" data-act="ring-open">Telefoons koppelen (QR)</button>';
+        else if (host && !S.practice) inner += '<button class="btn" data-act="invite-open">Vrienden uitnodigen</button>';
         inner += '<a class="btn ghost" href="index.html">Naar het hoofdmenu <span class="small muted">(je spel blijft open)</span></a>';
+      } else if (sh.type === 'invite') {
+        var iq = '';
+        try { var qq = qrcode(0, 'M'); qq.addData(joinUrl()); qq.make(); iq = qq.createSvgTag({ cellSize: 4, margin: 2, scalable: true }); } catch (e) { iq = ''; }
+        inner = '<h2>Vrienden uitnodigen</h2><p class="muted small">Ook vrienden die ver weg zijn kunnen meedoen. Stuur ze de link; ze hebben alleen internet nodig.</p>' +
+          '<div class="bigcode" style="font-size:1.8rem">' + esc(S.code) + '</div><div class="qr small">' + iq + '</div>' + inviteButtons() +
+          '<p class="small muted" style="margin:0">Wie later binnenkomt, kijkt mee en speelt mee vanaf het volgende potje.</p>';
       } else if (sh.type === 'chat') {
         inner = chatSheet();
       } else if (sh.type === 'wasask') {
@@ -1689,7 +1706,7 @@
       case 'forget': var sv2 = ls(K.host); ls(K.host, null); if (sv2) { try { localStorage.removeItem('toepen-mp-game-' + sv2.code); } catch (e2) {} } render(); break;
       case 'share-link':
         var url = joinUrl();
-        if (navigator.share) navigator.share({ title: 'Toepen', text: 'Doe mee aan mijn tafel ' + S.code, url: url }).catch(function () {});
+        if (navigator.share) navigator.share({ title: 'Toepen', text: 'Doe mee met Toepen! Tafelcode: ' + S.code, url: url }).catch(function () {});
         else { try { navigator.clipboard.writeText(url).then(function () { toast('Link gekopieerd'); }); } catch (e3) { toast(url); } }
         break;
       case 'addbot':
@@ -1711,6 +1728,7 @@
         S.peek = true; clearTimeout(S.peekTimer); S.peekTimer = setTimeout(function () { S.peek = false; render(); }, 20000); render(); break;
       case 'toep': act({ type: 'toep' }); buzz(40); break;
       case 'watch': S.db.update(base() + '/players/' + S.uid, { spectator: !(S.players[S.uid] && S.players[S.uid].spectator) }); break;
+      case 'invite-open': S.sheet = { type: 'invite' }; renderLayer(); break;
       case 'chat-open': S.sheet = { type: 'chat' }; S.chatUnread = 0; renderLayer(); break;
       case 'chat-send': var ci = document.getElementById('chattext'); if (sendChat(ci ? ci.value : S.chatDraft)) { S.chatDraft = ''; stopListening(); renderLayer(); } break;
       case 'chat-quick': if (sendChat(v)) renderLayer(); break;
