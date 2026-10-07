@@ -338,7 +338,7 @@
     meta: null, players: {}, pub: null, hand: [], subs: [], G: null, sheet: null, toast: '', connected: true,
     lastHands: {}, lastResultKey: '', hostTimer: null, err: '', busy: false, kind: null, method: null, rl: null, peek: false, black: false, blackTap: 0, offSince: {}, chat: [], chatUnread: 0, chatDraft: '', chatFrom: 0, listening: false,
     create: {
-      mode: 'play', limit: sbRules.limit || 10, bots: 0,
+      mode: 'play', limit: sbRules.limit || 10, bots: 0, undo: true,
       rules: {
         wittewas: sbRules.rules ? sbRules.rules.wittewas !== false : true,
         dubbelToep: sbRules.rules ? !!sbRules.rules.dubbelToep : false,
@@ -711,7 +711,7 @@
     }).then(function (code) {
       S.code = code; S.role = 'host'; S.practice = practice;
       var c = S.create, mode = practice ? 'play' : c.mode, now = Date.now();
-      var meta = { host: S.uid, hostName: S.name.trim() || 'Tafelleider', mode: mode, limit: c.limit, rules: c.rules, takeover: window.ToepenPrefs ? ToepenPrefs.get().takeover : 45, status: 'lobby', created: now };
+      var meta = { host: S.uid, hostName: S.name.trim() || 'Tafelleider', mode: mode, limit: c.limit, rules: c.rules, undo: c.undo !== false, takeover: window.ToepenPrefs ? ToepenPrefs.get().takeover : 45, status: 'lobby', created: now };
       var jobs = [S.db.set(base() + '/meta', meta)];
       if (mode === 'play') jobs.push(S.db.set(base() + '/players/' + S.uid, { name: S.name.trim(), joined: now, online: true }));
       var nb = practice ? Math.max(1, c.bots) : c.bots;
@@ -892,6 +892,7 @@
   }
   // Undo goes back to just before the last move of a person (moves by computer players are undone along with it).
   function undoTarget() {
+    if (S.meta && S.meta.undo === false) return null;   // switched off when the table was made
     var sn = S.snaps || [];
     for (var i = sn.length - 1; i >= 0; i--) if (!sn[i].auto) return { idx: i, label: sn[i].label };
     return null;
@@ -1102,9 +1103,9 @@
     var c = S.create, practice = S.view === 'practice', html = '';
     html += topbar(practice ? 'Oefenen' : 'Tafel maken', practice ? 'Tegen computerspelers, op deze telefoon' : (S.method ? METHODS[S.method].t : 'Kies hoe jij meedoet'), (practice && S.deep ? '<a class="btn ghost sm" href="index.html">← Terug</a>' : '<button class="btn ghost sm" data-act="' + (practice ? 'home' : 'mp1') + '">Terug</button>'));
     if (!practice) {
-      html += '<div class="stack"><div class="label">Hoe doe jij mee?</div>' +
+      html += '<div class="stack"><div class="label">Hoe doe jij mee?</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">' +
         '<button class="choice" data-act="mode" data-v="play" aria-pressed="' + (c.mode === 'play') + '"><b>Ik speel mee</b><span>Je speelt mee en bent ook de host.</span></button>' +
-        '<button class="choice" data-act="mode" data-v="lead" aria-pressed="' + (c.mode === 'lead') + '"><b>Tafelleider</b><span>Je speelt niet mee, maar ziet alle kaarten.</span></button></div>';
+        '<button class="choice" data-act="mode" data-v="lead" aria-pressed="' + (c.mode === 'lead') + '"><b>Tafelleider</b><span>Je speelt niet mee, maar ziet alle kaarten.</span></button></div></div>';
     }
     html += '<div class="panel"><div class="label">Spelregels</div>' +
       '<div class="row" style="padding:2px 2px 6px"><span class="small muted" style="flex:1">Af bij</span><div class="seg" style="flex:none">' + [10, 15, 21].map(function (l) {
@@ -1117,6 +1118,7 @@
         return '<button data-act="max-inzet" data-v="' + o[0] + '" aria-pressed="' + ((c.rules.maxInzet === undefined ? 4 : c.rules.maxInzet) === o[0]) + '">' + o[1] + '</button>'; }).join('') + '</div></div>' +
       toggleRow('rule-dubbelToep', c.rules.dubbelToep, 'Dubbel toepen', 'Twee keer achter elkaar toepen. Uit: na jouw toep moet eerst iemand anders toepen.') +
       toggleRow('rule-scherpPassen', c.rules.scherpPassen, 'Passen als je op scherp staat', 'Uit: wie op scherp staat, moet mee.') +
+      toggleRow('opt-undo', c.undo !== false, 'Ongedaan-maken knop (↶)', 'Je laatste zet terugdraaien.') +
       toggleRow('rule-hoogsteDeelt', c.rules.hoogsteDeelt, 'Hoogste stand deelt', 'Wie de meeste strafpunten heeft, deelt. Bij gelijke stand: op volgorde van de tafel. Uit: de deler schuift door.') + '</div>';
     var minB = practice ? 1 : 0;
     html += '<div class="panel" style="padding-top:8px;padding-bottom:8px"><div class="label" style="margin-bottom:2px">Computerspelers</div><div class="stepper">' +
@@ -1443,11 +1445,11 @@
         inner = '<h2>Menu</h2>';
         if (host && S.G && S.practice) {
           var ut0 = undoTarget();
-          inner += '<button class="btn ' + (ut0 ? 'warn' : 'ghost') + '" data-act="undo-ask"' + (ut0 ? '' : ' disabled') + '>↶ Ongedaan maken' + (ut0 ? ': ' + esc(ut0.label) : '') + '</button>';
+          if (!(S.meta && S.meta.undo === false)) inner += '<button class="btn ' + (ut0 ? 'warn' : 'ghost') + '" data-act="undo-ask"' + (ut0 ? '' : ' disabled') + '>↶ Ongedaan maken' + (ut0 ? ': ' + esc(ut0.label) : '') + '</button>';
           inner += '<button class="btn danger" data-act="ask-close">Spel stoppen</button>';
         } else if (host && S.G) {
           var ut = undoTarget();
-          inner += '<button class="btn ' + (ut ? 'warn' : 'ghost') + '" data-act="undo-ask"' + (ut ? '' : ' disabled') + '>↶ Ongedaan maken' + (ut ? ': ' + esc(ut.label) : '') + '</button>';
+          if (!(S.meta && S.meta.undo === false)) inner += '<button class="btn ' + (ut ? 'warn' : 'ghost') + '" data-act="undo-ask"' + (ut ? '' : ' disabled') + '>↶ Ongedaan maken' + (ut ? ': ' + esc(ut.label) : '') + '</button>';
           inner += '<div class="label">Spelers</div>' + S.G.seats.map(function (id) {
             var p = S.players[id] || {};
             if (p.bot) return '';
@@ -1660,6 +1662,7 @@
       case 'was-straf': c.rules.wasStraf = +v; render(); break;
       case 'max-inzet': c.rules.maxInzet = +v; render(); break;
       case 'bots': c.bots = Math.max(0, Math.min(7, c.bots + +v)); render(); break;
+      case 'opt-undo': c.undo = c.undo === false; render(); break;
       case 'rule-wittewas': case 'rule-dubbelToep': case 'rule-scherpPassen': case 'rule-hoogsteDeelt':
         var k = a.slice(5); c.rules[k] = !c.rules[k]; render(); break;
       case 'create': createTable(false); break;
