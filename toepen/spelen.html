@@ -928,7 +928,7 @@
     // Before the first card of a round people may still announce 'vuile was': give them a moment before the computer leads.
     var wait = DELAY.bot * (r.pending || r.was ? 0.6 : 1);
     if (!r.pending && !r.was && r.trickNo === 1 && !(r.trick || []).length && !(r.toeps || []).length &&
-        G.seats.some(function (id) { return !autoFor(id) && E.canWas(G, id); })) wait = Math.max(wait, FAST ? 40 : 2800 * pace());
+        G.seats.some(function (id) { return !autoFor(id) && E.canWas(G, id); })) wait = Math.max(wait, FAST ? 40 : ({ snel: 3000, normaal: 5000, rustig: 10000 })[(window.ToepenPrefs && ToepenPrefs.get().speed) || 'rustig']);
     S.hostTimer = setTimeout(function () {
       var a = E.botAction(G, actor);
       if (a) hostHandle(actor, a);
