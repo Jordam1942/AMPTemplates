@@ -1536,12 +1536,16 @@
     if (wasSheet) { /* a vuile-was window is open */ }
     else if (mustAnswer && S.view === 'table') {
       var pd = G.round.pending, cost = pd.to - 1, must = E.mustPlay(G, S.uid);
+      // Someone calling while you are tapping must not hit a button by accident: short pause, and 'Passen' asks twice.
+      var ak = G.round.n + ':' + pd.to + ':' + pd.by;
+      if (S.askKey !== ak) { S.askKey = ak; S.askUntil = FAST ? 0 : Date.now() + 1000; S.pasArmed = false; if (S.askUntil) setTimeout(function () { renderLayer(); }, 1050); }
+      var holding = Date.now() < (S.askUntil || 0);
       inner = '<h2>' + esc(name(pd.by)) + ' toept!</h2><p class="muted">De inzet gaat naar <b>' + pd.to + '</b>. Ga je mee, dan speel je door voor ' + plural(pd.to, 'punt', 'punten') + '. Pas je, dan krijg je nu ' + plural(cost, 'strafpunt', 'strafpunten') + '.</p>' +
         (handHidden() && !S.peek
           ? '<button class="btn ghost" data-act="hide-peek">Toon mijn kaarten</button>'
           : '<div class="hand-peek minis" style="justify-content:center">' + (S.hand || []).map(function (c) { return card(c); }).join('') + '</div>') +
-        '<button class="btn primary big" data-act="answer" data-v="mee">Meegaan</button>' +
-        '<button class="btn warn big" data-act="answer" data-v="pas"' + (must ? ' disabled' : '') + '>Passen (+' + cost + ')</button>' +
+        '<button class="btn primary big" data-act="answer" data-v="mee"' + (holding ? ' disabled' : '') + '>' + (holding ? 'Even kijken…' : 'Meegaan') + '</button>' +
+        '<button class="btn warn big" style="margin-top:6px' + (S.pasArmed ? ';background:var(--danger);color:#fff' : '') + '" data-act="answer" data-v="pas"' + (must || holding ? ' disabled' : '') + '>' + (S.pasArmed ? 'Zeker weten? Tik nog een keer: Passen (+' + cost + ')' : 'Passen (+' + cost + ')') + '</button>' +
         (must ? '<p class="small muted">Je staat op scherp en moet mee.</p>' : '');
       html += '<div class="scrim"><div class="sheet" role="dialog" aria-modal="true" aria-label="Toep"><div class="grip"></div>' + inner + '</div></div>';
     } else if (sh) {
@@ -1860,7 +1864,11 @@
       case 'was': S.sheet = null; act({ type: 'was' }); break;
       case 'was-answer': act({ type: 'wascheck', check: v === 'check' }); break;
       case 'was-seen': S.wasSeen = v; renderLayer(); break;
-      case 'answer': act({ type: 'answer', mee: v === 'mee' }); break;
+      case 'answer':
+        if (v === 'pas' && !S.pasArmed && window.ToepenPrefs && ToepenPrefs.get().confirmToep && !FAST) {
+          S.pasArmed = true; renderLayer(); clearTimeout(S.pasTimer); S.pasTimer = setTimeout(function () { S.pasArmed = false; renderLayer(); }, 3500); break;
+        }
+        S.pasArmed = false; act({ type: 'answer', mee: v === 'mee' }); break;
     }
   });
 
