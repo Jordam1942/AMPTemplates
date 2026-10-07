@@ -242,8 +242,6 @@
   .topic ul { margin: 0; padding-left: 20px; display: grid; gap: 6px; color: var(--muted); }
   .topic p { color: var(--muted); }
   .topic b { color: var(--fg); }
-  .fbstep { display: grid; gap: 12px; }
-  .fbstep ol { margin: 0; padding-left: 20px; display: grid; gap: 8px; }
   .wrap.fbwrap { min-height: 100%; display: flex; flex-direction: column; }
   .wrap.fbwrap > .stack { flex: 1; display: flex; flex-direction: column; }
   .fit1 .qr { width: min(210px, 100%); padding: 10px; }
@@ -304,29 +302,15 @@
 <script src="net.js"></script>
 <script src="ring.js"></script>
 <script src="peer.js"></script>
-<script src="firebase-config.js"></script>
 <script>
 (function () {
   'use strict';
   var E = window.ToepenEngine;
   var Q = new URLSearchParams(location.search);
   var FAST = Q.get('fast') === '1';
-  // Firebase settings come from firebase-config.js, from a QR link (?fb=...)
-  // or from the setup wizard on this phone.
-  var CFG_KEY = 'toepen-fb-config';
-  function b64e(o) { return btoa(unescape(encodeURIComponent(JSON.stringify(o)))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); }
-  function b64d(t) { t = t.replace(/-/g, '+').replace(/_/g, '/'); while (t.length % 4) t += '='; return JSON.parse(decodeURIComponent(escape(atob(t)))); }
-  function validCfg(c) { return !!(c && c.apiKey && c.authDomain && c.projectId && c.databaseURL); }
-  function compactCfg(c) { return { apiKey: c.apiKey, authDomain: c.authDomain, databaseURL: c.databaseURL, projectId: c.projectId }; }
-  var CFG = validCfg(window.TOEPEN_FIREBASE_CONFIG) ? window.TOEPEN_FIREBASE_CONFIG : null, CFG_SRC = CFG ? 'app' : null;
-  if (!CFG && Q.get('fb')) {
-    try { var fromLink = b64d(Q.get('fb')); if (validCfg(fromLink)) { CFG = fromLink; CFG_SRC = 'link'; localStorage.setItem(CFG_KEY, JSON.stringify(fromLink)); } } catch (e) {}
-  }
-  if (!CFG) {
-    try { var saved = JSON.parse(localStorage.getItem(CFG_KEY)); if (validCfg(saved)) { CFG = saved; CFG_SRC = 'phone'; } } catch (e) {}
-  }
+  try { localStorage.removeItem('toepen-fb-config'); } catch (e) {}   // left over from the removed Firebase option
   var VIA = Q.get('via') === 'peer' ? 'peer' : null;
-  var NET = Q.get('net') === 'local' ? 'local' : (CFG ? 'firebase' : null);
+  var NET = Q.get('net') === 'local' ? 'local' : null;   // 'local' = test mode in one browser
   var DELAY = { round: FAST ? 150 : 3500, bot: FAST ? 40 : 900 };
   var COLORS = ['#2f7d5b', '#c2571a', '#3b6fb6', '#a63d6b', '#7a5bb5', '#a67c12', '#1f8a8f', '#5d6b1f'];
   var BOTS = ['Kees', 'Mies', 'Joop', 'Truus', 'Henk', 'Ria', 'Piet'];
@@ -369,20 +353,8 @@
   function buzz(p) { if (navigator.vibrate && (!window.ToepenPrefs || ToepenPrefs.get().vibrate)) { try { navigator.vibrate(p); } catch (e) {} } }
 
   /* ---------- Connection ---------- */
-  var fbLoading = null;
-  function loadFirebase() {
-    if (window.firebase && window.firebase.database) return Promise.resolve();
-    if (fbLoading) return fbLoading;
-    fbLoading = ['vendor/firebase-app-compat.js', 'vendor/firebase-auth-compat.js', 'vendor/firebase-database-compat.js'].reduce(function (p, src) {
-      return p.then(function () {
-        return new Promise(function (res, rej) { var s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = function () { rej(new Error('Laden mislukt: ' + src)); }; document.head.appendChild(s); });
-      });
-    }, Promise.resolve());
-    return fbLoading;
-  }
   function connect(kind, practice) {
-    var p = kind === 'firebase' ? loadFirebase().then(function () { return window.ToepenNet.firebase(CFG); })
-      : kind === 'ring' ? Promise.resolve(getRing())
+    var p = kind === 'ring' ? Promise.resolve(getRing())
       : kind === 'peer' ? Promise.resolve(getPeer())
       : Promise.resolve(window.ToepenNet.local(practice ? 'practice' : 'test'));
     return p.then(function (db) {
@@ -423,7 +395,7 @@
     return PEER;
   }
   function kindFor() { return S.method === 'ring' ? 'ring' : S.method === 'peer' ? 'peer' : NET; }
-  function joinKindNow() { return S.method === 'peer' ? 'peer' : S.method === 'firebase' ? NET : (VIA || NET); }
+  function joinKindNow() { return S.method === 'peer' ? 'peer' : S.method === 'local' ? NET : (VIA || NET); }
   var RING = null;
   function getRing() {
     if (!RING) {
@@ -502,42 +474,40 @@
   var METHODS = {
     peer: { t: 'PeerJS, via internet', d: 'Ook op afstand. Gratis, zonder account of instellen. Nodig vrienden uit via WhatsApp of een QR.' },
     ring: { t: 'Zonder internet, QR-ring', d: 'Alleen voor vrienden bij je in de buurt: zelfde wifi of hotspot. Internet is niet nodig.' },
-    firebase: { t: 'Firebase', d: 'Ook op afstand en het stabielst. De host stelt het eenmalig in (ongeveer 10 minuten).' }
+    local: { t: 'Test op één toestel', d: 'Alleen voor testen: meerdere tabbladen in één browser.' }
   };
   function renderMp0() {
     var html = topbar('Multiplayer', 'Kies hoe jullie verbinden', (S.deep ? '<a class="btn ghost sm" href="index.html">← Terug</a>' : '<button class="btn ghost sm" data-act="home">Terug</button>'));
     ['peer', 'ring'].forEach(function (k) {
       var m = METHODS[k];
-      html += '<button class="choice ic ' + ({ peer: 't-blue', ring: 't-orange', firebase: 't-gold' })[k] + '" data-act="mp-method" data-v="' + k + '"><i class="i" aria-hidden="true">' + ({ peer: '<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18-3-3-3-15 0-18"/></svg>', ring: '<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5a10 10 0 0 1 14 0M8.5 16a5 5 0 0 1 7 0"/><circle cx="12" cy="19.5" r="1"/></svg>', firebase: '<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 18a4 4 0 0 1-.5-8 5.5 5.5 0 0 1 10.6 1.5A3.3 3.3 0 0 1 17 18z"/></svg>' })[k] + '</i><b>' + m.t + (k === 'peer' ? ' <span class="chip">Aanbevolen</span>' : '') + '</b><span>' + m.d + '</span></button>';
+      html += '<button class="choice ic ' + ({ peer: 't-blue', ring: 't-orange' })[k] + '" data-act="mp-method" data-v="' + k + '"><i class="i" aria-hidden="true">' + ({ peer: '<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18-3-3-3-15 0-18"/></svg>', ring: '<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5a10 10 0 0 1 14 0M8.5 16a5 5 0 0 1 7 0"/><circle cx="12" cy="19.5" r="1"/></svg>' })[k] + '</i><b>' + m.t + (k === 'peer' ? ' <span class="chip">Aanbevolen</span>' : '') + '</b><span>' + m.d + '</span></button>';
     });
-    html += '<button class="btn ghost" data-act="mp-method" data-v="firebase">Geavanceerd: Firebase' + (NET === 'firebase' ? '' : '') + '</button>';
+    if (NET === 'local') html += '<button class="btn ghost" data-act="mp-method" data-v="local">Test op één toestel</button>';
     return '<div class="stack">' + html + '</div>';
   }
   function renderMp1() {
-    var k = S.method || 'peer', m = METHODS[k], needSetup = k === 'firebase' && !NET;
+    var k = S.method || 'peer', m = METHODS[k];
     var html = topbar(m.t, 'Ben je de host?', '<button class="btn ghost sm" data-act="mp0">Terug</button>');
     if (S.err) html += '<div class="notice" role="alert">' + esc(S.err) + '</div>';
     html += '<div class="panel"><label class="label" for="myname">Jouw naam</label><input class="text" id="myname" maxlength="18" autocomplete="off" value="' + esc(S.name) + '" placeholder="Typ je naam"></div>';
-    var hostD = needSetup ? 'Jij stelt Firebase eenmalig in, stap voor stap (ongeveer 10 minuten). Daarna maak je een tafel.'
-      : k === 'ring' ? 'Je toont een QR aan je buurman en scant daarna zijn antwoord.'
+    var hostD = k === 'ring' ? 'Je toont een QR aan je buurman en scant daarna zijn antwoord.'
       : 'Je opent de tafel en nodigt vrienden uit via WhatsApp of een QR. Ze mogen overal zijn.';
     var guestD = k === 'ring' ? 'Scan de QR van de host of van je buurman in de kring.' : 'Scan de QR van de host, of vul de tafelcode in.';
     html += '<button class="choice ic t-green" data-act="mp-host"><i class="i" aria-hidden="true"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8l4 4 5-7 5 7 4-4-2 11H5z"/></svg></i><b>Ik ben de host</b><span>' + hostD + '</span></button>';
     html += '<button class="choice ic t-blue" data-act="mp-guest"><i class="i" aria-hidden="true"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4v18h-4M10 17l5-5-5-5M15 12H3"/></svg></i><b>Ik doe mee</b><span>' + guestD + '</span></button>';
-    if (needSetup) html += '<p class="small muted lobby-hint" style="text-align:center">Doe je alleen mee? Dan hoef je niets in te stellen. Scan de QR van de host, dan wordt alles vanzelf ingesteld.</p>';
     return '<div class="stack">' + html + '</div>';
   }
   function renderMpJoin() {
-    var k = S.method || 'peer', m = METHODS[k], needSetup = k === 'firebase' && !NET;
+    var k = S.method || 'peer', m = METHODS[k];
     var html = topbar('Meedoen', m.t, '<button class="btn ghost sm" data-act="mp1">Terug</button>');
     if (S.err) html += '<div class="notice" role="alert">' + esc(S.err) + '</div>';
     html += '<div class="panel"><label class="label" for="myname">Jouw naam</label><input class="text" id="myname" maxlength="18" autocomplete="off" value="' + esc(S.name) + '" placeholder="Typ je naam"></div>';
-    html += '<div class="panel" style="text-align:center"><b>Scan de QR van de host</b><p class="small muted lobby-hint">' + (needSetup ? 'Hierdoor wordt alles vanzelf voor je ingesteld.' : 'Je zit dan meteen aan tafel.') + '</p>' +
+    html += '<div class="panel" style="text-align:center"><b>Scan de QR van de host</b><p class="small muted lobby-hint">' + 'Je zit dan meteen aan tafel.' + '</p>' +
       '<button class="btn primary big" data-act="mp-scanqr">QR scannen</button></div>';
     html += '<div class="panel"><b>Of vul de tafelcode in</b>' +
-      '<div class="row"><input class="text code" id="joincode" maxlength="4" autocomplete="off" placeholder="Tafelcode" style="flex:1;min-width:0"' + (needSetup ? ' disabled' : '') + '>' +
-      '<button class="btn primary" data-act="join"' + (!needSetup && !S.busy ? '' : ' disabled') + '>Meedoen</button></div>' +
-      (needSetup ? '<p class="small muted">Met een code werkt het pas als Firebase is ingesteld. Scan daarom eerst de QR van de host.</p>' : '') + '</div>';
+      '<div class="row"><input class="text code" id="joincode" maxlength="4" autocomplete="off" placeholder="Tafelcode" style="flex:1;min-width:0"' + '' + '>' +
+      '<button class="btn primary" data-act="join"' + (S.busy ? ' disabled' : '') + '>Meedoen</button></div>' +
+      '</div>';
     return '<div class="stack">' + html + '</div>';
   }
   function renderRingJoin() {
@@ -656,7 +626,6 @@
     var v = S.view;
     if (v === 'mp1') return 'mp0';
     if (v === 'mpjoin' || v === 'ringjoin' || v === 'create') return 'mp1';
-    if (v === 'fb') return S.method ? 'mp1' : 'home';
     return 'home';
   }
 
@@ -1056,7 +1025,6 @@
 
   function showError(e) {
     S.err = (e && e.message) || 'Er ging iets mis.';
-    if (/permission|PERMISSION/.test(S.err)) S.err = 'Geen toegang tot de database. Kloppen de Firebase-regels?';
     if (/network|offline/i.test(S.err)) S.err = 'Geen verbinding. Controleer je internet en probeer opnieuw.';
     S.view = S.urlCode && !S.code ? 'invite' : 'home'; render();
   }
@@ -1123,151 +1091,9 @@
       html += '<div class="panel"><b>Je tafel ' + esc(saved.code) + ' is nog open' + (saved.practice ? ' (oefenen)' : '') + '.</b>' +
         '<div class="row"><button class="btn primary" style="flex:1" data-act="resume">Verder spelen</button><button class="btn ghost" data-act="forget">Sluiten</button></div></div>';
     }
-    html += '<button class="choice ic t-blue" data-act="go-mp"><i class="i" aria-hidden="true"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18-3-3-3-15 0-18"/></svg></i><b>Multiplayer</b><span>Speel met vrienden, ieder op de eigen telefoon. Kies PeerJS, QR-ring of Firebase.</span></button>';
+    html += '<button class="choice ic t-blue" data-act="go-mp"><i class="i" aria-hidden="true"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18-3-3-3-15 0-18"/></svg></i><b>Multiplayer</b><span>Speel met vrienden, ieder op de eigen telefoon. Kies PeerJS of QR-ring.</span></button>';
     html += '<button class="choice ic t-orange" data-act="go-practice"><i class="i" aria-hidden="true"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg></i><b>Oefenen tegen de computer</b><span>Speel alleen op deze telefoon tegen computerspelers. Werkt zonder internet.</span></button>';
     html += '<button class="btn ghost" data-act="help">Spelregels en uitleg</button>';
-    if (NET === 'firebase' && CFG_SRC !== 'app') html += '<button class="btn ghost sm" data-act="go-fb">Firebase-instellingen</button>';
-    return '<div class="stack">' + html + '</div>';
-  }
-
-  /* ---------- Firebase setup wizard ---------- */
-  function parseCfg(text) {
-    var o = {}, re = /["']?(\w+)["']?\s*:\s*["']([^"']+)["']/g, m;
-    while ((m = re.exec(text || ''))) o[m[1]] = m[2].trim();
-    var missing = ['apiKey', 'authDomain', 'projectId'].filter(function (k) { return !o[k]; });
-    var guessed = false;
-    if (!o.databaseURL && o.projectId) { o.databaseURL = 'https://' + o.projectId + '-default-rtdb.europe-west1.firebasedatabase.app'; guessed = true; }
-    return { cfg: missing.length ? null : compactCfg(o), missing: missing, guessed: guessed };
-  }
-  function consoleUrl(pid, path) { return 'https://console.firebase.google.com/' + (pid ? 'project/' + pid + '/' + path : ''); }
-  function withTimeout(p, ms, code) {
-    return Promise.race([p, new Promise(function (_, rej) { setTimeout(function () { var e = new Error('timeout'); e.code = code || 'timeout'; rej(e); }, ms); })]);
-  }
-
-  function runChecks() {
-    var F = S.fb, cfg = F.cfg, pid = cfg.projectId, host = location.hostname, app;
-    F.running = true; F.done = false;
-    F.checks = [
-      { id: 'sdk', label: 'Firebase laden', st: 'run' },
-      { id: 'auth', label: 'Aanmelden zonder account (anoniem)', st: 'wait' },
-      { id: 'db', label: 'Database schrijven en lezen', st: 'wait' },
-      { id: 'rules', label: 'Kaarten afgeschermd (beveiligingsregels)', st: 'wait' }
-    ];
-    var step = function (id, st, msg, link, linkText) {
-      F.checks.forEach(function (c) { if (c.id === id) { c.st = st; c.msg = msg; c.link = link; c.linkText = linkText; } });
-      render();
-    };
-    var stopAt = function (id, msg, link, linkText) {
-      step(id, 'fail', msg, link, linkText);
-      F.checks.forEach(function (c) { if (c.st === 'wait') c.st = 'skip'; });
-      F.running = false; render();
-      if (app) app.delete().catch(function () {});
-    };
-    render();
-    loadFirebase().then(function () {
-      step('sdk', 'ok'); step('auth', 'run');
-      app = window.firebase.initializeApp(cfg, 'check-' + Date.now());
-      return withTimeout(app.auth().signInAnonymously(), 15000, 'auth/timeout').then(function (cred) {
-        step('auth', 'ok'); step('db', 'run');
-        var uid = cred.user.uid, ref = app.database().ref('rooms/ZZ' + uid.slice(0, 8) + '/meta');
-        var meta = { host: uid, hostName: 'test', status: 'closed', created: Date.now() };
-        return withTimeout(ref.set(meta).then(function () { return ref.get(); }), 15000, 'db/timeout').then(function (snap) {
-          if (!snap.exists()) throw Object.assign(new Error('leeg'), { code: 'db/empty' });
-          ref.remove().catch(function () {});
-          step('db', 'ok'); step('rules', 'run');
-          return withTimeout(app.database().ref('rooms').get(), 15000, 'rules/timeout').then(function () {
-            stopAt('rules', 'Iedereen kan nog alles lezen, ook elkaars kaarten. Plak de regels uit stap 3 en tik op Publiceren.', consoleUrl(pid, 'database/' + pid + '-default-rtdb/rules'), 'Open de regels');
-          }, function (e) {
-            if (/permission/i.test(e.message || e.code || '')) {
-              step('rules', 'ok');
-              F.running = false; F.done = true;
-              try { localStorage.setItem(CFG_KEY, JSON.stringify(cfg)); } catch (e2) {}
-              app.delete().catch(function () {});
-              render();
-            } else throw e;
-          });
-        });
-      });
-    }).catch(function (e) {
-      var c = (e && (e.code || e.message)) || '';
-      if (!window.firebase) return stopAt('sdk', 'Firebase kon niet laden. Controleer je internet.');
-      if (/operation-not-allowed|admin-restricted/.test(c)) return stopAt('auth', 'Anoniem aanmelden staat nog uit. Zet het aan bij Authentication → Aanmeldmethode → Anoniem.', consoleUrl(pid, 'authentication/providers'), 'Open aanmeldmethoden');
-      if (/unauthorized-domain|requests-from-referer/.test(c)) return stopAt('auth', 'Dit adres mag nog niet inloggen. Voeg "' + host + '" toe bij Authentication → Instellingen → Geautoriseerde domeinen.', consoleUrl(pid, 'authentication/settings'), 'Open instellingen');
-      if (/api-key|invalid-api|API key/i.test(c)) return stopAt('auth', 'De apiKey klopt niet. Kopieer het blok opnieuw uit Projectinstellingen.', consoleUrl(pid, 'settings/general'), 'Open projectinstellingen');
-      if (/network/i.test(c)) return stopAt('auth', 'Geen verbinding met Firebase. Controleer je internet en probeer opnieuw.');
-      if (/auth\/timeout/.test(c)) return stopAt('auth', 'Aanmelden duurt te lang. Controleer je internet en probeer opnieuw.');
-      if (/permission/i.test(c)) return stopAt('db', 'De database weigert. Plak de regels uit stap 3 en tik op Publiceren.', consoleUrl(pid, 'database/' + pid + '-default-rtdb/rules'), 'Open de regels');
-      if (/db\/timeout|db\/empty|URL|url|database/.test(c)) return stopAt('db', 'De database is niet bereikbaar. Is de Realtime Database aangemaakt, en klopt het database-adres bij stap 2?', consoleUrl(pid, 'database'), 'Open Realtime Database');
-      stopAt(F.checks.filter(function (x) { return x.st === 'run'; }).map(function (x) { return x.id; })[0] || 'db', 'Er ging iets mis: ' + c);
-    });
-  }
-
-  var FB_STEPS = 8;
-  function renderFb() {
-    var F = S.fb, host = location.hostname, pid = F.cfg ? F.cfg.projectId : '', st = F.step || 0, body = '', title = '', next = true;
-    var link = function (url, text) { return '<a class="btn" href="' + url + '" target="_blank" rel="noopener">' + text + ' ↗</a>'; };
-    switch (st) {
-      case 0:
-        title = 'Zo werkt het';
-        body = '<p>In 8 korte stappen koppel je Firebase. Daarna kun je een tafel maken en krijgen je vrienden alles automatisch via jouw QR-code.</p>' +
-          '<p class="muted">Je hebt alleen een Google-account nodig. Het duurt ongeveer 10 minuten.</p>' +
-          '<div class="notice"><b>Tip:</b> zet op de Firebase-pagina’s in Chrome ⋮ → <b>Desktopsite</b> aan, dan vind je alle menu’s.</div>' +
-          (CFG && CFG_SRC !== 'app' ? '<div class="panel"><b>Deze telefoon is al gekoppeld aan “' + esc(CFG.projectId) + '”.</b><div class="row"><button class="btn" data-act="fb-retest">Opnieuw testen</button><button class="btn ghost" data-act="fb-forget">Ontkoppelen</button></div></div>' : '');
-        break;
-      case 1:
-        title = 'Project maken';
-        body = '<ol><li>Open Firebase.</li><li>Tik op <b>Project toevoegen</b>.</li><li>Noem het <code>toepen</code>.</li><li>Zet <b>Google Analytics</b> uit en tik op <b>Project maken</b>.</li></ol>' + link(consoleUrl(), 'Open Firebase');
-        break;
-      case 2:
-        title = 'Database maken';
-        body = '<ol><li>Ga in je project naar <b>Build → Realtime Database</b>.</li><li>Tik op <b>Database maken</b>.</li><li>Kies de locatie <b>België (europe-west1)</b>.</li><li>Kies <b>Starten in vergrendelde modus</b> en tik op <b>Inschakelen</b>.</li></ol>' + link(pid ? consoleUrl(pid, 'database') : consoleUrl(), 'Open Firebase');
-        break;
-      case 3:
-        title = 'Aanmelden zonder account';
-        body = '<ol><li>Ga naar <b>Build → Authentication</b> en tik op <b>Aan de slag</b>.</li><li>Kies bij aanmeldmethoden <b>Anoniem</b>.</li><li>Zet het <b>aan</b> en tik op <b>Opslaan</b>.</li></ol><p class="muted">Zo krijgt elke telefoon een eigen sleutel, zonder dat je vrienden een account nodig hebben.</p>' + link(pid ? consoleUrl(pid, 'authentication/providers') : consoleUrl(), 'Open Firebase');
-        break;
-      case 4:
-        title = 'Dit adres toestaan';
-        body = '<ol><li>Ga in Authentication naar <b>Instellingen → Geautoriseerde domeinen</b>.</li><li>Tik op <b>Domein toevoegen</b> en plak dit adres:</li></ol>' +
-          '<div class="row"><code style="font-size:1rem">' + esc(host) + '</code><button class="btn ghost sm" data-act="copy" data-v="' + esc(host) + '">Kopieer</button></div>' + link(pid ? consoleUrl(pid, 'authentication/settings') : consoleUrl(), 'Open Firebase');
-        break;
-      case 5:
-        title = 'Web-app en het blok';
-        body = '<ol><li>Tandwiel → <b>Projectinstellingen</b> → onderaan <b>Je apps</b> → <b>&lt;/&gt;</b>.</li><li>Naam <code>toepen</code> → <b>App registreren</b>.</li><li>Kopieer het blok <code>firebaseConfig = { … }</code> en plak het hier:</li></ol>' +
-          '<textarea id="fbtext" class="text" style="height:110px;padding:10px;font-family:monospace;font-size:0.8rem" placeholder="const firebaseConfig = {\n  apiKey: &quot;…&quot;,\n  …\n};">' + esc(F.text) + '</textarea>' +
-          '<button class="btn primary" data-act="fb-parse">Controleren</button>';
-        if (F.parsed) {
-          if (!F.cfg) body += '<div class="notice">Niet gevonden: <b>' + F.parsed.missing.join(', ') + '</b>. Kopieer het hele blok opnieuw.</div>';
-          else body += '<p class="small">✓ Project <b>' + esc(F.cfg.projectId) + '</b> herkend.</p>' +
-            '<label class="label" for="fbdb">Database-adres' + (F.parsed.guessed ? ' (standaard voor België ingevuld)' : '') + '</label><input class="text" id="fbdb" style="font-size:0.8rem" value="' + esc(F.cfg.databaseURL) + '">';
-        }
-        next = !!F.cfg;
-        break;
-      case 6:
-        title = 'Beveiligingsregels';
-        body = '<p>Deze regels zorgen dat niemand andermans kaarten kan zien.</p><ol><li>Tik op <b>Kopieer regels</b>.</li><li>Open de regels-pagina, vervang alles door de gekopieerde regels.</li><li>Tik op <b>Publiceren</b>.</li></ol>' +
-          '<button class="btn" data-act="fb-copyrules">Kopieer regels</button>' + link(consoleUrl(pid, 'database/' + pid + '-default-rtdb/rules'), 'Open de regels');
-        break;
-      case 7:
-        title = 'Testen';
-        next = false;
-        body = '<button class="btn primary big" data-act="fb-test"' + (F.running ? ' disabled' : '') + '>' + (F.running ? 'Bezig met testen…' : 'Test de verbinding') + '</button>';
-        if (F.checks.length) {
-          body += '<div class="stack" style="gap:8px">' + F.checks.map(function (c) {
-            var icon = { ok: '✓', fail: '✗', run: '…', wait: '○', skip: '–' }[c.st];
-            var col = c.st === 'ok' ? 'var(--accent)' : c.st === 'fail' ? 'var(--danger)' : 'var(--muted)';
-            return '<div><div style="display:flex;gap:10px;align-items:center"><b style="color:' + col + ';width:1.2em;text-align:center">' + icon + '</b><span>' + c.label + '</span></div>' +
-              (c.msg ? '<div class="notice" style="margin-top:6px">' + esc(c.msg) + (c.link ? '<div style="margin-top:8px"><a class="btn ghost sm" href="' + c.link + '" target="_blank" rel="noopener">' + c.linkText + ' ↗</a></div>' : '') + '</div>' : '') + '</div>';
-          }).join('') + '</div>';
-        }
-        if (F.done) body += '<div class="winner" style="text-align:left;padding:14px"><h2 style="font-size:1.4rem">Gelukt!</h2><p>Je vrienden krijgen de instellingen automatisch via jouw QR-code.</p><button class="btn big" data-act="fb-finish">Naar Tafel maken</button></div>';
-        break;
-    }
-    var html = topbar('Firebase koppelen', 'Stap ' + (st + 1) + ' van ' + FB_STEPS + ' · ' + title, '<button class="btn ghost sm" data-act="home">Sluiten</button>');
-    html += '<div class="fbstep">' + body + '</div>';
-    html += '<div class="page-nav"><button class="btn ghost" data-act="fb-step" data-v="-1"' + (st === 0 ? ' disabled' : '') + '>‹ Vorige</button>' +
-      '<span class="count">' + (st + 1) + ' / ' + FB_STEPS + '</span>' +
-      '<button class="btn primary" data-act="fb-step" data-v="1"' + (st >= FB_STEPS - 1 || !next ? ' disabled' : '') + '>Volgende ›</button></div>';
     return '<div class="stack">' + html + '</div>';
   }
 
@@ -1304,7 +1130,6 @@
     var u = location.origin + location.pathname + '?tafel=' + S.code;
     if (S.kind === 'peer') return u + '&via=peer';
     if (NET === 'local') u += '&net=local' + (FAST ? '&fast=1' : '');
-    if (NET === 'firebase' && CFG_SRC !== 'app') u += '&fb=' + b64e(compactCfg(CFG));
     return u;
   }
 
@@ -1338,13 +1163,13 @@
     html += topbar('Tafel ' + esc(S.code), host ? (m.mode === 'lead' ? 'Jij bent tafelleider' : 'Jij bent de host') : 'Host: ' + esc(m.hostName || ''), '<button class="btn ghost sm" data-act="' + (host ? 'ask-close' : 'leave') + '">' + (host ? 'Sluiten' : 'Verlaten') + '</button>');
     if (S.kind === 'ring') {
       if (!host) html += '<div class="panel" style="text-align:center"><h2>Je zit aan tafel!</h2><p class="muted">Wachten tot ' + esc(m.hostName || 'de host') + ' het spel start…</p>' + watchToggle() + '</div>';
-      html += ringPanel() + '<p class="small muted" style="text-align:center">Vrienden niet bij je in de buurt? Maak een tafel met <b>PeerJS</b> of <b>Firebase</b>.</p>';
+      html += ringPanel() + '<p class="small muted" style="text-align:center">Vrienden niet bij je in de buurt? Maak een tafel met <b>PeerJS</b>.</p>';
     } else if (host) {
       var qr = '';
       try { var q = qrcode(0, 'M'); q.addData(joinUrl()); q.make(); qr = q.createSvgTag({ cellSize: 6, margin: 2, scalable: true }); } catch (e) { qr = ''; }
       html += '<div class="panel" style="text-align:center"><b>Laat je vrienden deze code scannen</b>' +
         '<div class="qr" id="qr">' + qr + '</div><div class="bigcode" aria-label="Tafelcode ' + esc(S.code) + '">' + esc(S.code) + '</div>' +
-        '<p class="small muted lobby-line" style="margin:0">Met de gewone camera, of in de app: <b>Multiplayer → ' + (S.kind === 'peer' ? 'PeerJS' : 'Firebase') + ' → Ik doe mee</b>.</p>' +
+        '<p class="small muted lobby-line" style="margin:0">Met de gewone camera, of in de app: <b>Multiplayer → ' + 'PeerJS' + ' → Ik doe mee</b>.</p>' +
         inviteButtons() + '</div>';
     } else {
       html += '<div class="panel" style="text-align:center"><h2>Je zit aan tafel!</h2><p class="muted">Wachten tot ' + esc(m.hostName || 'de host') + ' het spel start…</p>' + watchToggle() +
@@ -1548,7 +1373,7 @@
       step('Kaarten verbergen', ['Tik op de ronde oog-knop naast je kaarten: ze worden meteen kaartruggen, ook als de telefoon open op tafel ligt. Tik er nog een keer op om ze weer te tonen.', 'Aan de beurt? Tik op je kaarten om ze even te zien en speel er een. Daarna zijn ze weer verborgen.', 'Rechtsboven bij <b>Kaarten</b> kun je ook het <b>scherm zwart</b> maken. Tik twee keer om terug te komen. Ben jij aan de beurt, dan komt het scherm vanzelf terug en trilt je telefoon.']) +
       step('Scherm vergrendeld?', ['Ben je per ongeluk op slot gegaan? Ontgrendel je telefoon en je zit weer aan tafel. De app maakt zelf opnieuw verbinding.', 'Ben je langer weg dan de host heeft ingesteld (standaard 45 seconden), dan speelt de computer even voor je. Zodra je terug bent, speel je weer zelf. Stop je met \u201cTafel verlaten\u201d, dan houdt de computer je plek vast.', 'De host moet het scherm aan laten staan, anders staat het spel stil voor iedereen.', 'Heeft de host de app per ongeluk afgesloten? Het spel is bewaard. Open de app opnieuw en tik in het hoofdmenu op <b>Verder met spelen</b>. De anderen maken vanzelf opnieuw verbinding en jullie gaan verder waar jullie waren.']) +
       step('Vuile was', ['Voor de eerste kaart kun je <b>Vuile was</b> melden, ook als je bluft.', 'De anderen kiezen <b>Ik geloof je</b> of <b>Controleren</b>. Bij controle beslist het spel en ziet iedereen je kaarten.', 'Klopt het, dan krijgt de controleur strafpunten. Blufte je, dan krijg jij ze.']) +
-      step('Op afstand spelen', ['Zit je ver van je vrienden, bijvoorbeeld op vakantie? Maak een tafel met <b>PeerJS</b> of <b>Firebase</b>. De QR-ring werkt alleen bij elkaar in de buurt.', 'Tik in de wachtruimte op <b>Uitnodigen via WhatsApp</b>. Je vrienden tikken op de link en zitten aan tafel.', 'Kletsen kan met de 💬-knop. Je kunt ook bellen of videobellen terwijl jullie spelen.']) +
+      step('Op afstand spelen', ['Zit je ver van je vrienden, bijvoorbeeld op vakantie? Maak een tafel met <b>PeerJS</b>. De QR-ring werkt alleen bij elkaar in de buurt.', 'Tik in de wachtruimte op <b>Uitnodigen via WhatsApp</b>. Je vrienden tikken op de link en zitten aan tafel.', 'Kletsen kan met de 💬-knop. Je kunt ook bellen of videobellen terwijl jullie spelen.']) +
       step('Chat en meekijken', ['Tik op de ronde knop 💬 om te kletsen met de anderen aan tafel. Handig als jullie op afstand spelen.', 'Tik op 🎤 en praat: je woorden worden tekst. Dat werkt met internet. Daarna tik je op <b>Stuur</b>.', 'Wil je alleen kijken? Kies in de wachtruimte <b>Ik kijk alleen mee</b>. Wil je ook alle kaarten zien? Laat de host de tafel openen als <b>Tafelleider</b>.']) +
       step('Punten', ['De punten worden automatisch bijgehouden. Na elke ronde zie je wie er wat kreeg.', 'Aan het eind komt de uitslag op de ranglijst van de host.']) +
       step('Goed om te weten', ['Iedereen heeft internet nodig. Valt je verbinding weg, open dan de app opnieuw: je zit weer aan tafel.', 'Is er een <b>tafelleider</b>, dan speelt die niet mee en kan die alle kaarten zien.', 'Laat je scherm aan staan; de app probeert dat zelf te regelen.']) +
@@ -1706,11 +1531,10 @@
   // Tighten the layout step by step until the screen fits without scrolling.
   function render() {
     for (var lvl = 0; lvl <= 4; lvl++) {
-      app.className = 'wrap' + (lvl ? ' fit1' : '') + (lvl > 1 ? ' fit2' : '') + (lvl > 2 ? ' fit3' : '') + (lvl > 3 ? ' fit4' : '') + (S.view === 'home' ? ' home' : '') + (/^(home|invite|mp0|mp1|mpjoin|ringjoin)$/.test(S.view) ? ' menuview' : '') + (S.view === 'fb' ? ' fbwrap' : '');
+      app.className = 'wrap' + (lvl ? ' fit1' : '') + (lvl > 1 ? ' fit2' : '') + (lvl > 2 ? ' fit3' : '') + (lvl > 3 ? ' fit4' : '') + (S.view === 'home' ? ' home' : '') + (/^(home|invite|mp0|mp1|mpjoin|ringjoin)$/.test(S.view) ? ' menuview' : '');
       var html;
       if (S.view === 'table') html = renderTable();
       else if (S.view === 'create' || S.view === 'practice') html = renderCreate();
-      else if (S.view === 'fb') html = renderFb();
       else if (S.view === 'invite') html = renderInvite();
       else if (S.view === 'mp0') html = renderMp0();
       else if (S.view === 'mp1') html = renderMp1();
@@ -1767,7 +1591,7 @@
     } else if (navHist) {
       navHist = 0;
       if (S.view === 'table') { if (pushMark('nav')) navHist = 1; S.sheet = { type: 'menu' }; renderLayer(); return; }
-      if (S.deep && (S.view === 'mp0' || S.view === 'practice' || S.view === 'fb')) { location.href = 'index.html'; return; }
+      if (S.deep && (S.view === 'mp0' || S.view === 'practice')) { location.href = 'index.html'; return; }
       var par = parentView(); S.err = ''; S.view = par;
       if (par === 'home') { S.method = null; S.rl = null; }
       render();
@@ -1790,7 +1614,6 @@
       case 'mp-method': S.err = ''; S.method = v; S.view = 'mp1'; render(); break;
       case 'mp-host':
         S.err = '';
-        if (S.method === 'firebase' && !NET) { S.view = 'fb'; S.fb = S.fb || { text: '', parsed: null, cfg: null, checks: [], running: false, done: false }; render(); window.scrollTo(0, 0); break; }
         S.view = 'create'; c.bots = 0; render(); break;
       case 'mp-guest':
         S.err = '';
@@ -1824,33 +1647,10 @@
         if (history.state && history.state.toepenPage) history.back();
         else { S.sheet = null; renderLayer(); }
         break;
-      case 'go-fb': S.err = ''; S.view = 'fb'; S.fb = S.fb || { text: '', parsed: null, cfg: null, checks: [], running: false, done: false };
-        if (CFG && CFG_SRC !== 'app' && !S.fb.cfg) S.fb.cfg = compactCfg(CFG);
-        render(); window.scrollTo(0, 0); break;
-      case 'fb-parse':
-        var F = S.fb; F.text = (document.getElementById('fbtext') || {}).value || '';
-        F.parsed = parseCfg(F.text); F.cfg = F.parsed.cfg; F.checks = []; F.done = false;
-        if (F.cfg) toast('Blok herkend'); render(); break;
-      case 'fb-test':
-        var dbIn = document.getElementById('fbdb');
-        if (dbIn && dbIn.value.trim()) S.fb.cfg.databaseURL = dbIn.value.trim().replace(/\/+$/, '');
-        runChecks(); break;
-      case 'fb-retest': S.fb.step = 7; runChecks(); break;
-      case 'fb-step':
-        if (S.fb.step === 5) { var t5 = document.getElementById('fbtext'), d5 = document.getElementById('fbdb'); if (t5) S.fb.text = t5.value; if (d5 && d5.value.trim() && S.fb.cfg) S.fb.cfg.databaseURL = d5.value.trim().replace(/\/+$/, ''); }
-        S.fb.step = Math.max(0, Math.min(FB_STEPS - 1, (S.fb.step || 0) + +v)); render(); window.scrollTo(0, 0); break;
-      case 'fb-forget': try { localStorage.removeItem(CFG_KEY); } catch (e4) {} location.href = location.pathname; break;
-      case 'fb-finish': location.href = location.pathname; break;
-      case 'fb-copyrules':
-        fetch('database.rules.json').then(function (r) { return r.text(); }).then(function (t) {
-          return navigator.clipboard.writeText(t).then(function () { toast('Regels gekopieerd. Plak ze in Firebase.'); });
-        }).catch(function () { toast('Kopiëren lukte niet. Open database.rules.json en kopieer het handmatig.'); });
-        break;
       case 'copy': try { navigator.clipboard.writeText(v).then(function () { toast('Gekopieerd'); }); } catch (e5) { toast(v); } break;
       case 'menu': S.sheet = { type: 'menu' }; renderLayer(); break;
       case 'sheet-close': S.sheet = null; renderLayer(); break;
       case 'home':
-        if (S.deep && S.view === 'fb') { location.href = 'index.html'; break; }
         S.view = 'home'; S.method = null; S.rl = null; render(); break;
       case 'go-practice': S.err = ''; S.view = 'practice'; c.bots = Math.max(c.bots, 3); render(); break;
       case 'mode': c.mode = v; render(); break;
@@ -1930,10 +1730,6 @@
   // Coming from the main menu: go straight to the right screen, and Terug goes back to the menu
   var START = Q.get('start');
   if (Q.get('debug') === '1') window.__dbg = { db: function () { return S.db; }, state: S };
-  if (!qcode && START === 'firebase') {
-    S.deep = true; S.view = 'fb'; S.fb = { text: '', parsed: null, cfg: null, checks: [], running: false, done: false };
-    if (CFG && CFG_SRC !== 'app') S.fb.cfg = compactCfg(CFG);
-  }
   if (!qcode && (START === 'oefenen' || START === 'multi')) {
     S.deep = true; S.view = START === 'oefenen' ? 'practice' : 'mp0';
     if (START === 'oefenen') S.create.bots = Math.max(S.create.bots, 3);

@@ -1,6 +1,5 @@
 /*
- * Small realtime-database layer with two backends:
- *  - firebase: Firebase Realtime Database with anonymous sign-in (real play)
+ * Small realtime-database layer (in one browser):
  *  - local:    same API inside one browser, synced between tabs with
  *              BroadcastChannel (practice mode and automated tests)
  * Paths look like "rooms/KLAV/state".
@@ -9,45 +8,6 @@
   'use strict';
 
   function clean(v) { return v === undefined ? null : JSON.parse(JSON.stringify(v)); }
-
-  /* ---------- Firebase ---------- */
-  function firebaseBackend(config) {
-    var app = root.firebase.apps.length ? root.firebase.app() : root.firebase.initializeApp(config);
-    var auth = app.auth(), db = app.database();
-    var ref = function (p) { return db.ref(p); };
-    return {
-      kind: 'firebase',
-      ready: function () {
-        return new Promise(function (resolve, reject) {
-          var off = auth.onAuthStateChanged(function (u) {
-            if (u) { off(); resolve(u.uid); }
-          });
-          auth.signInAnonymously().catch(function (e) { off(); reject(e); });
-        });
-      },
-      get: function (p) { return ref(p).get().then(function (s) { return s.val(); }); },
-      set: function (p, v) { return ref(p).set(clean(v)); },
-      update: function (p, v) { return ref(p).update(clean(v)); },
-      remove: function (p) { return ref(p).remove(); },
-      push: function (p, v) { return ref(p).push(clean(v)); },
-      on: function (p, cb) {
-        var r = ref(p), h = function (s) { cb(s.val()); };
-        r.on('value', h);
-        return function () { r.off('value', h); };
-      },
-      onChildAdded: function (p, cb) {
-        var r = ref(p), h = function (s) { cb(s.key, s.val()); };
-        r.on('child_added', h);
-        return function () { r.off('child_added', h); };
-      },
-      onDisconnect: function (p, v) { return ref(p).onDisconnect().set(clean(v)); },
-      onConnection: function (cb) {
-        var r = ref('.info/connected'), h = function (s) { cb(!!s.val()); };
-        r.on('value', h);
-        return function () { r.off('value', h); };
-      }
-    };
-  }
 
   /* ---------- Local (one browser) ---------- */
   function localBackend(ns) {
@@ -134,5 +94,5 @@
     return api;
   }
 
-  root.ToepenNet = { firebase: firebaseBackend, local: localBackend };
+  root.ToepenNet = { local: localBackend };
 })(this);

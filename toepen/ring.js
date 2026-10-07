@@ -7,7 +7,7 @@
  *
  * Every phone keeps a copy of the table's data and floods each change to the
  * phones it is linked to, so the same database API as net.js works on top of
- * it (see ToepenNet.firebase / ToepenNet.local). The host stays in charge of
+ * it (see ToepenNet.local). The host stays in charge of
  * the game. Phones can be linked as a ring (A-B-C-D-A): when one link drops,
  * messages still arrive the other way round.
  */
