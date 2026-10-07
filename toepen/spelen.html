@@ -1101,7 +1101,7 @@
 
   function renderCreate() {
     var c = S.create, practice = S.view === 'practice', html = '';
-    html += topbar(practice ? 'Oefenen' : 'Tafel maken', practice ? 'Tegen computerspelers, op deze telefoon' : (S.method ? METHODS[S.method].t : 'Kies hoe jij meedoet'), (practice && S.deep ? '<a class="btn ghost sm" href="index.html">← Terug</a>' : '<button class="btn ghost sm" data-act="' + (practice ? 'home' : 'mp1') + '">Terug</button>'));
+    html += topbar(practice ? 'Oefenen' : 'Tafel maken', practice ? 'Tegen de computer' : (S.method ? METHODS[S.method].t : 'Kies hoe jij meedoet'), (practice && S.deep ? '<a class="btn ghost sm" href="index.html">← Terug</a>' : '<button class="btn ghost sm" data-act="' + (practice ? 'home' : 'mp1') + '">Terug</button>'));
     if (!practice) {
       html += '<div class="stack"><div class="label">Hoe doe jij mee?</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">' +
         '<button class="choice" data-act="mode" data-v="play" aria-pressed="' + (c.mode === 'play') + '"><b>Ik speel mee</b><span>Je speelt mee en bent ook de host.</span></button>' +
