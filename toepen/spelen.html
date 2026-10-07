@@ -537,6 +537,7 @@
         '<button class="btn ghost" data-act="copy" data-v="' + esc(rl.code) + '">Code kopiëren</button>';
     } else {
       h += '<h2>Telefoons koppelen</h2>' + linkLine() +
+        (rl.relink ? '<div class="notice">Je spel is bewaard. Koppel opnieuw met <b>één telefoon die nog meespeelt</b> (of met de host). Eén koppeling is genoeg: de rest loopt vanzelf mee.</div>' : '') +
         '<p class="small muted" style="text-align:center">Koppel in een kring: jij → buurman → volgende → … → weer de host.</p>' +
         '<button class="btn primary big" data-act="ring-show">QR tonen aan de volgende</button>' +
         '<button class="btn big" data-act="ring-scan">QR scannen van de vorige</button>';
@@ -602,6 +603,7 @@
         return db.update(base() + '/players/' + S.uid, { name: S.name.trim(), joined: (me && me.joined) || Date.now(), online: true, auto: false });
       }).then(function () {
         db.onDisconnect(base() + '/players/' + S.uid + '/online', false);
+        ls(K.join, { code: best.code, kind: 'ring' });
         subscribe(); S.rl = null; S.busy = false; S.view = 'table'; render();
       });
     }).catch(function (e) { S.rl = { step: 'intro', err: e.message }; S.busy = false; S.view = 'ringjoin'; render(); });
@@ -959,10 +961,28 @@
       subscribe();
       S.busy = false; S.view = 'table';
       if (S.G) { S.lastHands = {}; publish(); } else render();
+      if (saved.kind === 'ring') { S.sheet = { type: 'ring' }; S.rl = { step: 'choose', relink: true }; renderLayer(); }
       if (saved.kind === 'peer') {
         // nobody is connected yet: show them as offline until their phone connects again (so the take-over timer works)
         Object.keys(S.players).forEach(function (id) { var pl = S.players[id]; if (!pl.bot && id !== S.uid && pl.online !== false) S.db.update(base() + '/players/' + id, { online: false }); });
       }
+    }).catch(function (e) { S.busy = false; showError(e); });
+  }
+
+  // A guest on the QR-ring who closed the app: the table is still on this phone, only the links are gone.
+  function resumeRingGuest(jn) {
+    S.busy = true; render();
+    connect('ring').then(function () {
+      S.code = jn.code; S.kind = 'ring'; S.role = 'client';
+      return S.db.get(base() + '/meta');
+    }).then(function (m) {
+      if (!m || m.status === 'closed') { ls(K.join, null); throw new Error('Deze tafel bestaat niet meer.'); }
+      S.meta = m;
+      return S.db.update(base() + '/players/' + S.uid, { online: true });
+    }).then(function () {
+      S.db.onDisconnect(base() + '/players/' + S.uid + '/online', false);
+      subscribe(); S.busy = false; S.view = 'table'; render();
+      S.sheet = { type: 'ring' }; S.rl = { step: 'choose', relink: true }; renderLayer();
     }).catch(function (e) { S.busy = false; showError(e); });
   }
 
@@ -1374,7 +1394,7 @@
       step('Aan tafel', ['De host tikt op <b>Tafel maken</b> en laat de QR-code zien.', 'Scan die met de camera van je telefoon, of vul de 4 letters in bij <b>Meedoen</b>.', 'Vul je naam in. De volgende keer onthoudt je telefoon die.']) +
       step('Spelen', ['Jouw kaarten staan onderin. Ben je aan de beurt, dan lichten de kaarten op die je mag spelen. Tik erop.', 'Wil je toepen? Tik op <b>Toep!</b> als je aan de beurt bent, vóór je een kaart speelt.', 'Toept een ander, dan vraagt je telefoon <b>Meegaan</b> of <b>Passen</b>. Je telefoon trilt.', 'Midden op tafel zie je de slag en wie er aan de beurt is.']) +
       step('Kaarten verbergen', ['Tik op de ronde oog-knop naast je kaarten: ze worden meteen kaartruggen, ook als de telefoon open op tafel ligt. Tik er nog een keer op om ze weer te tonen.', 'Aan de beurt? Tik op je kaarten om ze even te zien en speel er een. Daarna zijn ze weer verborgen.', 'Rechtsboven bij <b>Kaarten</b> kun je ook het <b>scherm zwart</b> maken. Tik twee keer om terug te komen. Ben jij aan de beurt, dan komt het scherm vanzelf terug en trilt je telefoon.']) +
-      step('Scherm vergrendeld?', ['Ben je per ongeluk op slot gegaan? Ontgrendel je telefoon en je zit weer aan tafel. De app maakt zelf opnieuw verbinding.', 'Ben je langer weg dan de host heeft ingesteld (standaard 45 seconden), dan speelt de computer even voor je. Zodra je terug bent, speel je weer zelf. Stop je met \u201cTafel verlaten\u201d, dan houdt de computer je plek vast.', 'De host moet het scherm aan laten staan, anders staat het spel stil voor iedereen.', 'Heeft de host de app per ongeluk afgesloten? Het spel is bewaard. Open de app opnieuw en tik in het hoofdmenu op <b>Verder met spelen</b>. De anderen maken vanzelf opnieuw verbinding en jullie gaan verder waar jullie waren.']) +
+      step('Scherm vergrendeld?', ['Ben je per ongeluk op slot gegaan? Ontgrendel je telefoon en je zit weer aan tafel. De app maakt zelf opnieuw verbinding.', 'Ben je langer weg dan de host heeft ingesteld (standaard 45 seconden), dan speelt de computer even voor je. Zodra je terug bent, speel je weer zelf. Stop je met \u201cTafel verlaten\u201d, dan houdt de computer je plek vast.', 'Speel je <b>zonder internet (QR-ring)</b>? Dan raakt een telefoon die sluit los van de anderen. Open de app, tik op <b>Verder met spelen</b> en koppel opnieuw met één telefoon die nog meedoet. Je plek en je kaarten blijven bewaard.', 'De host moet het scherm aan laten staan, anders staat het spel stil voor iedereen.', 'Heeft de host de app per ongeluk afgesloten? Het spel is bewaard. Open de app opnieuw en tik in het hoofdmenu op <b>Verder met spelen</b>. De anderen maken vanzelf opnieuw verbinding en jullie gaan verder waar jullie waren.']) +
       step('Vuile was', ['Voor de eerste kaart kun je <b>Vuile was</b> melden, ook als je bluft.', 'De anderen kiezen <b>Ik geloof je</b> of <b>Controleren</b>. Bij controle beslist het spel en ziet iedereen je kaarten.', 'Klopt het, dan krijgt de controleur strafpunten. Blufte je, dan krijg jij ze.']) +
       step('Op afstand spelen', ['Zit je ver van je vrienden, bijvoorbeeld op vakantie? Maak een tafel met <b>PeerJS</b>. De QR-ring werkt alleen bij elkaar in de buurt.', 'Tik in de wachtruimte op <b>Uitnodigen via WhatsApp</b>. Je vrienden tikken op de link en zitten aan tafel.', 'Kletsen kan met de 💬-knop. Je kunt ook bellen of videobellen terwijl jullie spelen.']) +
       step('Chat en meekijken', ['Tik op de ronde knop 💬 om te kletsen met de anderen aan tafel. Handig als jullie op afstand spelen.', 'Tik op 🎤 en praat: je woorden worden tekst. Dat werkt met internet. Daarna tik je op <b>Stuur</b>.', 'Wil je alleen kijken? Kies in de wachtruimte <b>Ik kijk alleen mee</b>. Wil je ook alle kaarten zien? Laat de host de tafel openen als <b>Tafelleider</b>.']) +
@@ -1390,6 +1410,7 @@
     var html = '';
     if (!S.connected && S.view === 'table') html += '<div class="conn" role="alert">' + (S.role === 'client' ? 'De host is even weg of heeft geen verbinding. Je verbindt vanzelf opnieuw, je plek blijft bewaard.' : 'Geen verbinding. Even geduld…') + '</div>';
     var sh = S.sheet, G = viewGame(), inner = '';
+    if (S.kind === 'ring' && S.view === 'table' && G && RING && !RING.linkCount() && !(sh && sh.type === 'ring')) html += '<button class="conn" data-act="ring-open" role="alert" style="width:100%;border:0;font:inherit;cursor:pointer">Niet gekoppeld met de andere telefoons. Tik hier om opnieuw te koppelen.</button>';
     var mustAnswer = G && G.phase === 'play' && G.round.pending && (G.round.pending.awaiting || []).indexOf(S.uid) >= 0 && !(G.round.pending.answers || {})[S.uid];
     var wasQ = G && G.phase === 'play' && G.round.was && (G.round.was.awaiting || []).indexOf(S.uid) >= 0 && !(G.round.was.answers || {})[S.uid];
     var wr = G && G.round.wasResult, wrKey = wr ? G.round.n + ':' + wr.by + ':' + (wr.checker || '') : '';
@@ -1429,10 +1450,14 @@
         var hp = sh.stack[sh.stack.length - 1], RT = rulesTopics(), GS = guideSteps();
         if (hp.v === 'menu') {
           full = 'Spelregels en uitleg';
-          inner = '<div class="label">Spelregels</div><div class="navlist"><a class="hlink" href="handleiding.html"><b>Handleiding met plaatjes</b></a>' + RT.map(function (t, i) {
+          inner = '<div class="label">Spelregels</div><div class="navlist"><button class="hlink" data-act="hp-open" data-v="guide" data-i="0"><b>Handleiding met plaatjes</b></button>' + RT.map(function (t, i) {
             return '<button class="navrow" data-act="hp-open" data-v="topic" data-i="' + i + '"><b>' + t.t + '</b></button>'; }).join('') + '</div>' +
             '<div class="label">Zo speel je in de app</div><div class="navlist">' + GS.map(function (t, i) {
             return '<button class="navrow" data-act="hp-open" data-v="step" data-i="' + i + '"><b>' + t.t + '</b></button>'; }).join('') + '</div>';
+        } else if (hp.v === 'guide') {
+          // shown inside this page, so the table connection stays alive
+          full = 'Handleiding';
+          inner = '<div style="flex:1;min-height:0"><iframe src="handleiding.html?embed=1" title="Handleiding" style="width:100%;height:100%;border:0;display:block"></iframe></div>';
         } else {
           var list = hp.v === 'topic' ? RT : GS, it = list[hp.i];
           full = it.t;
@@ -1739,11 +1764,15 @@
     S.deep = true; S.view = START === 'oefenen' ? 'practice' : 'mp0';
     if (START === 'oefenen') S.create.bots = Math.max(S.create.bots, 3);
   }
+  window.addEventListener('message', function (e) {
+    if (e.origin === location.origin && e.data && e.data.toepenGuide === 'close') { var bk = document.querySelector('.fullpage [data-act=back]'); if (bk) bk.click(); }
+  });
   var resumed = false;
   if (!qcode && START === 'verder') {
     S.deep = true; resumed = true;
     var sv0 = ls(K.host), jn0 = ls(K.join);
     if (sv0 && sv0.code) resumeHost(sv0);
+    else if (jn0 && jn0.code && jn0.kind === 'ring') resumeRingGuest(jn0);
     else if (jn0 && jn0.code && S.name.trim() && (jn0.kind === 'peer' || NET)) joinTable(jn0.code, jn0.kind === 'peer' ? 'peer' : undefined);
     else { S.view = 'mp0'; render(); }
   }

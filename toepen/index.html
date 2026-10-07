@@ -71,6 +71,7 @@
   .choice.ic .go { color: var(--t); }
   .t-green { --t: var(--accent); --ts: var(--accent-soft); } .t-blue { --t: var(--blue); --ts: var(--blue-soft); } .t-orange { --t: var(--orange); --ts: var(--orange-soft); } .t-purple { --t: var(--purple); --ts: var(--purple-soft); } .t-gold { --t: var(--gold); --ts: var(--gold-soft); }
   .choice.ic.main { border-width: 2px; border-color: var(--t); }
+  .resume { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; } .resume-x { align-self: stretch; min-width: 48px; padding: 0; font-size: 1.1rem; }
   .choice.main { border-color: var(--accent); background: var(--accent-soft); }
   .choice .go { float: right; color: var(--accent); }
   .row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 8px; width: 100%; padding: 12px 14px; border-radius: 14px; border: 1.5px solid var(--line); background: var(--surface); }
@@ -136,7 +137,7 @@
       var hst = JSON.parse(localStorage.getItem('toepen-mp-host'));
       if (hst && hst.code && (!hst.practice || localStorage.getItem('toepen-mp-game-' + hst.code))) return { practice: !!hst.practice, code: hst.code, host: true };
       var jn = JSON.parse(localStorage.getItem('toepen-mp-join'));
-      if (jn && jn.code) return { code: jn.code, host: false };
+      if (jn && jn.code) return { code: jn.code, host: false, ring: jn.kind === 'ring' };
     } catch (e) {}
     return null;
   }
@@ -144,8 +145,9 @@
     var cur = S.current(), h = '', ot = openTable();
     h += '<div class="topbar"><div class="meta"><h1>Toepen</h1><div class="suits" aria-hidden="true">♠ <span class="r">♥</span> ♣ <span class="r">♦</span></div></div><a class="btn ghost sm" href="handleiding.html">Handleiding</a></div><div class="stack down">';
     if (ot) {
-      h += '<a class="choice main ic t-green" href="spelen.html?start=verder"><i class="i" aria-hidden="true"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="7 4 20 12 7 20"/></svg></i><b>Verder met spelen</b><span>' +
-        (ot.practice ? 'Tegen de computer. Waar je gebleven was.' : ot.host ? 'Je tafel ' + esc(ot.code) + '. Verbind opnieuw, dan gaan jullie verder waar je was.' : 'Tafel ' + esc(ot.code) + '. Terug naar je plek.') + '</span></a>';
+      h += '<div class="resume"><a class="choice main ic t-green" href="spelen.html?start=verder"><i class="i" aria-hidden="true"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="7 4 20 12 7 20"/></svg></i><b>Verder met spelen</b><span>' +
+        (ot.practice ? 'Tegen de computer. Waar je gebleven was.' : ot.host ? 'Je tafel ' + esc(ot.code) + '. Verbind opnieuw, dan gaan jullie verder waar je was.' : 'Tafel ' + esc(ot.code) + '. Terug naar je plek' + (ot.ring ? ', daarna koppel je opnieuw met de anderen.' : '.')) + '</span></a>' +
+        '<button class="btn ghost resume-x" data-act="ask-clear" aria-label="Dit spel opruimen">✕</button></div>';
     }
     if (cur && cur.sum.players.length && !cur.sum.done) {
       h += '<a class="choice main ic t-green" href="scorebord.html"><i class="i" aria-hidden="true"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01"/></svg></i><b>Verder met je scorebord</b><span>Ronde ' + cur.sum.round + ' · ' + esc(who(cur.sum)) + '</span></a>';
@@ -200,7 +202,11 @@
   function renderSheet() {
     var sh = ui.sheet; if (!sh) return '';
     var inner = '';
-    if (sh.type === 'new') {
+    if (sh.type === 'clear') {
+      var ot2 = openTable();
+      inner = '<h2>Dit spel opruimen?</h2><p class="muted">' + (ot2 && ot2.practice ? 'Je oefenpotje wordt gewist.' : 'Je tafel wordt van deze telefoon gehaald. Je kunt er niet meer mee verder' + (ot2 && ot2.host ? ', en de anderen kunnen niet meer verbinden.' : '.')) + ' Je scorebord en opgeslagen scores blijven staan.</p>' +
+        '<button class="btn danger big" data-act="do-clear">Ja, opruimen</button>';
+    } else if (sh.type === 'new') {
       inner = '<h2>Scorebord opslaan</h2><p class="small muted">Geef het een naam. Je spelers, de stand en de ranglijst worden bewaard.</p>' +
         '<input class="text" id="savename" maxlength="40" autocomplete="off" value="' + esc(sh.name) + '" placeholder="Naam">' +
         (sh.err ? '<p class="small" style="color:var(--danger)" role="alert">' + esc(sh.err) + '</p>' : '') +
@@ -286,6 +292,14 @@
       case 'menu': ui.view = 'menu'; ui.sheet = null; draw(); break;
       case 'page': ui.page += +el.dataset.v; draw(); break;
       case 'close': ui.sheet = null; draw(); break;
+      case 'ask-clear': ui.sheet = { type: 'clear' }; draw(); break;
+      case 'do-clear':
+        try {
+          var ot3 = openTable(), rm = ['toepen-mp-host', 'toepen-mp-join', 'toepen-ring-data', 'toepen-peer-data', 'toepen-localdb-practice'];
+          if (ot3 && ot3.code) rm.push('toepen-mp-game-' + ot3.code);
+          rm.forEach(function (k) { localStorage.removeItem(k); });
+        } catch (e) {}
+        ui.sheet = null; draw(); toast('Opgeruimd'); break;
       case 'new': ui.sheet = { type: 'new', name: defaultName() }; draw(); break;
       case 'do-new':
         var st; try { st = JSON.parse(localStorage.getItem('toepen-scorebord-v2')); } catch (er) { st = null; }

@@ -177,18 +177,21 @@
   var i = 0;
   try { var q = parseInt(new URLSearchParams(location.search).get('s'), 10); if (q >= 1 && q <= steps.length) i = q - 1; } catch (e) {}
   try { var th = JSON.parse(localStorage.getItem('toepen-prefs-v1') || '{}').theme; if (th === 'light' || th === 'dark') document.documentElement.dataset.theme = th; } catch (e) {}
+  var EMBED = /[?&]embed=1/.test(location.search);
+  if (EMBED) { var st = document.createElement('style'); st.textContent = '.bar{display:none}.app{padding-top:10px}'; document.head.appendChild(st); }
   var app = document.getElementById('app');
   function draw() {
     var s = steps[i], last = i === steps.length - 1;
     app.innerHTML =
       '<div class="bar"><h1>Handleiding</h1><a class="btn ghost sm" href="index.html" id="sluit">Sluiten</a></div>' +
       '<div class="dots" aria-hidden="true">' + steps.map(function (_, k) { return '<i class="' + (k === i ? 'on' : '') + '"></i>'; }).join('') + '</div>' +
-      '<div class="art">' + s.art + '</div>' +
+      '<div class="art">' + ((EMBED && last) ? '<div style="font-size:3rem" aria-hidden="true">♠ ♥ ♣ ♦</div><div class="cap">Veel plezier met toepen!</div>' : s.art) + '</div>' +
       '<div class="txt"><h2>' + (i + 1) + '. ' + s.t + '</h2><p>' + s.p + '</p></div>' +
       '<div class="nav"><button class="btn ghost" data-d="-1"' + (i === 0 ? ' disabled' : '') + '>‹ Vorige</button>' +
-      (last ? '<a class="btn primary next" href="spelen.html?start=oefenen">Start oefenen</a>' : '<button class="btn primary next" data-d="1">Volgende ›</button>') + '</div>';
+      (last ? (EMBED ? '<button class="btn primary next" data-close="1">Klaar</button>' : '<a class="btn primary next" href="spelen.html?start=oefenen">Start oefenen</a>') : '<button class="btn primary next" data-d="1">Volgende ›</button>') + '</div>';
   }
   app.addEventListener('click', function (e) {
+    if (e.target.closest('[data-close]')) { try { parent.postMessage({ toepenGuide: 'close' }, location.origin); } catch (x) {} return; }
     var b = e.target.closest('[data-d]'); if (!b) return;
     i = Math.max(0, Math.min(steps.length - 1, i + +b.dataset.d)); draw();
   });
