@@ -80,6 +80,15 @@
   .stake { display: flex; align-items: center; gap: 14px; }
   .chip { width: 78px; height: 78px; border-radius: 50%; display: grid; place-items: center; font: 800 2.2rem/1 var(--font-display); background: var(--ink); color: var(--bg); border: 4px solid var(--surface); box-shadow: 0 0 0 2px var(--line); }
   .chip.o { background: var(--orange); color: #fff; }
+  .who3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; width: 100%; max-width: 360px; }
+  .pcol { display: grid; justify-items: center; gap: 5px; align-content: start; background: var(--bg); border-radius: 14px; padding: 10px 4px; text-align: center; }
+  .av { width: 34px; height: 34px; border-radius: 50%; color: #fff; display: grid; place-items: center; font: 800 1rem/1 var(--font-display); }
+  .say { font-size: 0.78rem; font-weight: 800; padding: 3px 8px; border-radius: 999px; } .say.ok { background: var(--accent-soft); color: var(--accent); } .say.no { background: var(--line); color: var(--muted); }
+  .lbl { font-size: 0.68rem; color: var(--muted); font-weight: 700; margin-top: 4px; }
+  .c.ghost { background: transparent; border: 2px dashed var(--line); box-shadow: none; color: var(--muted); align-items: center; justify-content: center; }
+  .res { font: 800 1.7rem/1 var(--font-display); border-radius: 12px; padding: 4px 14px; margin-top: 4px; } .res.z { background: var(--accent-soft); color: var(--accent); } .res.o { background: var(--orange-soft); color: var(--orange); }
+  .cap2 { font-size: 0.72rem; color: var(--muted); font-weight: 700; line-height: 1.2; }
+  .chip.sm { width: 40px; height: 40px; font-size: 1.2rem; border-width: 2px; }
   .mock { padding: 10px 16px; border-radius: 12px; font-weight: 800; min-width: 120px; text-align: center; }
   .mock.ok { background: var(--accent); color: var(--accent-fg); } .mock.no { background: transparent; border: 1.5px solid var(--line); } .mock.to { background: var(--orange); color: #fff; } .mock.wa { background: var(--purple); color: #fff; }
   .list { width: 100%; max-width: 340px; display: grid; gap: 6px; }
@@ -137,16 +146,15 @@
         '<div class="cap">De inzet begint op 1 en gaat bij elke toep 1 omhoog (standaard tot 4).</div>' +
         '<div class="row"><div class="mock to">Toep!</div></div>' +
         '<div class="row"><div class="mock ok">Meegaan</div><div class="mock no">Passen</div></div>' },
-    { t: 'Wie krijgt strafpunten?', p: 'Strafpunten zijn <b>minpunten</b>: je wilt er zo weinig mogelijk. De <b>winnaar van de ronde krijgt er geen</b>. Wie verliest, krijgt de inzet. Wie past, krijgt de inzet van vóór de toep.',
-      art: '<div class="cap" style="font-weight:700">Wat er gebeurt</div><div class="list">' +
-        '<div class="li"><b>Anna</b><span>toept: inzet wordt 2</span></div>' +
-        '<div class="li"><b>Bram</b><span>past en stapt uit de ronde</span></div>' +
-        '<div class="li"><b>Cas</b><span>gaat mee</span></div>' +
-        '<div class="li"><b>Anna</b><span>wint de laatste slag</span></div></div>' +
-        '<div class="cap" style="font-weight:700">Strafpunten na deze ronde</div><div class="list">' +
-        '<div class="li"><b>Anna</b><span>won de ronde</span><em class="pt z" style="font-style:normal">0</em></div>' +
-        '<div class="li"><b>Bram</b><span>paste: inzet van vóór de toep</span><em class="pt" style="font-style:normal">+1</em></div>' +
-        '<div class="li"><b>Cas</b><span>ging mee en verloor: de inzet</span><em class="pt" style="font-style:normal">+2</em></div></div>' },
+    { t: 'Wie krijgt strafpunten?', p: 'Alleen de <b>winnaar</b> van de ronde blijft vrij. <b>Bram</b> durfde niet en krijgt een klein straf. <b>Cas</b> durfde wel, maar verloor: groot straf.',
+      art: '<div class="row" style="gap:10px"><span class="tag o">Anna zegt: Toep!</span><span class="stake" style="gap:6px"><span class="chip sm">1</span>→<span class="chip sm o">2</span></span></div>' +
+        '<div class="who3">' +
+        '<div class="pcol"><div class="av" style="background:#2f7f5a">A</div><b>Anna</b>' +
+          '<div class="say ok">Gaat door</div><div class="lbl">laatste slag</div>' + card('10', '♥', 'win') + '<div class="res z">0</div><div class="cap2">won: geen straf</div></div>' +
+        '<div class="pcol"><div class="av" style="background:#b4602a">B</div><b>Bram</b>' +
+          '<div class="say no">Past</div><div class="lbl">laatste slag</div><div class="c ghost"><b>–</b></div><div class="res o">+1</div><div class="cap2">paste: klein straf</div></div>' +
+        '<div class="pcol"><div class="av" style="background:#34638f">C</div><b>Cas</b>' +
+          '<div class="say ok">Gaat mee</div><div class="lbl">laatste slag</div>' + card('8', '♥', 'dim') + '<div class="res o">+2</div><div class="cap2">verloor: groot straf</div></div></div>' },
     { t: 'Strafpunten en af', p: 'Bij je grens (bijvoorbeeld 15) lig je <b>eruit</b>. Eén punt eronder sta je <b>op scherp</b>. Wie overblijft, wint.',
       art: '<div class="score"><div class="h"><span>Anna</span><small>4 / 15</small></div><div class="bartrack"><i style="width:27%"></i></div></div>' +
         '<div class="score"><div class="h"><span>Bram</span><small>14 / 15 <span class="tag o">op scherp</span></small></div><div class="bartrack"><i style="width:93%;background:var(--orange)"></i></div></div>' +
