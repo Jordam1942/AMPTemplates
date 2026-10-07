@@ -156,6 +156,7 @@
   .hand .acts .btn.warn { background: var(--purple); color: #fff; }
 
   .players { display: grid; gap: 8px; margin-top: 14px; }
+  .hasfab .players { padding-right: 58px; }
   .pl { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 10px 12px; display: grid; gap: 8px; }
   .pl.turn { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
   .pl.af, .pl.passed { opacity: 0.6; }
@@ -1520,6 +1521,7 @@
     var fab = layer.querySelector('.chatfab'), hd = app.querySelector('.hand');
     var fb = (hd ? hd.offsetHeight : 0) + 14;
     var hf = layer.querySelector('.handfab'), uf = layer.querySelector('.undofab');
+    document.body.classList.toggle('hasfab', !!(fab || hf || uf));   // keep the score column free of the round buttons
     if (fab) fab.style.bottom = fb + 'px';
     if (hf) hf.style.bottom = (fb + (fab ? 62 : 0)) + 'px';
     if (uf) uf.style.bottom = (fb + (fab ? 62 : 0) + (hf ? 62 : 0)) + 'px';
