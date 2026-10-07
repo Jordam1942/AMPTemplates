@@ -142,7 +142,7 @@
   .hand { position: fixed; left: 0; right: 0; bottom: 0; z-index: 8; background: var(--surface); border-top: 1px solid var(--line); padding: 10px 16px calc(12px + env(safe-area-inset-bottom, 0px)); box-shadow: 0 -8px 24px -16px rgba(0,0,0,0.5); }
   .hand .inner { max-width: 560px; margin: 0 auto; display: grid; gap: 14px; }   /* room between the buttons and the cards, so a card tap never hits Toep */
   .hand .cards { display: flex; gap: 10px; justify-content: center; }
-  .hand .pc { width: 72px; height: 104px; } .hand .pc .r { font-size: 1.3rem; } .hand .pc .s2 { font-size: 2.3rem; }
+  .hand .pc { width: 78px; height: 112px; } .hand .pc .r { font-size: 1.4rem; } .hand .pc .s2 { font-size: 2.5rem; }
   .hand button.pc { cursor: pointer; transition: transform 0.12s; }
   .hand .hiddencards { cursor: pointer; }
   .hand .hiddencards .pc.back { pointer-events: none; }
@@ -156,7 +156,26 @@
   .hand .acts .btn.warn { background: var(--purple); color: #fff; }
 
   .players { display: grid; gap: 8px; margin-top: 14px; }
-  .hasfab .players { padding-right: 58px; }
+  /* Players as small tiles (two per row), so the table and the cards get the room */
+  .players { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 12px; }
+  .players .pl { padding: 7px 10px; gap: 4px; border-radius: 12px; }
+  .players .pl .head { gap: 8px; }
+  .players .avatar { width: 30px; height: 30px; font-size: 0.9rem; }
+  .players .pl .who b { font-size: 0.95rem; }
+  .players .pl .score { font-size: 1.35rem; line-height: 1; } .players .pl .score small { font-size: 0.68rem; }
+  .players .chips { margin-top: 0; gap: 3px; }
+  .players .chip { font-size: 0.62rem; padding: 1px 6px; }
+  .players .chip.now, .players .chip.pcchip { display: none; }
+  .players .pl:has(.minis), .players .pl:has(.chip-btn) { grid-column: 1 / -1; }
+  /* Bigger cards in the middle: they are what you read */
+  .trick .pc { width: 92px; height: 130px; } .trick .pc .r { font-size: 1.6rem; top: 6px; left: 8px; } .trick .pc .s1 { top: 34px; left: 8px; font-size: 1.2rem; } .trick .pc .s2 { font-size: 3.1rem; right: 8px; bottom: 6px; }
+  .trick.n4 .pc { width: 76px; height: 106px; } .trick.n4 .pc .s2 { font-size: 2.5rem; }
+  .trick.n5 .pc, .trick.n6 .pc { width: 62px; height: 88px; } .trick.n5 .pc .r, .trick.n6 .pc .r { font-size: 1.15rem; top: 4px; left: 6px; } .trick.n5 .pc .s1, .trick.n6 .pc .s1 { top: 24px; left: 6px; font-size: 0.95rem; } .trick.n5 .pc .s2, .trick.n6 .pc .s2 { font-size: 2rem; right: 6px; bottom: 4px; }
+  .trick { min-height: 136px; } .tslot { font-size: 0.85rem; max-width: 92px; } .tslot span { max-width: 92px; }
+  .status { font-size: 1.1rem; } .felt .stake { font-size: 3rem; }
+
+  .hasfab .players:has(.pl:nth-child(7)) { padding-right: 58px; }
+  .players:has(.pl:nth-child(7)) .pl .score small { display: none; }
   .pl { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 10px 12px; display: grid; gap: 8px; }
   .pl.turn { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
   .pl.af, .pl.passed { opacity: 0.6; }
@@ -1216,13 +1235,13 @@
 
   function chipsFor(G, id) {
     var p = G.players[id], r = G.round, out = '';
-    if (r.turn === id && G.phase === 'play' && !r.pending) out += '<span class="chip turn">Aan de beurt</span>';
+    if (r.turn === id && G.phase === 'play' && !r.pending) out += '<span class="chip turn now">Aan de beurt</span>';
     if (r.pending && (r.pending.awaiting || []).indexOf(id) >= 0 && !(r.pending.answers || {})[id]) out += '<span class="chip turn">Kiest…</span>';
     if (G.seats[G.dealer] === id) out += '<span class="chip deler">Deler</span>';
     if (p.out) out += '<span class="chip af">Af</span>';
     else if (p.score === G.limit - 1) out += '<span class="chip scherp">Op scherp</span>';
     if ((r.passed || {})[id] !== undefined) out += '<span class="chip">Gepast +' + r.passed[id] + '</span>';
-    if (S.players[id] && S.players[id].bot) out += '<span class="chip">Computer</span>';
+    if (S.players[id] && S.players[id].bot) out += '<span class="chip pcchip">Computer</span>';
     else if (S.players[id] && S.players[id].auto) out += '<span class="chip">Computer speelt</span>';
     else if (S.players[id] && S.players[id].online === false) out += '<span class="chip af">' + (offlineLong(id) ? 'Offline · computer speelt' : 'Offline') + '</span>';
     return out;
@@ -1250,11 +1269,11 @@
       // Felt: stake, trick, status
       var toeps = (r.toeps || []).map(function (t) { return esc(name(t.by)); }).join(' → ');
       html += '<div class="felt"><div class="stakeline"><div class="stake num">' + r.stake + '</div><div class="stake-txt"><div class="label">Inzet</div>' +
-        '<div>Verliezers krijgen ' + plural(r.stake, 'strafpunt', 'strafpunten') + (toeps ? ' · getoept: ' + toeps : '') + '</div></div>' +
+        '<div>Verliezers krijgen ' + plural(r.stake, 'strafpunt', 'strafpunten') + ((r.toeps || []).length ? ' · ' + (r.toeps.length === 1 ? 'getoept door ' + esc(name(r.toeps[0].by)) : r.toeps.length + '× getoept') : '') + '</div></div>' +
         '<div class="small num" style="text-align:right">Slag ' + Math.min(r.trickNo, 4) + '/4</div></div>';
       var trick = r.trick || [], showLast = !trick.length && r.lastTrick && G.phase === 'play';
       var shown = showLast ? r.lastTrick.cards : trick;
-      html += '<div class="trick">' + (shown.length ? shown.map(function (t) {
+      html += '<div class="trick n' + Math.min(shown.length, 6) + '">' + (shown.length ? shown.map(function (t) {
         return '<div class="tslot' + (showLast && r.lastTrick.winner === t.id ? ' win' : '') + '"' + (showLast ? ' style="opacity:.6"' : '') + '>' + card(t.card) + '<span>' + esc(name(t.id)) + '</span></div>';
       }).join('') : '<div class="empty">Nog geen kaarten op tafel</div>') + '</div>';
       if (showLast) html += '<div class="small" style="text-align:center;opacity:.85">Vorige slag: ' + esc(name(r.lastTrick.winner)) + '</div>';
@@ -1267,7 +1286,7 @@
     }
 
     // Players and scores
-    html += '<div class="players' + (G.seats.length >= 6 ? ' compact' : '') + '">';
+    html += '<div class="players">';
     G.seats.forEach(function (id) {
       var p = G.players[id], cls = 'pl';
       if (r.turn === id && G.phase === 'play') cls += ' turn';
