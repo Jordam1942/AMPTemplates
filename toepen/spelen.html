@@ -226,6 +226,27 @@
   .fit2 .toggle-row .txt div:last-child { display: none; }
 
   .result { background: var(--warn-soft); color: var(--fg); border-radius: 14px; padding: 12px 14px; font-weight: 600; text-align: center; }
+  /* animations */
+  .fx-in { animation: fxIn calc(.4s * var(--fx, 1)) cubic-bezier(.2,.8,.3,1) both; }
+  .fx-in.me { animation-name: fxInMe; }
+  @keyframes fxIn { from { opacity: 0; transform: translateY(-50px) scale(.85); } to { opacity: 1; transform: none; } }
+  @keyframes fxInMe { from { opacity: 0; transform: translateY(110px) scale(.85); } to { opacity: 1; transform: none; } }
+  .trick.fx-sweep .tslot.win .pc { animation: fxGlow calc(.9s * var(--fx, 1)) ease-out both; }
+  .trick.fx-sweep .tslot:not(.win) { animation: fxDim calc(.7s * var(--fx, 1)) ease-out both; }
+  @keyframes fxGlow { 0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(240,161,96,.95); } 40% { transform: scale(1.12); } 100% { transform: scale(1); box-shadow: 0 0 0 16px rgba(240,161,96,0); } }
+  @keyframes fxDim { from { opacity: 1; transform: none; } to { opacity: .6; transform: translateY(10px); } }
+  .fx-pop { animation: fxPop calc(.6s * var(--fx, 1)) ease-out; }
+  @keyframes fxPop { 0% { transform: scale(1); } 35% { transform: scale(1.8); color: #f0a160; } 100% { transform: scale(1); } }
+  .felt.fx-flash { animation: fxFlash calc(.7s * var(--fx, 1)) ease-out; }
+  @keyframes fxFlash { 0%, 100% { box-shadow: inset 0 0 0 2px var(--felt-line); } 30% { box-shadow: inset 0 0 0 6px #f0a160; } }
+  .score.fx-hit { position: relative; animation: fxHit calc(.6s * var(--fx, 1)) ease-out; color: var(--danger); }
+  .score.fx-hit::after { content: attr(data-plus); position: absolute; right: 0; top: -4px; font-size: 1rem; font-weight: 800; color: var(--danger); animation: fxPlus calc(1.2s * var(--fx, 1)) ease-out both; pointer-events: none; }
+  @keyframes fxHit { 0%, 100% { transform: translateX(0); } 20% { transform: translateX(-6px); } 40% { transform: translateX(6px); } 60% { transform: translateX(-4px); } 80% { transform: translateX(2px); } }
+  @keyframes fxPlus { from { opacity: 1; transform: translateY(0); } to { opacity: 0; transform: translateY(-26px); } }
+  .winner { position: relative; overflow: hidden; }
+  .confetti { position: absolute; inset: 0; pointer-events: none; }
+  .confetti i { position: absolute; top: -12px; width: 8px; height: 14px; border-radius: 2px; animation: fxFall calc(2.2s * var(--fx, 1)) ease-in both; }
+  @keyframes fxFall { from { opacity: 1; transform: translate(0, 0) rotate(0); } to { opacity: 0; transform: translate(var(--dx), 340px) rotate(620deg); } }
   .winner { background: var(--accent); color: var(--accent-fg); border-radius: 20px; padding: 22px 18px; display: grid; gap: 12px; text-align: center; }
   .winner h2 { font-size: 2rem; font-weight: 800; }
   .winner .btn { background: var(--accent-fg); color: var(--accent); }
@@ -1247,10 +1268,43 @@
     return out;
   }
 
+  /* ---------- Animations (each one can be switched off in Instellingen > Graphics) ---------- */
+  function fxOn(k) { return !!(window.ToepenPrefs && ToepenPrefs.fx(k)); }
+  // Looks at what changed since the last state and remembers it for a moment, so the next draw can animate it.
+  // Called on every draw but only works once per state (drawing can happen several times to make things fit).
+  function fxDetect(G) {
+    var r = G.round, scores = {}, sig;
+    G.seats.forEach(function (id) { scores[id] = G.players[id].score; });
+    sig = [G.phase, r.n, r.trickNo, (r.trick || []).length, r.stake, r.lastTrick ? r.lastTrick.n : 0, G.seats.map(function (id) { return scores[id]; }).join(',')].join('|');
+    if (S.fxSig === sig) return;
+    S.fxSig = sig;
+    var prev = S.fxPrev, keys = (r.trick || []).map(function (t) { return r.trickNo + ':' + t.id; });
+    S.fxPrev = { n: r.n, stake: r.stake, scores: scores, phase: G.phase, last: r.lastTrick ? r.lastTrick.n : 0, keys: keys };
+    S.fx = null;
+    if (!prev) return;                       // first look at this table: nothing to animate
+    var fx = { cards: {}, sweep: null, toep: false, hits: {}, win: false }, any = false;
+    if (fxOn('fxPlay') && prev.n === r.n) keys.forEach(function (k) { if (prev.keys.indexOf(k) < 0) { fx.cards[k] = true; any = true; } });
+    if (fxOn('fxTrick') && r.lastTrick && !(r.trick || []).length && (prev.n !== r.n || prev.last !== r.lastTrick.n)) { fx.sweep = r.lastTrick.winner; any = true; }
+    if (fxOn('fxToep') && prev.n === r.n && r.stake > prev.stake) { fx.toep = true; any = true; }
+    if (fxOn('fxScore')) G.seats.forEach(function (id) { var d = scores[id] - (prev.scores[id] || 0); if (d > 0) { fx.hits[id] = d; any = true; } });
+    if (fxOn('fxWin') && G.phase === 'done' && prev.phase !== 'done') { fx.win = true; any = true; }
+    if (!any) return;
+    S.fx = fx;
+    document.documentElement.style.setProperty('--fx', pace());
+    clearTimeout(S.fxTimer); S.fxTimer = setTimeout(function () { S.fx = null; }, 1600 * pace());
+  }
+  function confettiHtml() {
+    var cols = ['#f0a160', '#4fbf89', '#ffd166', '#7aa7ff', '#ef6f6c', '#b79cff'], h = '<div class="confetti" aria-hidden="true">';
+    for (var i = 0; i < 36; i++) h += '<i style="left:' + ((i * 29) % 100) + '%;background:' + cols[i % cols.length] + ';animation-delay:' + ((i % 9) * 0.12).toFixed(2) + 's;--dx:' + (((i * 7) % 5) - 2) * 14 + 'px"></i>';
+    return h + '</div>';
+  }
+
   function renderTable() {
     var m = S.meta || {};
     if (!S.pub || !m.status || m.status === 'lobby') return renderLobby();
     var G = viewGame(), r = G.round, host = S.role === 'host', lead = host && m.mode === 'lead';
+    fxDetect(G);
+    var fx = S.fx || { cards: {}, hits: {} };
     var seated = G.seats.indexOf(S.uid) >= 0, html = '';
     var mePl = S.players[S.uid] || {};
     var hideBtn = seated && G.phase === 'play' && !(G.players[S.uid] || {}).out
@@ -1261,20 +1315,20 @@
     if (mePl.auto && seated && G.phase !== 'done') html += '<div class="notice" role="status" style="display:flex;gap:8px;align-items:center;justify-content:space-between"><span>De computer speelt voor jou.</span><button class="btn sm" data-act="auto-me">Zelf weer spelen</button></div>';
     if (G.phase === 'done') {
       var w = G.winner;
-      html += '<div class="winner"><div class="label" style="color:inherit;opacity:.8">Winnaar</div><h2>' + esc(name(w)) + (w === S.uid ? ' (jij!)' : '') + '</h2>' +
+      html += '<div class="winner">' + (fx.win ? confettiHtml() : '') + '<div class="label" style="color:inherit;opacity:.8">Winnaar</div><h2>' + esc(name(w)) + (w === S.uid ? ' (jij!)' : '') + '</h2>' +
         '<p>Na ' + plural(r.n, 'ronde', 'rondes') + '.</p>' +
         (host ? '<button class="btn big" data-act="again">Nog een potje</button><button class="btn ghost" data-act="ask-close">Tafel sluiten</button>'
               : '<p class="small">Wachten tot de host een nieuw potje start…</p><button class="btn ghost" data-act="leave">Tafel verlaten</button>') + '</div>';
     } else {
       // Felt: stake, trick, status
       var toeps = (r.toeps || []).map(function (t) { return esc(name(t.by)); }).join(' → ');
-      html += '<div class="felt"><div class="stakeline"><div class="stake num">' + r.stake + '</div><div class="stake-txt"><div class="label">Inzet</div>' +
+      html += '<div class="felt' + (fx.toep ? ' fx-flash' : '') + '"><div class="stakeline"><div class="stake num' + (fx.toep ? ' fx-pop' : '') + '">' + r.stake + '</div><div class="stake-txt"><div class="label">Inzet</div>' +
         '<div>Verliezers krijgen ' + plural(r.stake, 'strafpunt', 'strafpunten') + ((r.toeps || []).length ? ' · ' + (r.toeps.length === 1 ? 'getoept door ' + esc(name(r.toeps[0].by)) : r.toeps.length + '× getoept') : '') + '</div></div>' +
         '<div class="small num" style="text-align:right">Slag ' + Math.min(r.trickNo, 4) + '/4</div></div>';
       var trick = r.trick || [], showLast = !trick.length && r.lastTrick && G.phase === 'play';
       var shown = showLast ? r.lastTrick.cards : trick;
-      html += '<div class="trick n' + Math.min(shown.length, 6) + '">' + (shown.length ? shown.map(function (t) {
-        return '<div class="tslot' + (showLast && r.lastTrick.winner === t.id ? ' win' : '') + '"' + (showLast ? ' style="opacity:.6"' : '') + '>' + card(t.card) + '<span>' + esc(name(t.id)) + '</span></div>';
+      html += '<div class="trick n' + Math.min(shown.length, 6) + (showLast && fx.sweep ? ' fx-sweep' : '') + '">' + (shown.length ? shown.map(function (t) {
+        return '<div class="tslot' + (showLast && r.lastTrick.winner === t.id ? ' win' : '') + (!showLast && fx.cards[r.trickNo + ':' + t.id] ? ' fx-in' + (t.id === S.uid ? ' me' : '') : '') + '"' + (showLast ? ' style="opacity:.6"' : '') + '>' + card(t.card) + '<span>' + esc(name(t.id)) + '</span></div>';
       }).join('') : '<div class="empty">Nog geen kaarten op tafel</div>') + '</div>';
       if (showLast) html += '<div class="small" style="text-align:center;opacity:.85">Vorige slag: ' + esc(name(r.lastTrick.winner)) + '</div>';
       html += '<div class="status' + (statusMine(G) ? ' me' : '') + '" role="status">' + esc(statusText(G)) + '</div></div>';
@@ -1297,7 +1351,7 @@
         else if (sp.online === false) takeBtn = '<button class="chip-btn" data-act="auto" data-id="' + esc(id) + '">Computer neemt over</button>';
       }
       html += '<div class="' + cls + '"><div class="head">' + avatar(id, p.name) + '<div class="who"><b>' + esc(p.name) + (id === S.uid ? ' (jij)' : '') + '</b><div class="chips">' + chipsFor(G, id) + takeBtn + '</div></div>' +
-        '<div class="score num">' + p.score + '<small> / ' + G.limit + '</small></div></div>';
+        '<div class="score num' + (fx.hits[id] ? ' fx-hit' : '') + '"' + (fx.hits[id] ? ' data-plus="+' + fx.hits[id] + '"' : '') + '>' + p.score + '<small> / ' + G.limit + '</small></div></div>';
       if (lead && G.phase !== 'done' && S.G.round.hands[id] && S.G.round.hands[id].length) {
         html += '<div class="minis">' + S.G.round.hands[id].map(function (c) { return card(c, 'sm'); }).join('') + '</div>';
       }

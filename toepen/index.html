@@ -177,11 +177,23 @@
     h += '<div class="panel"><div class="label">Tempo van het spel</div><div class="seg">' + [['rustig', 'Rustig'], ['normaal', 'Normaal'], ['snel', 'Snel']].map(function (o) {
       return '<button data-act="pref-speed" data-v="' + o[0] + '" aria-pressed="' + (pr.speed === o[0]) + '">' + o[1] + '</button>'; }).join('') + '</div>' +
       '<p class="small muted" style="margin:0">Hoe lang uitslagen in beeld blijven en hoe snel de computer speelt.</p></div>';
+    h += '<button class="btn ghost" data-act="gfx">Graphics en animaties ›</button>';
     h += '<div class="panel">' + toggle('pref-sound', pr.sound, 'Geluid', 'Korte tonen bij toepen, rondes en de winnaar.') +
       toggle('pref-confirmToep', pr.confirmToep, 'Toep bevestigen', 'Je moet de toep nog een keer bevestigen. Zo toep je niet per ongeluk.') +
       toggle('pref-vibrate', pr.vibrate, 'Trillen', 'Voelbare tik bij elke actie.') +
       toggle('pref-wake', pr.wake, 'Scherm aan houden', 'Je telefoon gaat niet op slot tijdens het spel.') + '</div>';
     h += '<p class="small muted" style="text-align:center">Toepen · versie ' + VERSION + '</p></div>';
+    return h;
+  }
+  // Graphics: every animation can be switched on or off by itself
+  var FX_LIST = [['fxPlay', 'Kaarten leggen', 'Je kaart glijdt naar het midden van de tafel.'], ['fxTrick', 'Slag binnenhalen', 'De winnaar van de slag licht op.'],
+    ['fxToep', 'Toep en inzet', 'Het inzetcijfer springt op en de tafel flitst.'], ['fxScore', 'Strafpunten', 'Het cijfer schudt en toont +1, +2 enzovoort.'], ['fxWin', 'Winnaar', 'Confetti als iemand het spel wint.']];
+  function renderGfx() {
+    var pr = window.ToepenPrefs.get(), h = '';
+    h += '<div class="topbar"><div class="meta"><h1>Graphics</h1><div class="small muted">Animaties in het spel</div></div><button class="btn ghost sm" data-act="settings">← Terug</button></div><div class="stack down">';
+    h += '<div class="panel">' + toggle('pref-gfx', pr.gfx, 'Animaties', 'Alles tegelijk aan of uit. Handig op een oudere telefoon.') + '</div>';
+    h += '<div class="panel"' + (pr.gfx ? '' : ' style="opacity:.5"') + '><div class="label">Per animatie</div>' + FX_LIST.map(function (f) { return toggle('pref-' + f[0], pr[f[0]], f[1], f[2]); }).join('') + '</div>';
+    h += '<p class="small muted" style="text-align:center;margin:0">Staat op je telefoon \u201cminder beweging\u201d aan, dan blijven animaties altijd uit.</p></div>';
     return h;
   }
   function renderSaves() {
@@ -245,7 +257,7 @@
     var cls = '';
     for (var lvl = 0; lvl < 3; lvl++) {
       app.className = 'wrap' + cls;
-      app.innerHTML = ui.view === 'saves' ? renderSaves() : ui.view === 'settings' ? renderSettings() : renderMenu();
+      app.innerHTML = ui.view === 'saves' ? renderSaves() : ui.view === 'settings' ? renderSettings() : ui.view === 'gfx' ? renderGfx() : renderMenu();
       if (document.documentElement.scrollHeight <= window.innerHeight + 1) break;
       if (ui.view === 'saves') { if (ui.size > 1) { ui.size--; continue; } break; }
       cls = lvl === 0 ? ' compact' : ' compact tight';
@@ -287,6 +299,9 @@
     switch (a) {
       case 'saves': ui.view = 'saves'; ui.page = 0; draw(); break;
       case 'settings': ui.view = 'settings'; draw(); break;
+      case 'gfx': ui.view = 'gfx'; draw(); break;
+      case 'pref-gfx': window.ToepenPrefs.set('gfx', !window.ToepenPrefs.get().gfx); draw(); break;
+      case 'pref-fxPlay': case 'pref-fxTrick': case 'pref-fxToep': case 'pref-fxScore': case 'pref-fxWin': var fk = a.slice(5); window.ToepenPrefs.set(fk, !window.ToepenPrefs.get()[fk]); draw(); break;
       case 'pref-takeover': window.ToepenPrefs.set('takeover', +el.dataset.v); draw(); break;
       case 'pref-hand': window.ToepenPrefs.set('hand', el.dataset.v); draw(); break;
       case 'pref-speed': window.ToepenPrefs.set('speed', el.dataset.v); draw(); break;
