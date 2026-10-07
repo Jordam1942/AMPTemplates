@@ -9,6 +9,7 @@
 <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <script src="prefs.js"></script>
+<script src="sfx.js"></script>
 <title>Toepen Multiplayer</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -924,10 +925,14 @@
       if (soon.length && takeoverSecs()) S.hostTimer = setTimeout(scheduleHost, Math.max(100, Math.min.apply(null, soon)) + 50);
       return;
     }
+    // Before the first card of a round people may still announce 'vuile was': give them a moment before the computer leads.
+    var wait = DELAY.bot * (r.pending || r.was ? 0.6 : 1);
+    if (!r.pending && !r.was && r.trickNo === 1 && !(r.trick || []).length && !(r.toeps || []).length &&
+        G.seats.some(function (id) { return !autoFor(id) && E.canWas(G, id); })) wait = Math.max(wait, FAST ? 40 : 2800 * pace());
     S.hostTimer = setTimeout(function () {
       var a = E.botAction(G, actor);
       if (a) hostHandle(actor, a);
-    }, DELAY.bot * (r.pending || r.was ? 0.6 : 1));
+    }, wait);
   }
 
   /* ---------- Undo (host only): snapshots of the game before every action ---------- */
@@ -1279,9 +1284,16 @@
     if (S.fxSig === sig) return;
     S.fxSig = sig;
     var prev = S.fxPrev, keys = (r.trick || []).map(function (t) { return r.trickNo + ':' + t.id; });
-    S.fxPrev = { n: r.n, stake: r.stake, scores: scores, phase: G.phase, last: r.lastTrick ? r.lastTrick.n : 0, keys: keys };
+    var asked = !!(r.pending && (r.pending.awaiting || []).indexOf(S.uid) >= 0 && !(r.pending.answers || {})[S.uid]);
+    S.fxPrev = { n: r.n, stake: r.stake, scores: scores, phase: G.phase, last: r.lastTrick ? r.lastTrick.n : 0, keys: keys, turn: G.phase === 'play' && r.turn === S.uid && !r.pending, asked: asked };
     S.fx = null;
-    if (!prev) return;                       // first look at this table: nothing to animate
+    if (!prev) return;                       // first look at this table: nothing to animate or play
+    // sound: one tone per change, the most important one wins (this does not depend on the animation settings)
+    var newCard = prev.n === r.n && keys.some(function (k) { return prev.keys.indexOf(k) < 0; }), hit = false;
+    G.seats.forEach(function (id) { if (scores[id] > (prev.scores[id] || 0)) hit = true; });
+    var sfx = G.phase === 'done' && prev.phase !== 'done' ? 'win' : (prev.n === r.n && r.stake > prev.stake) || (asked && !prev.asked) ? 'toep' : hit ? 'hit'
+      : r.n !== prev.n ? 'round' : S.fxPrev.turn && !prev.turn ? 'turn' : newCard ? 'tick' : null;
+    if (sfx && window.ToepenSfx) ToepenSfx.play(sfx);
     var fx = { cards: {}, sweep: null, toep: false, hits: {}, win: false }, any = false;
     if (fxOn('fxPlay') && prev.n === r.n) keys.forEach(function (k) { if (prev.keys.indexOf(k) < 0) { fx.cards[k] = true; any = true; } });
     if (fxOn('fxTrick') && r.lastTrick && !(r.trick || []).length && (prev.n !== r.n || prev.last !== r.lastTrick.n)) { fx.sweep = r.lastTrick.winner; any = true; }
@@ -1384,6 +1396,7 @@
       return name(r.pending.by) + ' toept. Wachten op: ' + waiting.map(name).join(', ');
     }
     if (r.turn === S.uid) return (r.trick || []).length ? 'Jij bent aan de beurt. Beken kleur als je kunt.' : 'Jij komt uit. Kies een kaart.';
+    if (E.canWas(G, S.uid) && G.rules.wittewas) return name(r.turn) + ' is aan de beurt. Vuile was melden kan nog.';
     return name(r.turn) + ' is aan de beurt';
   }
 

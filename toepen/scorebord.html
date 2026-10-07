@@ -9,6 +9,7 @@
 <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <script src="prefs.js"></script>
+<script src="sfx.js"></script>
 <title>Toepen Scorebord</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -822,6 +823,7 @@
   var actx = null;
   function sound(kind) {
     if (!state.settings.sound) return;
+    if (window.ToepenSfx) { ToepenSfx.play(kind); return; }   // shared sound system (wakes up after the app was in the background)
     try {
       actx = actx || new (window.AudioContext || window.webkitAudioContext)();
       var notes = { toep: [523, 784], tick: [440], round: [392, 523], win: [523, 659, 784, 1047] }[kind] || [440];

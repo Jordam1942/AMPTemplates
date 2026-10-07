@@ -178,7 +178,7 @@
       return '<button data-act="pref-speed" data-v="' + o[0] + '" aria-pressed="' + (pr.speed === o[0]) + '">' + o[1] + '</button>'; }).join('') + '</div>' +
       '<p class="small muted" style="margin:0">Hoe lang uitslagen in beeld blijven en hoe snel de computer speelt.</p></div>';
     h += '<button class="btn ghost" data-act="gfx">Graphics en animaties ›</button>';
-    h += '<div class="panel">' + toggle('pref-sound', pr.sound, 'Geluid', 'Korte tonen bij toepen, rondes en de winnaar.') +
+    h += '<div class="panel">' + toggle('pref-sound', pr.sound, 'Geluid', 'Tonen bij kaarten, toepen, strafpunten, jouw beurt en de winnaar.') +
       toggle('pref-confirmToep', pr.confirmToep, 'Toep bevestigen', 'Je moet de toep nog een keer bevestigen. Zo toep je niet per ongeluk.') +
       toggle('pref-vibrate', pr.vibrate, 'Trillen', 'Voelbare tik bij elke actie.') +
       toggle('pref-wake', pr.wake, 'Scherm aan houden', 'Je telefoon gaat niet op slot tijdens het spel.') + '</div>';
