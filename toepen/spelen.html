@@ -156,6 +156,7 @@
   .btn.toep:disabled { background: var(--ink); color: var(--ink-fg); }
   .hand .acts .btn.warn { background: var(--purple); color: #fff; }
 
+  .sheet .seg { display: flex; gap: 8px; } .sheet .seg button { flex: 1; }
   .players { display: grid; gap: 8px; margin-top: 14px; }
   /* Players as small tiles (two per row), so the table and the cards get the room */
   .players { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 12px; }
@@ -1319,8 +1320,7 @@
     var fx = S.fx || { cards: {}, hits: {} };
     var seated = G.seats.indexOf(S.uid) >= 0, html = '';
     var mePl = S.players[S.uid] || {};
-    var hideBtn = seated && G.phase === 'play' && !(G.players[S.uid] || {}).out
-      ? '<button class="btn ghost sm" data-act="hand-opts" aria-label="Je kaarten verbergen: opties">Kaarten</button>' : '';
+    var hideBtn = '<button class="btn ghost sm icon-round" data-act="hand-opts" aria-label="Instellingen"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>';
     html += topbar('Ronde ' + r.n, 'Tafel ' + esc(S.code) + ' · af bij ' + G.limit,
       hideBtn + '<button class="btn ghost sm" data-act="menu">Menu</button>');
 
@@ -1422,15 +1422,19 @@
     if (r.was && (r.was.awaiting || []).indexOf(S.uid) >= 0 && !(r.was.answers || {})[S.uid]) return 'w' + k;
     return !r.pending && !r.was && r.turn === S.uid ? 't' + k : '';
   }
+  // Settings during the game: your cards (hide / black screen), sound, animations and pace
   function handSheet() {
-    var m = handMode();
-    var opt = function (v, t, d) { return '<button class="choice" data-act="hand-mode" data-v="' + v + '" aria-pressed="' + (m === v) + '"><b>' + t + '</b><span>' + d + '</span></button>'; };
-    return '<h2>Je kaarten verbergen</h2>' +
-      '<p class="small muted" style="margin:0">Sneller kan het met de ronde oog-knop naast je kaarten: één tik.</p>' +
-      opt('zichtbaar', 'Zichtbaar', 'Je kaarten zijn altijd te zien.') +
-      opt('verborgen', 'Verborgen', 'Kaartruggen. Tik erop om ze even te zien; na het spelen zijn ze weer verborgen.') +
-      '<button class="btn big" data-act="black-on">Scherm zwart maken</button>' +
-      '<p class="small muted" style="margin:0">Zwart scherm: niemand ziet iets, het spel blijft gewoon doorlopen en spaart accu. Tik twee keer om terug te komen. Is het jouw beurt, dan komt het scherm vanzelf terug en trilt je telefoon.</p>';
+    var m = handMode(), pr = window.ToepenPrefs ? ToepenPrefs.get() : {};
+    var G0 = viewGame(), playing = G0 && G0.phase === 'play' && G0.seats.indexOf(S.uid) >= 0 && !(G0.players[S.uid] || {}).out;
+    var seg = function (act, cur, list) { return '<div class="seg">' + list.map(function (o) { return '<button data-act="' + act + '" data-v="' + o[0] + '" aria-pressed="' + (cur === o[0]) + '">' + o[1] + '</button>'; }).join('') + '</div>'; };
+    var h = '<h2>Instellingen</h2>';
+    if (playing) h += '<div class="label">Je kaarten</div>' + seg('hand-mode', m, [['zichtbaar', 'Zichtbaar'], ['verborgen', 'Verborgen']]) +
+      '<p class="small muted" style="margin:0">Verborgen: kaartruggen, tik erop om ze even te zien. Sneller kan met de ronde oog-knop: één tik.</p>' +
+      '<button class="btn" data-act="black-on">Scherm zwart maken</button>' +
+      '<p class="small muted" style="margin:0">Zwart scherm: het spel loopt door en spaart accu. Tik twee keer om terug te komen. Ben jij aan de beurt, dan komt het scherm vanzelf terug en trilt je telefoon.</p>';
+    h += toggleRow('pref-sound', pr.sound, 'Geluid', 'Tonen bij kaarten, toepen en jouw beurt.') + toggleRow('pref-gfx', pr.gfx, 'Animaties', 'Meer opties onder Instellingen in het hoofdmenu.') +
+      '<div class="label">Tempo van het spel</div>' + seg('pref-speed', pr.speed, [['rustig', 'Rustig'], ['normaal', 'Normaal'], ['snel', 'Snel']]);
+    return h;
   }
 
   function inRoundCount(G) { return G.seats.filter(function (id) { return !G.players[id].out && !((G.round.passed || {})[id] !== undefined); }).length; }
@@ -1826,6 +1830,8 @@
       case 'play': S.peek = false; act({ type: 'play', card: v }); break;
       case 'hand-opts': S.sheet = { type: 'hand' }; renderLayer(); break;
       case 'hand-mode': setHandMode(v); break;
+      case 'pref-sound': case 'pref-gfx': if (window.ToepenPrefs) { var pk = a.slice(5); ToepenPrefs.set(pk, !ToepenPrefs.get()[pk]); } renderLayer(); break;
+      case 'pref-speed': if (window.ToepenPrefs) ToepenPrefs.set('speed', v); renderLayer(); break;
       case 'hand-quick':
         // one tap always does what the icon says: hide what is showing, show what is hidden
         if (handHidden()) { S.peek = !S.peek; clearTimeout(S.peekTimer); if (S.peek) S.peekTimer = setTimeout(function () { S.peek = false; render(); }, 20000); render(); }
