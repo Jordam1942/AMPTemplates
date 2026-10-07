@@ -128,10 +128,10 @@
         '<span></span><div class="slot">' + card('B', '♥') + '</div><span></span></div></div>' +
         '<div class="row"><span class="tag">♥ gevraagd</span><span class="tag g">♥9 wint</span></div>' +
         '<div class="cap">De ♠10 heeft geen ♥ om te volgen en wordt opgegooid: die kan niet winnen.</div>' },
-    { t: 'Vier slagen per ronde', p: 'Een ronde heeft 4 slagen. Alleen de <b>laatste slag</b> telt: wie die wint, wint de ronde.',
+    { t: 'Vier slagen per ronde', p: 'Een ronde heeft 4 slagen. Alleen de <b>laatste slag</b> telt: wie die wint, wint de ronde. <b>Alle anderen krijgen 1 strafpunt</b> (zonder toep).',
       art: '<div class="slags">' + [1, 2, 3, 4].map(function (n) { return '<div class="slag' + (n === 4 ? ' on' : '') + '"><span class="n">' + n + '</span>' + card(['8', '9', 'A', '10'][n - 1], ['♣', '♦', '♠', '♥'][n - 1], 'sm') + '<span class="m">' + (n === 4 ? 'TELT' : 'telt niet') + '</span></div>'; }).join('') + '</div>' +
         '<div class="cap">Bewaar dus je hoogste kaart voor het einde.</div>' },
-    { t: 'Toepen', p: 'Denk je dat je wint? Zeg <b>Toep!</b> Dan gaat de inzet omhoog. De anderen kiezen: <b>meegaan</b> of <b>passen</b>.',
+    { t: 'Toepen', p: 'Denk je dat je wint? Zeg <b>Toep!</b> Dan gaat de inzet omhoog, en daarmee de straf voor <b>elke verliezer</b>: 2, 3 of 4 punten in plaats van 1. De anderen kiezen: <b>meegaan</b> of <b>passen</b>.',
       art: '<div class="stake"><div class="chip">1</div><span style="font-size:1.6rem;color:var(--muted)">→</span><div class="chip o">2</div></div>' +
         '<div class="cap">De inzet begint op 1 en gaat bij elke toep 1 omhoog (standaard tot 4).</div>' +
         '<div class="row"><div class="mock to">Toep!</div></div>' +
@@ -170,7 +170,7 @@
   function draw() {
     var s = steps[i], last = i === steps.length - 1;
     app.innerHTML =
-      '<div class="bar"><h1>Handleiding</h1><a class="btn ghost sm" href="index.html">Sluiten</a></div>' +
+      '<div class="bar"><h1>Handleiding</h1><a class="btn ghost sm" href="index.html" id="sluit">Sluiten</a></div>' +
       '<div class="dots" aria-hidden="true">' + steps.map(function (_, k) { return '<i class="' + (k === i ? 'on' : '') + '"></i>'; }).join('') + '</div>' +
       '<div class="art">' + s.art + '</div>' +
       '<div class="txt"><h2>' + (i + 1) + '. ' + s.t + '</h2><p>' + s.p + '</p></div>' +
@@ -182,6 +182,11 @@
     i = Math.max(0, Math.min(steps.length - 1, i + +b.dataset.d)); draw();
   });
   draw();
+  // Back to where you came from (scoreboard, table, menu), not always the main menu.
+  app.addEventListener('click', function (e) {
+    var a = e.target.closest('#sluit'); if (!a) return;
+    try { if (document.referrer && new URL(document.referrer).origin === location.origin && history.length > 1 && !/handleiding/.test(document.referrer)) { e.preventDefault(); history.back(); } } catch (x) {}
+  });
 })();
 </script>
 </body>
