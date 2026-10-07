@@ -338,7 +338,7 @@
     meta: null, players: {}, pub: null, hand: [], subs: [], G: null, sheet: null, toast: '', connected: true,
     lastHands: {}, lastResultKey: '', hostTimer: null, err: '', busy: false, kind: null, method: null, rl: null, peek: false, black: false, blackTap: 0, offSince: {}, chat: [], chatUnread: 0, chatDraft: '', chatFrom: 0, listening: false,
     create: {
-      mode: 'play', limit: sbRules.limit || 10, bots: 0, undo: true,
+      mode: 'play', limit: sbRules.limit || 10, bots: 0, undo: false,
       rules: {
         wittewas: sbRules.rules ? sbRules.rules.wittewas !== false : true,
         dubbelToep: sbRules.rules ? !!sbRules.rules.dubbelToep : false,
@@ -711,7 +711,7 @@
     }).then(function (code) {
       S.code = code; S.role = 'host'; S.practice = practice;
       var c = S.create, mode = practice ? 'play' : c.mode, now = Date.now();
-      var meta = { host: S.uid, hostName: S.name.trim() || 'Tafelleider', mode: mode, limit: c.limit, rules: c.rules, undo: c.undo !== false, takeover: window.ToepenPrefs ? ToepenPrefs.get().takeover : 45, status: 'lobby', created: now };
+      var meta = { host: S.uid, hostName: S.name.trim() || 'Tafelleider', mode: mode, limit: c.limit, rules: c.rules, undo: !!c.undo, takeover: window.ToepenPrefs ? ToepenPrefs.get().takeover : 45, status: 'lobby', created: now };
       var jobs = [S.db.set(base() + '/meta', meta)];
       if (mode === 'play') jobs.push(S.db.set(base() + '/players/' + S.uid, { name: S.name.trim(), joined: now, online: true }));
       var nb = practice ? Math.max(1, c.bots) : c.bots;
@@ -1118,7 +1118,7 @@
         return '<button data-act="max-inzet" data-v="' + o[0] + '" aria-pressed="' + ((c.rules.maxInzet === undefined ? 4 : c.rules.maxInzet) === o[0]) + '">' + o[1] + '</button>'; }).join('') + '</div></div>' +
       toggleRow('rule-dubbelToep', c.rules.dubbelToep, 'Dubbel toepen', 'Twee keer achter elkaar toepen. Uit: na jouw toep moet eerst iemand anders toepen.') +
       toggleRow('rule-scherpPassen', c.rules.scherpPassen, 'Passen als je op scherp staat', 'Uit: wie op scherp staat, moet mee.') +
-      toggleRow('opt-undo', c.undo !== false, 'Ongedaan-maken knop (↶)', 'Je laatste zet terugdraaien.') +
+      toggleRow('opt-undo', !!c.undo, 'Ongedaan-maken knop (↶)', 'Je laatste zet terugdraaien.') +
       toggleRow('rule-hoogsteDeelt', c.rules.hoogsteDeelt, 'Hoogste stand deelt', 'Wie de meeste strafpunten heeft, deelt. Bij gelijke stand: op volgorde van de tafel. Uit: de deler schuift door.') + '</div>';
     var minB = practice ? 1 : 0;
     html += '<div class="panel" style="padding-top:8px;padding-bottom:8px"><div class="label" style="margin-bottom:2px">Computerspelers</div><div class="stepper">' +
@@ -1662,7 +1662,7 @@
       case 'was-straf': c.rules.wasStraf = +v; render(); break;
       case 'max-inzet': c.rules.maxInzet = +v; render(); break;
       case 'bots': c.bots = Math.max(0, Math.min(7, c.bots + +v)); render(); break;
-      case 'opt-undo': c.undo = c.undo === false; render(); break;
+      case 'opt-undo': c.undo = !c.undo; render(); break;
       case 'rule-wittewas': case 'rule-dubbelToep': case 'rule-scherpPassen': case 'rule-hoogsteDeelt':
         var k = a.slice(5); c.rules[k] = !c.rules[k]; render(); break;
       case 'create': createTable(false); break;
