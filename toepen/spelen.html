@@ -312,7 +312,9 @@
   try { localStorage.removeItem('toepen-fb-config'); } catch (e) {}   // left over from the removed Firebase option
   var VIA = Q.get('via') === 'peer' ? 'peer' : null;
   var NET = Q.get('net') === 'local' ? 'local' : null;   // 'local' = test mode in one browser
-  var DELAY = { round: FAST ? 150 : 3500, bot: FAST ? 40 : 900 };
+  // Pace of the game: how long results stay on screen and how fast the computer players move.
+  function pace() { var v = window.ToepenPrefs ? ToepenPrefs.get().speed : 'rustig'; return v === 'snel' ? 0.6 : v === 'normaal' ? 1 : 2; }
+  var DELAY = { get round() { return FAST ? 150 : 3500 * pace(); }, get bot() { return FAST ? 40 : 900 * pace(); } };
   var COLORS = ['#2f7d5b', '#c2571a', '#3b6fb6', '#a63d6b', '#7a5bb5', '#a67c12', '#1f8a8f', '#5d6b1f'];
   var BOTS = ['Kees', 'Mies', 'Joop', 'Truus', 'Henk', 'Ria', 'Piet'];
   var SUIT = { h: '♥', r: '♦', k: '♣', s: '♠' };
@@ -350,7 +352,7 @@
     }
   };
   var toastTimer;
-  function toast(m) { S.toast = m; renderLayer(); clearTimeout(toastTimer); toastTimer = setTimeout(function () { S.toast = ''; renderLayer(); }, 2600); }
+  function toast(m) { S.toast = m; renderLayer(); clearTimeout(toastTimer); toastTimer = setTimeout(function () { S.toast = ''; renderLayer(); }, FAST ? 2600 : Math.round(3200 * pace())); }
   function buzz(p) { if (navigator.vibrate && (!window.ToepenPrefs || ToepenPrefs.get().vibrate)) { try { navigator.vibrate(p); } catch (e) {} } }
 
   /* ---------- Connection ---------- */
@@ -456,6 +458,9 @@
   }
 
   /* ---------- QR-ring: linking phones ---------- */
+  // The QR holds a web address: a normal phone camera opens the app right away, even on a phone that does not have it yet.
+  function ringUrl(code) { return location.href.split(/[?#]/)[0].replace(/[^\/]*$/, '') + 'spelen.html?ring=' + encodeURIComponent(code); }
+  function ringCode(t) { var m = /[?&#]ring=([^&#\s]+)/.exec(t || ''); try { return m ? decodeURIComponent(m[1]) : t; } catch (e) { return t; } }
   function qrSvg(text, cls) {
     if (!text) return '<p class="muted" style="text-align:center">Code maken…</p>';
     try { var q = qrcode(0, 'M'); q.addData(text); q.make(); return '<div class="qr ' + (cls || '') + '">' + q.createSvgTag({ cellSize: 5, margin: 2, scalable: true }) + '</div>'; }
@@ -517,6 +522,10 @@
     if (rl.step === 'answer' || rl.step === 'linking') {
       html += '<div class="panel" style="text-align:center"><b>Laat je buurman dit scannen</b><p class="small muted lobby-hint">Je buurman kiest <b>Antwoord scannen</b>. Zodra dat lukt, zit je aan tafel.</p>' +
         qrSvg(rl.code, 'small') + '<div class="small muted">Even wachten…</div><button class="btn ghost" data-act="copy" data-v="' + esc(rl.code) + '">Code kopiëren</button></div>';
+    } else if (S.ringOffer) {
+      html += '<div class="panel" style="text-align:center"><b>Je bent uitgenodigd voor een spel zonder internet</b><p class="small muted">Vul je naam in en tik op Meedoen. Daarna toon je een QR aan degene die jou heeft uitgenodigd.</p></div>' +
+        '<div class="panel"><label class="label" for="myname">Jouw naam</label><input class="text" id="myname" maxlength="18" autocomplete="off" value="' + esc(S.name) + '" placeholder="Typ je naam"></div>' +
+        '<button class="btn primary big" data-act="ring-land-go"' + (rl.busy ? ' disabled' : '') + '>' + (rl.busy ? 'Even geduld…' : 'Meedoen') + '</button>';
     } else {
       html += '<div class="panel" style="text-align:center"><b>Scan de QR van je buurman</b><p class="small muted">Je doet mee als <b>' + esc(S.name) + '</b>.</p><p class="small muted lobby-hint">1. De host of een speler die al aan tafel zit, kiest <b>QR tonen</b>.<br>2. Jij scant die QR met de camera van deze app.<br>3. Daarna laat jij een antwoord zien, dat je buurman scant.</p>' +
         '<button class="btn primary big" data-act="ring-scan"' + (rl.busy ? ' disabled' : '') + '>' + (rl.busy ? 'Even geduld…' : 'QR scannen') + '</button></div>';
@@ -527,8 +536,8 @@
     var rl = S.rl || { step: 'choose' }, h = '';
     if (rl.err) h += '<div class="notice" role="alert">' + esc(rl.err) + '</div>';
     if (rl.step === 'show') {
-      h += '<h2>Laat je buurman scannen</h2>' + qrSvg(rl.code, 'small') +
-        '<p class="small muted" style="text-align:center">Je buurman kiest <b>QR scannen</b> (of Meedoen). Daarna toont zijn telefoon een antwoord.</p>' +
+      h += '<h2>Laat je buurman scannen</h2>' + qrSvg(rl.code ? ringUrl(rl.code) : '', 'small') +
+        '<p class="small muted" style="text-align:center">Je buurman scant met de <b>gewone camera</b>: de app opent vanzelf, ook als hij hem nog niet heeft. Of hij kiest in de app <b>QR scannen</b>. Daarna toont zijn telefoon een antwoord.</p>' +
         '<button class="btn primary big" data-act="ring-scan-answer">Antwoord scannen</button>' +
         '<button class="btn ghost" data-act="copy" data-v="' + esc(rl.code) + '">Code kopiëren</button>';
     } else if (rl.step === 'answer' || rl.step === 'linking') {
@@ -668,7 +677,7 @@
     scanEl.querySelector('#scan-x').onclick = function () { closeScanner(); };
     scanEl.querySelector('#scan-ok').onclick = function () {
       var t = scanEl.querySelector('#scan-paste').value.trim();
-      if (accept.test(t)) done(t); else bad('Dit is niet de juiste code.');
+      if (accept.test(ringCode(t))) done(ringCode(t)); else bad('Dit is niet de juiste code.');
     };
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { bad('Camera niet beschikbaar. Plak de code hieronder.'); return; }
     var detector = null;
@@ -683,7 +692,7 @@
         cx.drawImage(video, 0, 0, cv.width, cv.height);
         if (detector) {
           busy = true;
-          detector.detect(cv).then(function (codes) { busy = false; for (var i = 0; i < codes.length; i++) if (accept.test(codes[i].rawValue)) { done(codes[i].rawValue); return; } }).catch(function () { busy = false; });
+          detector.detect(cv).then(function (codes) { busy = false; for (var i = 0; i < codes.length; i++) if (accept.test(ringCode(codes[i].rawValue))) { done(ringCode(codes[i].rawValue)); return; } }).catch(function () { busy = false; });
         } else {
           var img = cx.getImageData(0, 0, cv.width, cv.height), res = window.jsQR(img.data, img.width, img.height, { inversionAttempts: 'dontInvert' });
           if (res && accept.test(res.data)) done(res.data);
@@ -1658,6 +1667,15 @@
           location.href = u.href;
         }); break;
       case 'ring-open': S.sheet = { type: 'ring' }; S.rl = { step: 'choose' }; renderLayer(); break;
+      case 'ring-land-go':
+        var nmEl = document.getElementById('myname'); S.name = nmEl ? nmEl.value.trim() : S.name;
+        if (!S.name) { toast('Vul eerst je naam in.'); break; }
+        ls(K.name, S.name); S.rl = { step: 'intro', busy: true }; render();
+        primeCamera().then(function () { return connect('ring'); }).then(function () {
+          var db = getRing(); S.rl.base = db.linkCount(); return db.acceptOffer(S.ringOffer);
+        }).then(function (code) { S.rl.step = 'answer'; S.rl.code = code; S.rl.busy = false; render(); })
+          .catch(function (e) { S.rl = { step: 'intro', err: e.message }; render(); });
+        break;
       case 'ring-show': ringShow(); break;
       case 'ring-scan': ringScan('offer'); break;
       case 'ring-scan-answer': ringScan('answer'); break;
@@ -1767,6 +1785,11 @@
   window.addEventListener('message', function (e) {
     if (e.origin === location.origin && e.data && e.data.toepenGuide === 'close') { var bk = document.querySelector('.fullpage [data-act=back]'); if (bk) bk.click(); }
   });
+  var ringIn = Q.get('ring');
+  if (!qcode && ringIn && TP.test(ringIn)) {
+    S.ringOffer = ringIn; S.deep = true; S.view = 'ringjoin'; S.rl = { step: 'intro' };
+    try { history.replaceState(null, '', location.pathname); } catch (e) {}
+  }
   var resumed = false;
   if (!qcode && START === 'verder') {
     S.deep = true; resumed = true;
@@ -1777,6 +1800,7 @@
     else { S.view = 'mp0'; render(); }
   }
   if (resumed) { /* handled above */ }
+  else if (S.ringOffer) { render(); }
   else if (qcode && S.name.trim() && (VIA || NET)) joinTable(qcode);
   else {
     var j = ls(K.join);
