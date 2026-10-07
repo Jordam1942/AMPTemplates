@@ -100,6 +100,7 @@
   .legend { display: grid; gap: 6px; font-size: 0.88rem; width: 100%; max-width: 340px; } .legend div { display: flex; gap: 8px; align-items: center; } .legend .pin { position: static; flex: none; box-shadow: none; }
   .inapp { display: flex; gap: 14px; align-items: center; width: 100%; justify-content: center; }
   .inapp .legend { max-width: 150px; font-size: 0.8rem; }
+  @media (max-height: 760px) { .li { padding: 5px 8px; font-size: 0.85rem; } .list { gap: 4px; } }
   @media (max-height: 700px) { .phone { height: 270px; } .txt p { font-size: 0.92rem; } .c { width: 40px; height: 58px; } .fan .c { width: 50px; height: 72px; } .art { gap: 8px; } }
 </style>
 </head>
@@ -136,14 +137,16 @@
         '<div class="cap">De inzet begint op 1 en gaat bij elke toep 1 omhoog (standaard tot 4).</div>' +
         '<div class="row"><div class="mock to">Toep!</div></div>' +
         '<div class="row"><div class="mock ok">Meegaan</div><div class="mock no">Passen</div></div>' },
-    { t: 'Meegaan of passen?', p: 'Passen kost <b>weinig</b>. Meegaan en verliezen kost <b>de hele inzet</b>. Wie wint, krijgt niets.',
-      art: '<div class="list">' +
+    { t: 'Wie krijgt strafpunten?', p: 'Strafpunten zijn <b>minpunten</b>: je wilt er zo weinig mogelijk. De <b>winnaar van de ronde krijgt er geen</b>. Wie verliest, krijgt de inzet. Wie past, krijgt de inzet van vóór de toep.',
+      art: '<div class="cap" style="font-weight:700">Wat er gebeurt</div><div class="list">' +
         '<div class="li"><b>Anna</b><span>toept: inzet wordt 2</span></div>' +
-        '<div class="li"><b>Bram</b><span>past, zit nu uit de ronde</span><em class="pt" style="font-style:normal">+1</em></div>' +
-        '<div class="li"><b>Cas</b><span>gaat mee</span><em class="pt z" style="font-style:normal">0</em></div>' +
-        '<div class="li"><b>Anna</b><span>wint de laatste slag</span><em class="pt z" style="font-style:normal">0</em></div>' +
-        '<div class="li"><b>Cas</b><span>verliest de slag</span><em class="pt" style="font-style:normal">+2</em></div></div>' +
-        '<div class="cap">Wie past krijgt de inzet van <b>vóór</b> de toep (hier 1).</div>' },
+        '<div class="li"><b>Bram</b><span>past en stapt uit de ronde</span></div>' +
+        '<div class="li"><b>Cas</b><span>gaat mee</span></div>' +
+        '<div class="li"><b>Anna</b><span>wint de laatste slag</span></div></div>' +
+        '<div class="cap" style="font-weight:700">Strafpunten na deze ronde</div><div class="list">' +
+        '<div class="li"><b>Anna</b><span>won de ronde</span><em class="pt z" style="font-style:normal">0</em></div>' +
+        '<div class="li"><b>Bram</b><span>paste: inzet van vóór de toep</span><em class="pt" style="font-style:normal">+1</em></div>' +
+        '<div class="li"><b>Cas</b><span>ging mee en verloor: de inzet</span><em class="pt" style="font-style:normal">+2</em></div></div>' },
     { t: 'Strafpunten en af', p: 'Bij je grens (bijvoorbeeld 15) lig je <b>eruit</b>. Eén punt eronder sta je <b>op scherp</b>. Wie overblijft, wint.',
       art: '<div class="score"><div class="h"><span>Anna</span><small>4 / 15</small></div><div class="bartrack"><i style="width:27%"></i></div></div>' +
         '<div class="score"><div class="h"><span>Bram</span><small>14 / 15 <span class="tag o">op scherp</span></small></div><div class="bartrack"><i style="width:93%;background:var(--orange)"></i></div></div>' +
