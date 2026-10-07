@@ -740,7 +740,7 @@
   }
 
   function hostAgain(code, n) {
-    return S.db.openHost(code).catch(function (e) {
+    return S.db.openHost(code, { resume: true }).catch(function (e) {
       if (e && e.type === 'unavailable-id' && n > 0) return new Promise(function (r) { setTimeout(r, 1500); }).then(function () { return hostAgain(code, n - 1); });
       throw e;
     });

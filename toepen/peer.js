@@ -56,13 +56,26 @@
     }
     function destroy() { if (peer) { try { peer.destroy(); } catch (e) {} peer = null; } }
 
-    // Host: register the table code as this phone's address.
-    api.openHost = function (code) {
-      return loadLib().then(function () {
+    // The table code is the host's address. After an accident the public server can keep the old
+    // registration of a dead phone for a minute or more, so a resumed host may take a spare address
+    // and guests simply try all of them.
+    function ids(code) { return ['toepen-' + code, 'toepen-' + code + '-b', 'toepen-' + code + '-c']; }
+    api.openHost = function (code, opts) {
+      var list = ids(code), tries = opts && opts.resume ? list.length : 1;
+      function attempt(i) {
+        return openOne(code, list[i]).catch(function (e) {
+          if (e && e.type === 'unavailable-id' && i + 1 < tries) return attempt(i + 1);
+          throw e;
+        });
+      }
+      return loadLib().then(function () { return attempt(0); });
+    };
+    function openOne(code, id) {
+      return Promise.resolve().then(function () {
         return new Promise(function (res, rej) {
           destroy(); role = 'host'; stopped = false;
           var done = false;
-          peer = new root.Peer('toepen-' + code, cfg());
+          peer = new root.Peer(id, cfg());
           peer.on('open', function () { done = true; res(code); });
           peer.on('error', function (e) { if (!done) { done = true; rej(nl(e)); } });
           peer.on('connection', function (conn) { adapt(conn); });
@@ -70,29 +83,38 @@
           setTimeout(function () { if (!done) { done = true; rej(nl({ type: 'network' })); } }, 12000);
         });
       });
-    };
+    }
     // Guest: call the host; keeps trying again when the link drops.
     api.joinHost = function (code) {
       return loadLib().then(function () {
         return new Promise(function (res, rej) {
           destroy(); role = 'client'; stopped = false;
-          var first = true, hostId = 'toepen-' + code;
+          var first = true, hostIds = ids(code), idx = 0, unavail = 0;
           function dial() {
             if (stopped || !peer || peer.destroyed || api.linkCount() > 0) return;
             if (peer.disconnected) { try { peer.reconnect(); } catch (e) {} setTimeout(dial, 1500); return; }
-            var conn = peer.connect(hostId, { reliable: true });
-            conn.on('open', function () { if (first) { first = false; res(); } });
-            conn.on('close', function () { if (!stopped) setTimeout(dial, 2000); });
+            var conn = peer.connect(hostIds[idx % hostIds.length], { reliable: true }), settled = false;
+            // a dead phone that is still registered never answers: after a while try the next address
+            var timer = setTimeout(function () { if (!settled && !stopped) { settled = true; try { conn.close(); } catch (e) {} idx++; dial(); } }, 7000);
+            conn.on('open', function () { settled = true; clearTimeout(timer); unavail = 0; if (first) { first = false; res(); } });
+            conn.on('close', function () {
+              clearTimeout(timer);
+              if (stopped) return;
+              if (!settled) { settled = true; idx++; setTimeout(dial, 500); } else setTimeout(dial, 2000);
+            });
             adapt(conn);
           }
           redial = dial;
           peer = new root.Peer(cfg());
           peer.on('open', dial);
           peer.on('error', function (e) {
-            if (first) { first = false; rej(nl(e)); }
-            else if (e && e.type === 'peer-unavailable' && !stopped) setTimeout(dial, 2500);
+            if (e && e.type === 'peer-unavailable' && !stopped) {
+              idx++; unavail++;
+              if (first && unavail >= hostIds.length) { first = false; rej(nl(e)); }
+              else setTimeout(dial, first ? 200 : 2500);
+            } else if (first) { first = false; rej(nl(e)); }
           });
-          setTimeout(function () { if (first) { first = false; rej(nl({ type: 'peer-unavailable' })); } }, 12000);
+          setTimeout(function () { if (first) { first = false; rej(nl({ type: 'peer-unavailable' })); } }, 22000);
         });
       });
     };
