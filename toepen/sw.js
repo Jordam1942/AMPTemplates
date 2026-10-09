@@ -1,7 +1,7 @@
 // Offline support: app files are cached on install; Google Fonts are cached
 // the first time they load. Everything else (such as the live
 // game connections) goes straight to the network.
-var CACHE = 'toepen-v35';
+var CACHE = 'toepen-v36';
 var FILES = [
   './', 'index.html', 'scorebord.html', 'spelen.html', 'handleiding.html', 'saves.js', 'prefs.js', 'sfx.js', 'engine.js', 'net.js', 'ring.js', 'peer.js', 'manifest.webmanifest',
   'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png',

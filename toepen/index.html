@@ -54,6 +54,7 @@
   .btn.primary { background: var(--accent); color: var(--accent-fg); }
   .btn.ghost { background: transparent; border: 1.5px solid var(--line); color: var(--fg); }
   .btn.danger { background: var(--danger-soft); color: var(--danger); }
+  .icon-round { width: 40px; min-height: 40px; padding: 0; }
   .btn.sm { min-height: 40px; padding: 0 12px; font-size: 0.9rem; } .btn.big { min-height: 56px; font-size: 1.1rem; }
   .btn:disabled { opacity: 0.4; cursor: default; }
   .topbar { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
@@ -143,7 +144,7 @@
   }
   function renderMenu() {
     var cur = S.current(), h = '', ot = openTable();
-    h += '<div class="topbar"><div class="meta"><h1>Toepen</h1><div class="suits" aria-hidden="true">♠ <span class="r">♥</span> ♣ <span class="r">♦</span></div></div><a class="btn ghost sm" href="handleiding.html">Handleiding</a></div><div class="stack down">';
+    h += '<div class="topbar"><div class="meta"><h1>Toepen</h1><div class="suits" aria-hidden="true">♠ <span class="r">♥</span> ♣ <span class="r">♦</span></div></div><div style="display:flex;gap:8px"><button class="btn ghost sm icon-round" data-act="share" aria-label="Deel het spel"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg></button><a class="btn ghost sm" href="handleiding.html">Handleiding</a></div></div><div class="stack down">';
     if (ot) {
       h += '<div class="resume"><a class="choice main ic t-green" href="spelen.html?start=verder"><i class="i" aria-hidden="true"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="7 4 20 12 7 20"/></svg></i><b>Verder met spelen</b><span>' +
         (ot.practice ? 'Tegen de computer. Waar je gebleven was.' : ot.host ? 'Je tafel ' + esc(ot.code) + '. Verbind opnieuw, dan gaan jullie verder waar je was.' : 'Tafel ' + esc(ot.code) + '. Terug naar je plek' + (ot.ring ? ', daarna koppel je opnieuw met de anderen.' : '.')) + '</span></a>' +
@@ -214,10 +215,18 @@
     if (pages > 1) h += '<div class="pager"><button class="btn ghost sm" data-act="page" data-v="-1"' + (ui.page === 0 ? ' disabled' : '') + '>‹ Vorige</button><span class="small muted">' + (ui.page + 1) + ' / ' + pages + '</span><button class="btn ghost sm" data-act="page" data-v="1"' + (ui.page >= pages - 1 ? ' disabled' : '') + '>Volgende ›</button></div>';
     return h + saveBtn + '</div>';
   }
+  // The address of this app (without the page name), for sharing
+  function shareUrl() { return location.href.split(/[?#]/)[0].replace(/[^\/]*$/, ''); }
   function renderSheet() {
     var sh = ui.sheet; if (!sh) return '';
     var inner = '';
-    if (sh.type === 'clear') {
+    if (sh.type === 'share') {
+      var su = shareUrl(), st = 'Speel mee met Toepen! 🃏 Alleen, met vrienden of om de score bij te houden: ' + su;
+      inner = '<h2>Deel Toepen</h2><p class="muted">Stuur de link naar vrienden. Ze openen hem op hun telefoon en kunnen direct spelen. Installeren is niet nodig.</p>' +
+        '<a class="btn primary big" href="https://wa.me/?text=' + encodeURIComponent(st) + '" target="_blank" rel="noopener">Delen via WhatsApp</a>' +
+        '<button class="btn big" data-act="copy-link">Link kopiëren</button>' +
+        '<div class="small muted" style="text-align:center;word-break:break-all">' + esc(su) + '</div>';
+    } else if (sh.type === 'clear') {
       var ot2 = openTable();
       inner = '<h2>Dit spel opruimen?</h2><p class="muted">' + (ot2 && ot2.practice ? 'Je oefenpotje wordt gewist.' : 'Je tafel wordt van deze telefoon gehaald. Je kunt er niet meer mee verder' + (ot2 && ot2.host ? ', en de anderen kunnen niet meer verbinden.' : '.')) + ' Je scorebord en opgeslagen scores blijven staan.</p>' +
         '<button class="btn danger big" data-act="do-clear">Ja, opruimen</button>';
@@ -311,6 +320,14 @@
       case 'menu': ui.view = 'menu'; ui.sheet = null; draw(); break;
       case 'page': ui.page += +el.dataset.v; draw(); break;
       case 'close': ui.sheet = null; draw(); break;
+      case 'share':
+        var shd = { title: 'Toepen', text: 'Speel mee met Toepen! 🃏', url: shareUrl() };
+        if (navigator.share) { navigator.share(shd).catch(function (e) { if (e && e.name !== 'AbortError') { ui.sheet = { type: 'share' }; draw(); } }); }
+        else { ui.sheet = { type: 'share' }; draw(); }
+        break;
+      case 'copy-link':
+        try { navigator.clipboard.writeText(shareUrl()).then(function () { toast('Link gekopieerd'); }, function () { toast(shareUrl()); }); } catch (e) { toast(shareUrl()); }
+        break;
       case 'ask-clear': ui.sheet = { type: 'clear' }; draw(); break;
       case 'do-clear':
         try {
