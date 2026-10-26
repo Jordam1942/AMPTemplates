@@ -72,12 +72,30 @@ public sealed class UnitController : MonoBehaviour, IDamageable, IGatherMovement
     private UnitVeterancy veterancy;
     private float hpBonusMultiplier = 1f;
     private float fireRateMultiplier = 1f;
+    private float hordeFireMultiplier = 1f;
+    private float hordeSpeedMultiplier = 1f;
+    private float damageMultiplier = 1f;
+
+    /// <summary>Wordt aangeroepen zodra deze unit sterft. Gebruikt door scrap-drops.</summary>
+    public event Action<UnitController> Died;
+
+    /// <summary>True zolang de China Horde Bonus actief is.</summary>
+    public bool HasHordeBonus { get; private set; }
 
     private void Awake()
     {
         agent = GetComponent<NavMeshAgent>();
         bodyCollider = GetComponent<Collider>();
         veterancy = GetComponent<UnitVeterancy>();
+
+        // Een kinematic Rigidbody maakt trigger-contact mogelijk (mijnen). Zonder die body stopt de detectie.
+        if (!TryGetComponent(out Rigidbody body))
+        {
+            body = gameObject.AddComponent<Rigidbody>();
+        }
+
+        body.isKinematic = true;
+        body.useGravity = false;
 
         if (data == null)
         {
@@ -225,6 +243,22 @@ public sealed class UnitController : MonoBehaviour, IDamageable, IGatherMovement
         CurrentHp += MaxHp - oldMax;
     }
 
+    /// <summary>Zet de China Horde Bonus aan of uit. Snelheid wordt direct op de agent toegepast.</summary>
+    public void SetHordeBonus(bool active, float fireMultiplier, float speedMultiplier)
+    {
+        HasHordeBonus = active;
+        hordeFireMultiplier = active ? fireMultiplier : 1f;
+        hordeSpeedMultiplier = active ? speedMultiplier : 1f;
+
+        if (agent != null && agent.enabled && data != null) agent.speed = data.speed * hordeSpeedMultiplier;
+    }
+
+    /// <summary>Schadefactor van het wapen. Gebruikt door de GLA-scrap-upgrades.</summary>
+    public void SetDamageMultiplier(float multiplier)
+    {
+        damageMultiplier = Mathf.Max(0f, multiplier);
+    }
+
     public void Heal(int amount)
     {
         if (!IsAlive || amount <= 0) return;
@@ -306,7 +340,7 @@ public sealed class UnitController : MonoBehaviour, IDamageable, IGatherMovement
         if (Time.time >= nextShotTime)
         {
             Fire();
-            nextShotTime = Time.time + 1f / (data.fireRate * fireRateMultiplier);
+            nextShotTime = Time.time + 1f / (data.fireRate * fireRateMultiplier * hordeFireMultiplier);
         }
     }
 
@@ -342,7 +376,7 @@ public sealed class UnitController : MonoBehaviour, IDamageable, IGatherMovement
     {
         float multiplier = data.GetDamageMultiplier(attackTarget.Armor);
         bool wasAlive = attackTarget.IsAlive;
-        attackTarget.TakeDamage(Mathf.RoundToInt(data.weaponDamage * multiplier));
+        attackTarget.TakeDamage(Mathf.RoundToInt(data.weaponDamage * multiplier * damageMultiplier));
 
         // Alleen een echte kill telt voor veterancy en de generaal. Gebouwen leveren hier geen XP.
         UnitController victim = attackTarget as UnitController;
@@ -355,6 +389,7 @@ public sealed class UnitController : MonoBehaviour, IDamageable, IGatherMovement
     private void EnterDying()
     {
         SetState(State.Dying);
+        Died?.Invoke(this);
 
         if (agent.enabled) agent.enabled = false;
         bodyCollider.enabled = false; // Niet meer raakbaar of selecteerbaar.
