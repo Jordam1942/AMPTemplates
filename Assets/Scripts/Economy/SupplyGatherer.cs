@@ -2,7 +2,8 @@ using UnityEngine;
 
 /// <summary>
 /// Autonome supply-loop: dock → laden → supply center → lossen → herhalen, tot alle docks leeg zijn.
-/// UnitController verzorgt de beweging. Deze klasse beheert alleen de fasen en de lading.
+/// De beweging komt van een IGatherMovement: NavMesh voor grondvoertuigen, ChinookFlight voor helikopters.
+/// Deze klasse beheert alleen de fasen en de lading.
 /// </summary>
 [RequireComponent(typeof(UnitController))]
 [DisallowMultipleComponent]
@@ -19,10 +20,11 @@ public sealed class SupplyGatherer : MonoBehaviour
     [Tooltip("Interval waarmee een inactieve gatherer opnieuw zoekt naar werk.")]
     [SerializeField, Min(0.5f)] private float idleRetryInterval = 3f;
 
-    [Tooltip("Interval waarmee een vastgelopen gatherer een nieuwe route krijgt.")]
+    [Tooltip("Interval waarmee een vastgelopen gatherer een nieuwe route krijgt. Geldt niet tijdens een vlucht.")]
     [SerializeField, Min(0.5f)] private float repathInterval = 1f;
 
     private UnitController unit;
+    private IGatherMovement movement;
     private SupplyDock dock;
     private SupplyCenter center;
     private Phase phase = Phase.Idle;
@@ -36,6 +38,10 @@ public sealed class SupplyGatherer : MonoBehaviour
     {
         unit = GetComponent<UnitController>();
         unit.AutoAcquire = false;
+
+        // Een ChinookFlight heeft voorrang. Anders valt de gatherer terug op grondbeweging.
+        ChinookFlight flight = GetComponent<ChinookFlight>();
+        movement = flight != null ? (IGatherMovement)flight : unit;
     }
 
     private void Start() => StartTrip();
@@ -110,7 +116,7 @@ public sealed class SupplyGatherer : MonoBehaviour
 
         phase = Phase.ToDock;
         repathTimer = repathInterval;
-        unit.CommandMove(dock.Position);
+        movement.MoveTo(dock.Position);
     }
 
     private void RouteToCenterOrIdle()
@@ -125,7 +131,7 @@ public sealed class SupplyGatherer : MonoBehaviour
 
         phase = Phase.ToCenter;
         repathTimer = repathInterval;
-        unit.CommandMove(center.Position);
+        movement.MoveTo(center.Position);
     }
 
     private void BeginLoading()
@@ -181,15 +187,15 @@ public sealed class SupplyGatherer : MonoBehaviour
         return d.sqrMagnitude <= radius * radius;
     }
 
-    /// <summary>Als de agent stil staat zonder aankomst (blokkade), geef periodiek een nieuwe route.</summary>
+    /// <summary>Als de beweging stilvalt zonder aankomst (blokkade), geef periodiek een nieuwe route.</summary>
     private void RepathIfStuck(Vector3 target, float dt)
     {
-        if (unit.CurrentState != UnitController.State.Idle) return;
+        if (!movement.IsIdle) return;
 
         repathTimer -= dt;
         if (repathTimer > 0f) return;
 
         repathTimer = repathInterval;
-        unit.CommandMove(target);
+        movement.MoveTo(target);
     }
 }

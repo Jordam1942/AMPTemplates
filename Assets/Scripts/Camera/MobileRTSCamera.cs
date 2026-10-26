@@ -142,6 +142,19 @@ public sealed class MobileRTSCamera : MonoBehaviour
             rtsCamera.orthographicSize = currentDistance * 0.5f;
     }
 
+    /// <summary>Speelkaart in wereldruimte (XZ). Gedeeld met de minimap en de fog of war.</summary>
+    public Rect MapBounds => mapBounds;
+
+    /// <summary>
+    /// Zet de pivot direct op een wereldpunt, bijvoorbeeld vanaf de minimap.
+    /// De kaartgrenzen worden in het volgende frame toegepast.
+    /// </summary>
+    public void SetPivot(Vector3 worldPoint)
+    {
+        transform.position = new Vector3(worldPoint.x, transform.position.y, worldPoint.z);
+        panVelocity = Vector3.zero;
+    }
+
     /// <summary>Zet een schermverplaatsing in pixels om naar een wereldverplaatsing op het grondvlak.</summary>
     private Vector3 ScreenDeltaToWorld(Vector2 pixels)
     {

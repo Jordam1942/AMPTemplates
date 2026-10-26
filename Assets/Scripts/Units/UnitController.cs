@@ -7,10 +7,11 @@ using UnityEngine.AI;
 /// Doelzoeken gebeurt staggered en via een statische registry, niet via scene-queries.
 /// Stop: stopt direct en blijft idle. Guard: blijft op de huidige plek, vuurt op vijanden in bereik
 /// en keert daarna terug naar de bewaakpositie.
+/// External control: een chinook neemt de beweging over. De NavMesh-agent is dan uitgeschakeld.
 /// </summary>
 [RequireComponent(typeof(NavMeshAgent))]
 [RequireComponent(typeof(Collider))]
-public sealed class UnitController : MonoBehaviour
+public sealed class UnitController : MonoBehaviour, IDamageable, IGatherMovement
 {
     public enum State { Idle, Moving, Attacking, Dying }
 
@@ -42,7 +43,11 @@ public sealed class UnitController : MonoBehaviour
     public bool IsAlive => CurrentHp > 0 && CurrentState != State.Dying;
     public bool IsSelected { get; private set; }
     public bool IsGuarding { get; private set; }
+    public bool IsUnderExternalControl { get; private set; }
     public Vector3 Position => transform.position;
+
+    /// <summary>True als de unit stilstaat en niet door een extern systeem wordt aangestuurd.</summary>
+    public bool IsIdle => CurrentState == State.Idle && !IsUnderExternalControl;
 
     /// <summary>
     /// Uitgeschakeld voor gespecialiseerde units (dozers, gatherers). Die sturen hun eigen bewegingen
@@ -91,6 +96,16 @@ public sealed class UnitController : MonoBehaviour
 
     private void Update()
     {
+        // Een gesneuveld object moet altijd het sterfproces afmaken, ook tijdens een vlucht.
+        if (CurrentState == State.Dying)
+        {
+            TickDying();
+            return;
+        }
+
+        // Een extern systeem (chinook) bestuurt deze unit. De FSM rust tot de release.
+        if (IsUnderExternalControl) return;
+
         retargetTimer -= Time.deltaTime;
         bool retargetNow = retargetTimer <= 0f;
         if (retargetNow) retargetTimer = RetargetInterval;
@@ -100,7 +115,6 @@ public sealed class UnitController : MonoBehaviour
             case State.Idle: TickIdle(retargetNow); break;
             case State.Moving: TickMoving(); break;
             case State.Attacking: TickAttacking(retargetNow); break;
-            case State.Dying: TickDying(); break;
         }
     }
 
@@ -108,7 +122,7 @@ public sealed class UnitController : MonoBehaviour
 
     public void CommandMove(Vector3 destination)
     {
-        if (!IsAlive) return;
+        if (!IsAlive || IsUnderExternalControl) return;
 
         IsGuarding = false;
         attackTarget = null;
@@ -117,6 +131,9 @@ public sealed class UnitController : MonoBehaviour
         agent.SetDestination(destination);
         SetState(State.Moving);
     }
+
+    /// <summary>Implementatie van IGatherMovement voor grondvoertuigen.</summary>
+    public void MoveTo(Vector3 destination) => CommandMove(destination);
 
     public void CommandAttack(IDamageable target)
     {
@@ -128,7 +145,7 @@ public sealed class UnitController : MonoBehaviour
     /// <summary>Stopt direct. De unit blijft staan en wacht op een nieuw commando.</summary>
     public void CommandStop()
     {
-        if (!IsAlive) return;
+        if (!IsAlive || IsUnderExternalControl) return;
 
         IsGuarding = false;
         attackTarget = null;
@@ -140,7 +157,7 @@ public sealed class UnitController : MonoBehaviour
     /// <summary>Bewaakt de huidige positie. Vijanden in bereik worden aangevallen, daarna keert de unit terug.</summary>
     public void CommandGuard()
     {
-        if (!IsAlive) return;
+        if (!IsAlive || IsUnderExternalControl) return;
 
         IsGuarding = true;
         guardPoint = transform.position;
@@ -155,6 +172,34 @@ public sealed class UnitController : MonoBehaviour
     {
         // Warp faalt stil als de positie niet op de NavMesh ligt. Sample die positie vooraf.
         agent.Warp(position);
+    }
+
+    /// <summary>Geeft de beweging aan een extern systeem. De NavMesh-agent wordt uitgeschakeld.</summary>
+    public void BeginExternalControl()
+    {
+        if (IsUnderExternalControl) return;
+
+        IsGuarding = false;
+        attackTarget = null;
+        if (agent.enabled)
+        {
+            agent.ResetPath();
+            agent.enabled = false;
+        }
+
+        IsUnderExternalControl = true;
+        SetState(State.Idle);
+    }
+
+    /// <summary>Geeft de beweging terug. navMeshPosition moet op de NavMesh liggen.</summary>
+    public void EndExternalControl(Vector3 navMeshPosition)
+    {
+        if (!IsUnderExternalControl) return;
+
+        IsUnderExternalControl = false;
+        agent.enabled = true;
+        agent.Warp(navMeshPosition);
+        SetState(State.Idle);
     }
 
     public void SetSelected(bool value)
@@ -240,7 +285,7 @@ public sealed class UnitController : MonoBehaviour
 
     private void BeginAttack(IDamageable target)
     {
-        if (!IsAlive || target == null || !target.IsAlive || target.Team == team) return;
+        if (!IsAlive || IsUnderExternalControl || target == null || !target.IsAlive || target.Team == team) return;
 
         attackTarget = target;
         retargetTimer = 0f; // Direct herpad in het volgende frame.
@@ -267,7 +312,7 @@ public sealed class UnitController : MonoBehaviour
     {
         SetState(State.Dying);
 
-        agent.enabled = false;
+        if (agent.enabled) agent.enabled = false;
         bodyCollider.enabled = false; // Niet meer raakbaar of selecteerbaar.
         SetSelected(false);
         corpseTimer = corpseDuration;
@@ -278,11 +323,15 @@ public sealed class UnitController : MonoBehaviour
         UnitController best = null;
         float bestSqr = data.sightRange * data.sightRange;
         Vector3 pos = transform.position;
+        FogOfWar fog = FogOfWar.Instance;
 
         for (int i = 0; i < registry.Count; i++)
         {
             UnitController other = registry[i];
             if (other.team == team || !other.IsAlive) continue;
+
+            // De speler-units kunnen alleen vijanden zien die in het zicht zijn.
+            if (team == LocalPlayerTeam && fog != null && !fog.IsVisible(other.Position)) continue;
 
             float distSqr = (other.Position - pos).sqrMagnitude;
             if (distSqr < bestSqr)

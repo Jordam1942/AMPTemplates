@@ -42,6 +42,9 @@ public sealed class BuildingDataSO : ScriptableObject
     [Min(0.5f)] public float buildTime = 10f;
     [Min(1)] public int maxHp = 1000;
 
+    [Tooltip("Zichtradius van het gebouw in de fog of war.")]
+    [Min(0f)] public float sightRange = 30f;
+
     [Tooltip("Voetafdruk in meters (X, Z) in onrotatiestand.")]
     public Vector2 footprint = new Vector2(6f, 6f);
 

@@ -149,7 +149,7 @@ public sealed class TouchSelectionHandler : MonoBehaviour
                 if (target is UnitController unit) SelectSingle(unit);
                 else if (target is BuildingController building) SelectBuilding(building);
             }
-            else
+            else if (IsTargetVisible(target))
             {
                 IssueAttack(target);
             }
@@ -170,6 +170,20 @@ public sealed class TouchSelectionHandler : MonoBehaviour
 
         if (AudioManager.Instance != null) AudioManager.Instance.PlaySelectionVoice(selection);
         HapticFeedback.Tick();
+    }
+
+    /// <summary>
+    /// Verborgen vijanden zijn niet aanvalbaar. Eenheden moeten in het zicht zijn. Gebouwen mogen
+    /// al aangevallen worden zodra ze verkend zijn.
+    /// </summary>
+    private static bool IsTargetVisible(IDamageable target)
+    {
+        FogOfWar fog = FogOfWar.Instance;
+        if (fog == null) return true;
+
+        return target is BuildingController
+            ? fog.GetState(target.Position) != FogState.Unexplored
+            : fog.IsVisible(target.Position);
     }
 
     private void SelectBuilding(BuildingController building)
