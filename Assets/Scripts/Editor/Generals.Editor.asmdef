@@ -1,0 +1,27 @@
+{
+    "name": "Generals.Editor",
+    "rootNamespace": "",
+    "references": [
+        "Generals.Runtime",
+        "Unity.InputSystem",
+        "Unity.InputSystem.ForUI",
+        "Unity.AI.Navigation",
+        "Unity.TextMeshPro",
+        "Unity.UI",
+        "Unity.RenderPipelines.Core.Runtime",
+        "Unity.RenderPipelines.Universal.Runtime"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "UNITY_INCLUDE_TESTS"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
