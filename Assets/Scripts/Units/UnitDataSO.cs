@@ -18,6 +18,9 @@ public sealed class UnitDataSO : ScriptableObject
     [Tooltip("Icoon voor de HUD en productiewachtrij.")]
     public Sprite icon;
 
+    [Tooltip("Bouwkosten. Dit is ook de XP-waarde van de unit voor de schutter en de generaal.")]
+    [Min(0)] public int cost = 500;
+
     [Header("Overleven en beweging")]
     [Min(1)] public int maxHp = 100;
     [Min(0.1f)] public float speed = 4f;

@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.AI;
@@ -26,6 +27,9 @@ public sealed class UnitController : MonoBehaviour, IDamageable, IGatherMovement
     /// <summary>Alle actieve units, voor selectie en doelzoeken.</summary>
     public static IReadOnlyList<UnitController> Registry => registry;
 
+    /// <summary>Wordt aangeroepen als een unit een andere unit doodt. Args: slachtoffer, schutter.</summary>
+    public static event Action<UnitController, UnitController> UnitKilled;
+
     [Header("Data")]
     [SerializeField] private UnitDataSO data;
     [SerializeField] private int team = LocalPlayerTeam;
@@ -46,6 +50,9 @@ public sealed class UnitController : MonoBehaviour, IDamageable, IGatherMovement
     public bool IsUnderExternalControl { get; private set; }
     public Vector3 Position => transform.position;
 
+    /// <summary>Maximum HP inclusief het rangbonus van de veterancy.</summary>
+    public int MaxHp => data != null ? Mathf.RoundToInt(data.maxHp * hpBonusMultiplier) : 0;
+
     /// <summary>True als de unit stilstaat en niet door een extern systeem wordt aangestuurd.</summary>
     public bool IsIdle => CurrentState == State.Idle && !IsUnderExternalControl;
 
@@ -62,11 +69,15 @@ public sealed class UnitController : MonoBehaviour, IDamageable, IGatherMovement
     private float nextShotTime;
     private float corpseTimer;
     private Vector3 guardPoint;
+    private UnitVeterancy veterancy;
+    private float hpBonusMultiplier = 1f;
+    private float fireRateMultiplier = 1f;
 
     private void Awake()
     {
         agent = GetComponent<NavMeshAgent>();
         bodyCollider = GetComponent<Collider>();
+        veterancy = GetComponent<UnitVeterancy>();
 
         if (data == null)
         {
@@ -202,6 +213,25 @@ public sealed class UnitController : MonoBehaviour, IDamageable, IGatherMovement
         SetState(State.Idle);
     }
 
+    /// <summary>
+    /// Past de rangbonussen toe. Het huidige HP groeit mee met het verschil in maximum, zodat een
+    /// rangstijging de unit niet ineens half beschadigd maakt.
+    /// </summary>
+    public void ApplyVeterancy(float hpMultiplier, float fireRateBonus)
+    {
+        int oldMax = MaxHp;
+        hpBonusMultiplier = hpMultiplier;
+        fireRateMultiplier = fireRateBonus;
+        CurrentHp += MaxHp - oldMax;
+    }
+
+    public void Heal(int amount)
+    {
+        if (!IsAlive || amount <= 0) return;
+
+        CurrentHp = Mathf.Min(MaxHp, CurrentHp + amount);
+    }
+
     /// <summary>Wijst de unit toe aan een team. Gebruikt door gebouwen, zodat één prefab voor elke partij werkt.</summary>
     public void SetTeam(int newTeam)
     {
@@ -276,7 +306,7 @@ public sealed class UnitController : MonoBehaviour, IDamageable, IGatherMovement
         if (Time.time >= nextShotTime)
         {
             Fire();
-            nextShotTime = Time.time + 1f / data.fireRate;
+            nextShotTime = Time.time + 1f / (data.fireRate * fireRateMultiplier);
         }
     }
 
@@ -311,7 +341,15 @@ public sealed class UnitController : MonoBehaviour, IDamageable, IGatherMovement
     private void Fire()
     {
         float multiplier = data.GetDamageMultiplier(attackTarget.Armor);
+        bool wasAlive = attackTarget.IsAlive;
         attackTarget.TakeDamage(Mathf.RoundToInt(data.weaponDamage * multiplier));
+
+        // Alleen een echte kill telt voor veterancy en de generaal. Gebouwen leveren hier geen XP.
+        UnitController victim = attackTarget as UnitController;
+        if (!wasAlive || attackTarget.IsAlive || victim == null) return;
+
+        if (veterancy != null && victim.Data != null) veterancy.AddKillXp(victim.Data.cost);
+        UnitKilled?.Invoke(victim, this);
     }
 
     private void EnterDying()

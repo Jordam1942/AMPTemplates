@@ -168,6 +168,15 @@ public sealed class FogOfWar : MonoBehaviour
             AddViewer(b.Position, b.Data.sightRange, ref count);
         }
 
+        // Tijdelijke bronnen, bijvoorbeeld een spy drone. Verlopen bronnen worden eerst opgeruimd.
+        TemporaryVision.Prune();
+        IReadOnlyList<TemporaryVision.VisionSource> temporary = TemporaryVision.Active;
+        for (int i = 0; i < temporary.Count; i++)
+        {
+            if (temporary[i].team != team) continue;
+            AddViewer(temporary[i].position, temporary[i].radius, ref count);
+        }
+
         return count;
     }
 

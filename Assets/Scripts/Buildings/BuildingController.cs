@@ -61,6 +61,9 @@ public sealed class BuildingController : MonoBehaviour, IDamageable
     public event Action<UpgradeDataSO> UpgradeCompleted;
     public event Action<BuildingController> Destroyed;
 
+    /// <summary>Wordt aangeroepen zodra een gebouw van welk team dan ook is opgebouwd. Voor de generaal-XP.</summary>
+    public static event Action<BuildingController> ConstructionCompletedGlobal;
+
     private bool isDead;
     private float destroyTimer;
     private Collider bodyCollider;
@@ -156,6 +159,7 @@ public sealed class BuildingController : MonoBehaviour, IDamageable
         CurrentHp = data.maxHp;
         ApplyVisual();
         RefreshEconomyPower();
+        ConstructionCompletedGlobal?.Invoke(this);
     }
 
     private void ApplyVisual()
