@@ -150,6 +150,7 @@ public sealed class ConstructionSystem : MonoBehaviour
     {
         // Eén vinger plaatst. Een tweede vinger hoort bij de camera.
         if (placingData == null || placingFinger != null || Touch.activeTouches.Count > 1) return;
+        if (UIInputGuard.IsOverUI(finger)) return;
 
         placingFinger = finger;
         ghostDirty = true;

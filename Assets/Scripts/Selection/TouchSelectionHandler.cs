@@ -94,8 +94,8 @@ public sealed class TouchSelectionHandler : MonoBehaviour
 
     private void OnFingerDown(Finger finger)
     {
-        // Tijdens bouwplaatsing is het ghost-systeem de eigenaar van de input.
-        if (ConstructionSystem.IsPlacing) return;
+        // Tijdens bouwplaatsing, rally-keuze of een tik op de HUD is een ander systeem de eigenaar van de input.
+        if (ConstructionSystem.IsPlacing || TargetPicker.IsActive || UIInputGuard.IsOverUI(finger)) return;
 
         // Een tweede vinger hoort bij de camera (pinch/twist). Lopende selectie stopt.
         if (Touch.activeTouches.Count > 1)
@@ -147,6 +147,7 @@ public sealed class TouchSelectionHandler : MonoBehaviour
             if (target.Team == UnitController.LocalPlayerTeam)
             {
                 if (target is UnitController unit) SelectSingle(unit);
+                else if (target is BuildingController building) SelectBuilding(building);
             }
             else
             {
@@ -155,7 +156,9 @@ public sealed class TouchSelectionHandler : MonoBehaviour
         }
         else if ((groundMask.value & hitLayerBit) != 0)
         {
-            IssueMove(hit.point);
+            // Met een selectie van units is de grondtik een bevel. Anders sluit het gebouwpaneel.
+            if (selection.Count > 0) IssueMove(hit.point);
+            else SelectionState.Clear();
         }
     }
 
@@ -166,6 +169,15 @@ public sealed class TouchSelectionHandler : MonoBehaviour
         SetSelection(scratch);
 
         if (AudioManager.Instance != null) AudioManager.Instance.PlaySelectionVoice(selection);
+        HapticFeedback.Tick();
+    }
+
+    private void SelectBuilding(BuildingController building)
+    {
+        scratch.Clear();
+        SetSelection(scratch); // Leeg de unitselectie, anders commandeert de handler verborgen units.
+
+        SelectionState.SetBuilding(building);
         HapticFeedback.Tick();
     }
 
@@ -291,17 +303,25 @@ public sealed class TouchSelectionHandler : MonoBehaviour
             selection.Add(units[i]);
             units[i].SetSelected(true);
         }
+
+        SelectionState.SetUnits(selection);
     }
 
     private void PruneDead()
     {
+        bool removed = false;
+
         for (int i = selection.Count - 1; i >= 0; i--)
         {
             if (selection[i].IsAlive) continue;
 
             selection[i].SetSelected(false);
             selection.RemoveAt(i);
+            removed = true;
         }
+
+        // De HUD moet weten dat de selectie is gekrompen.
+        if (removed) SelectionState.SetUnits(selection);
     }
 
     private static Rect ScreenRect(Vector2 a, Vector2 b) =>

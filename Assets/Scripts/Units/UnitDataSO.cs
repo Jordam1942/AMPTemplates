@@ -15,6 +15,8 @@ public sealed class UnitDataSO : ScriptableObject
     public string displayName = "Unit";
     public Faction faction = Faction.USA;
     public ArmorType armorType = ArmorType.Vehicle;
+    [Tooltip("Icoon voor de HUD en productiewachtrij.")]
+    public Sprite icon;
 
     [Header("Overleven en beweging")]
     [Min(1)] public int maxHp = 100;

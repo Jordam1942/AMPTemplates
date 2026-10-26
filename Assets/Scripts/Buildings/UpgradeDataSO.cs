@@ -11,4 +11,5 @@ public sealed class UpgradeDataSO : ScriptableObject
     public string upgradeId = "upgrade_id";
 
     public string displayName = "Upgrade";
+    public Sprite icon;
 }

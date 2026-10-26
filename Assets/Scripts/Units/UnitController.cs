@@ -5,6 +5,8 @@ using UnityEngine.AI;
 /// <summary>
 /// Één eenheid met een lichte FSM: Idle → Moving / Attacking → Dying.
 /// Doelzoeken gebeurt staggered en via een statische registry, niet via scene-queries.
+/// Stop: stopt direct en blijft idle. Guard: blijft op de huidige plek, vuurt op vijanden in bereik
+/// en keert daarna terug naar de bewaakpositie.
 /// </summary>
 [RequireComponent(typeof(NavMeshAgent))]
 [RequireComponent(typeof(Collider))]
@@ -16,6 +18,7 @@ public sealed class UnitController : MonoBehaviour
 
     private const float RetargetInterval = 0.25f;
     private const float TurnSpeed = 10f;
+    private const float GuardReturnDistance = 1.5f;
 
     private static readonly List<UnitController> registry = new List<UnitController>(256);
 
@@ -33,10 +36,12 @@ public sealed class UnitController : MonoBehaviour
     public UnitDataSO Data => data;
     public int Team => team;
     public ArmorType Armor => data != null ? data.armorType : ArmorType.Vehicle;
+    public Sprite Icon => data != null ? data.icon : null;
     public State CurrentState { get; private set; } = State.Idle;
     public int CurrentHp { get; private set; }
     public bool IsAlive => CurrentHp > 0 && CurrentState != State.Dying;
     public bool IsSelected { get; private set; }
+    public bool IsGuarding { get; private set; }
     public Vector3 Position => transform.position;
 
     /// <summary>
@@ -51,6 +56,7 @@ public sealed class UnitController : MonoBehaviour
     private float retargetTimer;
     private float nextShotTime;
     private float corpseTimer;
+    private Vector3 guardPoint;
 
     private void Awake()
     {
@@ -98,12 +104,13 @@ public sealed class UnitController : MonoBehaviour
         }
     }
 
-    // ---------- Commando's (aangeroepen door de selectie-handler en systemen) ----------
+    // ---------- Commando's (aangeroepen door de selectie-handler, de HUD en systemen) ----------
 
     public void CommandMove(Vector3 destination)
     {
         if (!IsAlive) return;
 
+        IsGuarding = false;
         attackTarget = null;
         agent.isStopped = false;
         agent.stoppingDistance = 0.25f;
@@ -113,11 +120,34 @@ public sealed class UnitController : MonoBehaviour
 
     public void CommandAttack(IDamageable target)
     {
-        if (!IsAlive || target == null || !target.IsAlive || target.Team == team) return;
+        // Een expliciet aanvalscommando beëindigt de bewaking.
+        IsGuarding = false;
+        BeginAttack(target);
+    }
 
-        attackTarget = target;
-        retargetTimer = 0f; // Direct herpad in het volgende frame.
-        SetState(State.Attacking);
+    /// <summary>Stopt direct. De unit blijft staan en wacht op een nieuw commando.</summary>
+    public void CommandStop()
+    {
+        if (!IsAlive) return;
+
+        IsGuarding = false;
+        attackTarget = null;
+        agent.isStopped = true;
+        agent.ResetPath();
+        SetState(State.Idle);
+    }
+
+    /// <summary>Bewaakt de huidige positie. Vijanden in bereik worden aangevallen, daarna keert de unit terug.</summary>
+    public void CommandGuard()
+    {
+        if (!IsAlive) return;
+
+        IsGuarding = true;
+        guardPoint = transform.position;
+        attackTarget = null;
+        agent.isStopped = true;
+        agent.ResetPath();
+        SetState(State.Idle);
     }
 
     /// <summary>Plaatst de agent direct op een positie, bijvoorbeeld bij het verlaten van een gebouw.</summary>
@@ -148,7 +178,13 @@ public sealed class UnitController : MonoBehaviour
         if (!AutoAcquire || !retargetNow) return;
 
         UnitController enemy = FindNearestEnemy();
-        if (enemy != null) CommandAttack(enemy);
+        if (enemy != null)
+        {
+            BeginAttack(enemy);
+            return;
+        }
+
+        if (IsGuarding) ReturnToGuardPoint();
     }
 
     private void TickMoving()
@@ -201,6 +237,25 @@ public sealed class UnitController : MonoBehaviour
     }
 
     // ---------- Interne hulpfuncties ----------
+
+    private void BeginAttack(IDamageable target)
+    {
+        if (!IsAlive || target == null || !target.IsAlive || target.Team == team) return;
+
+        attackTarget = target;
+        retargetTimer = 0f; // Direct herpad in het volgende frame.
+        SetState(State.Attacking);
+    }
+
+    private void ReturnToGuardPoint()
+    {
+        if ((guardPoint - transform.position).sqrMagnitude <= GuardReturnDistance * GuardReturnDistance) return;
+
+        agent.isStopped = false;
+        agent.stoppingDistance = 0.25f;
+        agent.SetDestination(guardPoint);
+        SetState(State.Moving);
+    }
 
     private void Fire()
     {

@@ -28,6 +28,8 @@ public sealed class BuildingDataSO : ScriptableObject
 {
     [Header("Identiteit")]
     public string displayName = "Building";
+    [Tooltip("Icoon voor het bouwmenu.")]
+    public Sprite icon;
     public Faction faction = Faction.USA;
 
     [Tooltip("Prefab met BuildingController, een collider op de Buildings-laag en optioneel SupplyCenter. " +

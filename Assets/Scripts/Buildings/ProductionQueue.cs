@@ -62,6 +62,19 @@ public sealed class ProductionQueue
         return true;
     }
 
+    /// <summary>Leest item 'index' zonder de lijst te kopiëren. Index 0 is het voorste item, het enige dat loopt.</summary>
+    public bool TryGetEntry(int index, out ProductionOption option, out float progress)
+    {
+        option = default;
+        progress = 0f;
+        if (index < 0 || index >= entries.Count) return false;
+
+        Entry entry = entries[index];
+        option = entry.Option;
+        progress = index == 0 ? 1f - entry.Remaining / entry.Total : 0f;
+        return true;
+    }
+
     /// <summary>Annuleert het laatst toegevoegde item, zodat de kosten terugbetaald kunnen worden.</summary>
     public bool TryCancelLast(out ProductionOption cancelled)
     {
