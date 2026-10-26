@@ -58,8 +58,8 @@ public sealed class SupplyCenter : MonoBehaviour
     /// <summary>Levert credits af bij de economie van het team van dit centrum.</summary>
     public void Deliver(int amount)
     {
-        PlayerEconomy economy = PlayerEconomy.Instance;
-        if (economy != null && economy.TeamId == building.Team)
-            economy.Deposit(amount);
+        // De economie van het team van dit centrum. Een AI-center stort dus in de AI-kas.
+        PlayerEconomy economy = PlayerEconomy.ForTeam(building.Team);
+        if (economy != null) economy.Deposit(amount);
     }
 }

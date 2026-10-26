@@ -202,6 +202,12 @@ public sealed class UnitController : MonoBehaviour, IDamageable, IGatherMovement
         SetState(State.Idle);
     }
 
+    /// <summary>Wijst de unit toe aan een team. Gebruikt door gebouwen, zodat één prefab voor elke partij werkt.</summary>
+    public void SetTeam(int newTeam)
+    {
+        team = newTeam;
+    }
+
     public void SetSelected(bool value)
     {
         IsSelected = value;

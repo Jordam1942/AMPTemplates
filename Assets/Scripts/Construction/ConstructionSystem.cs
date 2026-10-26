@@ -1,15 +1,12 @@
+using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.AI;
 using UnityEngine.InputSystem.EnhancedTouch;
 using Touch = UnityEngine.InputSystem.EnhancedTouch.Touch;
 
-public enum PlacementResult { Valid, Unaffordable, NotWalkable, Blocked }
-
 /// <summary>
-/// Bouwplaatsing. Een ghost volgt de vinger op het grondvlak, snapt op het grid en kleurt
-/// groen (vrij en begaanbaar) of rood (geblokkeerd, niet begaanbaar of onbetaalbaar).
-/// Loslaten commit de plaatsing: kosten worden afgeschreven, het gebouw verschijnt in opbouwstand
-/// en de eerstvolgende vrije bouwer krijgt de opdracht.
+/// Bouwplaatsing voor de speler. Een ghost volgt de vinger op het grondvlak, snapt op het grid en kleurt
+/// groen (vrij en begaanbaar) of rood. Loslaten commit de plaatsing. De regels zelf staan in PlacementRules
+/// en worden ook door de AI gebruikt.
 /// </summary>
 [DisallowMultipleComponent]
 public sealed class ConstructionSystem : MonoBehaviour
@@ -23,10 +20,6 @@ public sealed class ConstructionSystem : MonoBehaviour
     private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
     private static readonly Color ValidColor = new Color(0.2f, 1f, 0.3f, 0.6f);
     private static readonly Color InvalidColor = new Color(1f, 0.2f, 0.2f, 0.6f);
-
-    private const int SampleGrid = 3;
-    private const float NavMeshSampleDistance = 0.5f;
-    private const float MaxFlatnessError = 0.5f;
 
     [Header("References")]
     [SerializeField] private Camera worldCamera;
@@ -98,6 +91,7 @@ public sealed class ConstructionSystem : MonoBehaviour
             RefreshPlacement(point);
         }
 
+        // Dit geldt voor alle teams: AI-gebouwen in opbouw krijgen ook een bouwer.
         assignTimer -= Time.deltaTime;
         if (assignTimer <= 0f)
         {
@@ -106,7 +100,7 @@ public sealed class ConstructionSystem : MonoBehaviour
         }
     }
 
-    // ---------- Publieke API (aangeroepen door UI) ----------
+    // ---------- Publieke API (aangeroepen door de HUD) ----------
 
     /// <summary>Start plaatsingsmodus voor het gebouw. Een volgende vingerdruk plaatst het.</summary>
     public void BeginPlacement(BuildingDataSO data)
@@ -168,11 +162,14 @@ public sealed class ConstructionSystem : MonoBehaviour
         placingFinger = null;
         if (rtsCamera != null) rtsCamera.InputLocked = false;
 
-        if (lastResult == PlacementResult.Valid && Commit(snappedPosition, ghostTransform.rotation))
+        if (lastResult == PlacementResult.Valid && PlacementRules.TryPlace(
+                placingData, snappedPosition, ghostTransform.rotation, PlayerEconomy.Instance, out _))
+        {
             ClearPlacingState();
+        }
     }
 
-    // ---------- Ghost en validatie ----------
+    // ---------- Ghost ----------
 
     private void RefreshPlacement(Vector3 groundPoint)
     {
@@ -183,48 +180,12 @@ public sealed class ConstructionSystem : MonoBehaviour
         ghostDirty = false;
 
         ghostTransform.position = snapped + Vector3.up * (ghostHeight * 0.5f);
-        lastResult = Evaluate(snapped, ghostTransform.rotation);
+        lastResult = PlacementRules.Evaluate(
+            placingData, snapped, ghostTransform.rotation, 0f,
+            blockingMask.value, overlapBuffer, PlayerEconomy.Instance);
 
         ghostBlock.SetColor(BaseColorId, lastResult == PlacementResult.Valid ? ValidColor : InvalidColor);
         ghostRenderer.SetPropertyBlock(ghostBlock);
-    }
-
-    /// <summary>
-    /// Controleert kosten, begaanbaarheid op de NavMesh en overlap met blokkerende colliders.
-    /// Begaanbaarheid wordt bemonsterd op een raster over de voetafdruk, niet alleen in het midden.
-    /// </summary>
-    private PlacementResult Evaluate(Vector3 center, Quaternion rotation)
-    {
-        PlayerEconomy economy = PlayerEconomy.Instance;
-        if (economy == null || !economy.CanAfford(placingData.cost)) return PlacementResult.Unaffordable;
-
-        Vector2 half = placingData.footprint * 0.5f;
-
-        for (int ix = 0; ix < SampleGrid; ix++)
-        {
-            for (int iz = 0; iz < SampleGrid; iz++)
-            {
-                float tx = ix / (float)(SampleGrid - 1);
-                float tz = iz / (float)(SampleGrid - 1);
-                Vector3 local = new Vector3(Mathf.Lerp(-half.x, half.x, tx), 0f, Mathf.Lerp(-half.y, half.y, tz));
-                Vector3 sample = center + rotation * local;
-
-                if (!NavMesh.SamplePosition(sample, out NavMeshHit hit, NavMeshSampleDistance, NavMesh.AllAreas))
-                    return PlacementResult.NotWalkable;
-
-                // Vlakte: een punt op een andere hoogte betekent een helling of een trede.
-                if (Mathf.Abs(hit.position.y - center.y) > MaxFlatnessError)
-                    return PlacementResult.NotWalkable;
-            }
-        }
-
-        // Overlap-box iets kleiner dan de voetafdruk, zodat aangrenzend bouwen mogelijk blijft.
-        Vector3 boxCenter = center + Vector3.up;
-        Vector3 boxHalf = new Vector3(half.x * 0.95f, 1f, half.y * 0.95f);
-        int hits = Physics.OverlapBoxNonAlloc(
-            boxCenter, boxHalf, overlapBuffer, rotation, blockingMask.value, QueryTriggerInteraction.Ignore);
-
-        return hits > 0 ? PlacementResult.Blocked : PlacementResult.Valid;
     }
 
     private Vector3 SnapToGrid(Vector3 p)
@@ -255,25 +216,7 @@ public sealed class ConstructionSystem : MonoBehaviour
         return hit;
     }
 
-    // ---------- Commit en toewijzing ----------
-
-    private bool Commit(Vector3 position, Quaternion rotation)
-    {
-        PlayerEconomy economy = PlayerEconomy.Instance;
-        if (economy == null || !economy.TrySpend(placingData.cost)) return false;
-
-        GameObject go = Instantiate(placingData.prefab, position, rotation);
-        if (!go.TryGetComponent(out BuildingController site))
-        {
-            Destroy(go);
-            economy.Refund(placingData.cost);
-            return false;
-        }
-
-        // Er is geen aparte bouwwachtrij. Bouwers zoeken zelf naar gebouwen in opbouw via BuildingController.Registry.
-        site.BeginConstruction(placingData, economy.TeamId);
-        return true;
-    }
+    // ---------- Bouwers toewijzen ----------
 
     /// <summary>
     /// Wijst vrije bouwers toe aan gebouwen in opbouw. Door de registry te doorlopen, herpakt een

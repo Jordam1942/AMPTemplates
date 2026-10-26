@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// Globale economie voor één team: credits, cashflow over een venster, en de stroombalans.
+/// Economie voor één team: credits, cashflow over een venster, en de stroombalans.
+/// Meerdere teams hebben elk een eigen component (de speler op team 0, de AI op team 1).
+/// Gebouwen en supply centers zoeken hun economie via ForTeam, zodat er geen spellogica dubbel is.
 /// Stroom: de productie en het verbruik van alle operationele gebouwen van het team worden opgeteld.
 /// Bij een tekort (verbruik > productie) staat het team op Low Power en produceert het op 50% snelheid.
 /// </summary>
@@ -22,7 +24,21 @@ public sealed class PlayerEconomy : MonoBehaviour
         }
     }
 
-    public static PlayerEconomy Instance { get; private set; }
+    private static readonly List<PlayerEconomy> economies = new List<PlayerEconomy>(4);
+
+    /// <summary>De economie van de lokale speler (team 0). Het HUD gebruikt deze.</summary>
+    public static PlayerEconomy Instance => ForTeam(UnitController.LocalPlayerTeam);
+
+    /// <summary>De economie van het opgegeven team, of null als dat team geen economie heeft.</summary>
+    public static PlayerEconomy ForTeam(int team)
+    {
+        for (int i = 0; i < economies.Count; i++)
+        {
+            if (economies[i].teamId == team) return economies[i];
+        }
+
+        return null;
+    }
 
     [SerializeField] private int teamId = UnitController.LocalPlayerTeam;
     [SerializeField, Min(0)] private int startingMoney = 5000;
@@ -47,13 +63,14 @@ public sealed class PlayerEconomy : MonoBehaviour
 
     private void Awake()
     {
-        if (Instance != null && Instance != this)
+        if (ForTeam(teamId) != null)
         {
-            Destroy(gameObject);
+            Debug.LogWarning($"Er bestaat al een economie voor team {teamId}. Deze wordt genegeerd.", this);
+            Destroy(this);
             return;
         }
 
-        Instance = this;
+        economies.Add(this);
         Money = startingMoney;
     }
 
@@ -65,7 +82,7 @@ public sealed class PlayerEconomy : MonoBehaviour
 
     private void OnDestroy()
     {
-        if (Instance == this) Instance = null;
+        economies.Remove(this);
     }
 
     private void Update()

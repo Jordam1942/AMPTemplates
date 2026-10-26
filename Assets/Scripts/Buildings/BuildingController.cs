@@ -6,7 +6,7 @@ using UnityEngine.AI;
 /// <summary>
 /// Gebouw met opbouwstand, HP, stroombijdrage en een productiewachtrij met rally point.
 /// Operationeel = opgebouwd, niet vernield en voorzien van data. Alleen operationele gebouwen
-/// leveren stroom en produceren.
+/// leveren stroom en produceren. De economie wordt per team opgezocht (PlayerEconomy.ForTeam).
 /// </summary>
 [DisallowMultipleComponent]
 [RequireComponent(typeof(Collider))]
@@ -21,7 +21,7 @@ public sealed class BuildingController : MonoBehaviour, IDamageable
     [SerializeField] private BuildingDataSO data;
     [SerializeField] private int team = UnitController.LocalPlayerTeam;
 
-    [Tooltip("True voor gebouwen die al in de scène staan. Door ConstructionSystem geplaatste gebouwen starten op 0%.")]
+    [Tooltip("True voor gebouwen die al in de scène staan. Door een plaatsing gespawnde gebouwen starten op 0%.")]
     [SerializeField] private bool startsBuilt = true;
 
     [Header("Scène")]
@@ -54,6 +54,9 @@ public sealed class BuildingController : MonoBehaviour, IDamageable
 
     public float BuildTime => data != null ? data.buildTime : 1f;
 
+    /// <summary>De economie van het team van dit gebouw. Null als dat team geen economie heeft.</summary>
+    private PlayerEconomy Economy => PlayerEconomy.ForTeam(team);
+
     public event Action<UnitController> UnitProduced;
     public event Action<UpgradeDataSO> UpgradeCompleted;
     public event Action<BuildingController> Destroyed;
@@ -84,7 +87,7 @@ public sealed class BuildingController : MonoBehaviour, IDamageable
     private void OnDisable()
     {
         registry.Remove(this);
-        if (PlayerEconomy.Instance != null) PlayerEconomy.Instance.RefreshPower();
+        RefreshEconomyPower();
     }
 
     private void Update()
@@ -98,7 +101,8 @@ public sealed class BuildingController : MonoBehaviour, IDamageable
 
         if (!IsOperational || Queue == null || Queue.Count == 0) return;
 
-        float speed = PlayerEconomy.Instance != null ? PlayerEconomy.Instance.ProductionSpeedMultiplier : 1f;
+        PlayerEconomy economy = Economy;
+        float speed = economy != null ? economy.ProductionSpeedMultiplier : 1f;
         if (!Queue.Tick(Time.deltaTime, speed, out ProductionOption done)) return;
 
         if (done.kind == ProductionKind.Unit) SpawnUnit(done.unitPrefab);
@@ -107,7 +111,7 @@ public sealed class BuildingController : MonoBehaviour, IDamageable
 
     // ---------- Constructie ----------
 
-    /// <summary>Zet het gebouw in opbouwstand. Aangeroepen door ConstructionSystem direct na Instantiate.</summary>
+    /// <summary>Zet het gebouw in opbouwstand. Aangeroepen direct na Instantiate door PlacementRules.</summary>
     public void BeginConstruction(BuildingDataSO buildingData, int ownerTeam)
     {
         data = buildingData;
@@ -151,8 +155,7 @@ public sealed class BuildingController : MonoBehaviour, IDamageable
         HasBuilder = false;
         CurrentHp = data.maxHp;
         ApplyVisual();
-
-        if (PlayerEconomy.Instance != null) PlayerEconomy.Instance.RefreshPower();
+        RefreshEconomyPower();
     }
 
     private void ApplyVisual()
@@ -161,6 +164,12 @@ public sealed class BuildingController : MonoBehaviour, IDamageable
 
         float y = Mathf.Lerp(scaleAtStart, 1f, ConstructionProgress);
         modelRoot.localScale = new Vector3(1f, y, 1f);
+    }
+
+    private void RefreshEconomyPower()
+    {
+        PlayerEconomy economy = Economy;
+        if (economy != null) economy.RefreshPower();
     }
 
     // ---------- Productie ----------
@@ -176,7 +185,7 @@ public sealed class BuildingController : MonoBehaviour, IDamageable
         ProductionOption option = options[optionIndex];
         if (option.kind == ProductionKind.Unit && option.unitPrefab == null) return false;
 
-        PlayerEconomy economy = PlayerEconomy.Instance;
+        PlayerEconomy economy = Economy;
         if (economy == null || !economy.TrySpend(option.cost)) return false;
 
         Queue.TryEnqueue(option);
@@ -188,7 +197,8 @@ public sealed class BuildingController : MonoBehaviour, IDamageable
     {
         if (Queue == null || !Queue.TryCancelLast(out ProductionOption cancelled)) return false;
 
-        if (PlayerEconomy.Instance != null) PlayerEconomy.Instance.Refund(cancelled.cost);
+        PlayerEconomy economy = Economy;
+        if (economy != null) economy.Refund(cancelled.cost);
         return true;
     }
 
@@ -213,6 +223,9 @@ public sealed class BuildingController : MonoBehaviour, IDamageable
             Destroy(go);
             return;
         }
+
+        // Het team komt van het gebouw, zodat één prefab voor beide kanten werkt.
+        unit.SetTeam(team);
 
         // Warp faalt stil als spawnpos niet op de NavMesh ligt. Zorg dat spawnPoint op de NavMesh staat.
         unit.WarpTo(spawnPos);
@@ -239,7 +252,7 @@ public sealed class BuildingController : MonoBehaviour, IDamageable
         if (bodyCollider != null) bodyCollider.enabled = false;
 
         // Stroom valt direct weg. Het gebouw blijft nog even zichtbaar voor de vernielanimatie.
-        if (PlayerEconomy.Instance != null) PlayerEconomy.Instance.RefreshPower();
+        RefreshEconomyPower();
 
         Destroyed?.Invoke(this);
     }
