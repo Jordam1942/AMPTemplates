@@ -159,11 +159,16 @@ function toKgf(r, t) {
   const st = SPOKE_TYPES[t]; return 100 * Math.pow(r / st.R100, st.p);
 }
 const turnLbl = (q) => ({ 0.125: '1/8', 0.25: '1/4', 0.375: '3/8', 0.5: '1/2', 0.625: '5/8', 0.75: '3/4', 0.875: '7/8', 1: '1' })[q] || q;
+const INFL_OPP = 0.25, INFL_SAME = 0.10; // invloed van 1 slag op buurspaken (andere kant +, zelfde kant −)
+const WOBBLE_KINDS = { left: 'Velg naar links', right: 'Velg naar rechts', high: 'Hoog (bult)', low: 'Laag (deuk)' };
 function analyze(m, w) {
-  const t = w.spokeType, perTurn = SPOKE_TYPES[t].perTurn, out = { sides: {}, actions: [], within: 0, filled: 0, n: w.spokes };
+  const t = w.spokeType, perTurn = SPOKE_TYPES[t].perTurn, n = w.spokes, half = n / 2;
+  const out = { sides: {}, actions: [], within: 0, filled: 0, n };
+  const g = (s, i) => s === 'R' ? 2 * i : 2 * i + 1;
   let maxDev = 0, sumDev = 0;
+  const target = Array(n).fill(0), has = Array(n).fill(false);
   for (const s of ['R', 'L']) {
-    const vals = m[s], sp = vals.map((r, i) => ({ s, i, no: i + 1, r, kgf: r == null ? null : toKgf(r, t), dev: null }));
+    const vals = m[s], sp = vals.map((r, i) => ({ s, i, no: i + 1, r, kgf: r == null ? null : toKgf(r, t), dev: null, turn: 0 }));
     const valid = sp.filter(x => x.kgf != null);
     const sd = { spokes: sp, count: valid.length, avg: null, avgR: null, min: null, max: null, maxDev: 0, within: 0, actions: [] };
     if (valid.length) {
@@ -172,17 +177,42 @@ function analyze(m, w) {
       for (const x of valid) {
         x.dev = (x.kgf - sd.avg) / sd.avg * 100; const ad = Math.abs(x.dev);
         sd.maxDev = Math.max(sd.maxDev, ad); maxDev = Math.max(maxDev, ad); sumDev += ad; out.filled++;
-        if (ad <= TOL_OK) { sd.within++; continue; }
-        const q = clamp(Math.round(Math.abs(x.kgf - sd.avg) / perTurn * 8) / 8 || 0.125, 0.125, 1);
-        const a = { s, i: x.i, no: x.no, dev: x.dev, dir: x.dev < 0 ? 'vaster' : 'losser', turn: turnLbl(q), urgent: ad > TOL_WARN };
-        sd.actions.push(a); out.actions.push(a);
+        if (ad <= TOL_OK) sd.within++; else { target[g(s, x.i)] = sd.avg - x.kgf; has[g(s, x.i)] = true; }
       }
     }
     out.within += sd.within; out.sides[s] = sd;
   }
+  // Slag uit de richtbank: extra spanningsdoel rond de aangewezen positie
+  for (const wb of (m.wobbles || [])) {
+    const d = (wb.size === 2 ? 0.2 : 0.1) * perTurn;
+    const near = (side) => { const par = side === 'R' ? 0 : 1; return [...Array(n).keys()].filter(k => k % 2 === par).map(k => [Math.min(Math.abs(k - wb.pos), n - Math.abs(k - wb.pos)), k]).sort((a, b) => a[0] - b[0]).slice(0, 2).map(x => x[1]); };
+    const R = near('R'), L = near('L');
+    const add = (k, v) => { target[k] += v; has[k] = true; };
+    if (wb.kind === 'left') { R.forEach(k => add(k, d)); L.forEach(k => add(k, -d)); }
+    else if (wb.kind === 'right') { R.forEach(k => add(k, -d)); L.forEach(k => add(k, d)); }
+    else if (wb.kind === 'high') { R.concat(L).forEach(k => add(k, d)); }
+    else if (wb.kind === 'low') { R.concat(L).forEach(k => add(k, -d)); }
+  }
+  // Gezamenlijk oplossen voor de te verstellen spaken (Gauss-Seidel):
+  // ΔT_j = perTurn·(θ_j + INFL_OPP·(θ_j±1) − INFL_SAME·(θ_j±2)); spaken binnen tolerantie blijven staan.
+  const th = Array(n).fill(0);
+  for (let it = 0; it < 40; it++) for (let j = 0; j < n; j++) {
+    if (!has[j]) continue;
+    const nb = INFL_OPP * (th[(j + 1) % n] + th[(j - 1 + n) % n]) - INFL_SAME * (th[(j + 2) % n] + th[(j - 2 + n) % n]);
+    th[j] = target[j] / perTurn - nb;
+  }
+  out.affected = []; // buurspaken aan de andere kant die meebewegen: bij nameten meenemen
+  for (let j = 0; j < n; j++) if (has[j] && Math.abs(th[j]) >= 0.0625) for (const k of [(j + 1) % n, (j - 1 + n) % n]) if (!has[k] && !out.affected.includes(k)) out.affected.push(k);
+  for (const s of ['R', 'L']) for (const x of out.sides[s].spokes) {
+    if (x.kgf == null || !has[g(s, x.i)]) continue;
+    const q = clamp(Math.round(th[g(s, x.i)] * 8) / 8, -1, 1); x.turn = q;
+    if (Math.abs(q) < 0.125) continue;
+    const a = { s, i: x.i, no: x.no, dev: x.dev, dir: q > 0 ? 'vaster' : 'losser', turn: turnLbl(Math.abs(q)), urgent: Math.abs(x.dev) > TOL_WARN, comp: Math.abs(x.dev) <= TOL_OK };
+    out.sides[s].actions.push(a); out.actions.push(a);
+  }
   const meanDev = out.filled ? sumDev / out.filled : 0;
   out.score = out.filled ? clamp(Math.round(100 - 1.5 * maxDev - 2 * meanDev), 0, 100) : 0;
-  out.maxDev = maxDev; out.complete = out.filled === w.spokes; out.cal = isCal(t);
+  out.maxDev = maxDev; out.complete = out.filled === n; out.cal = isCal(t);
   return out;
 }
 const scoreInfo = (s) => s >= 90 ? { label: 'Perfect', hex: '#10b981', cls: 'text-emerald-700' } : s >= 75 ? { label: 'Goed', hex: '#34d399', cls: 'text-emerald-700' } : s >= 55 ? { label: 'Matig', hex: '#f59e0b', cls: 'text-amber-700' } : { label: 'Onvoldoende', hex: '#f43f5e', cls: 'text-rose-700' };
@@ -375,29 +405,33 @@ ROUTES.result = (wid, mid) => {
   const nulScore = nul && nul.id !== m.id ? analyze(nul, w).score : null, nAct = an.actions.length;
   const sideBlock = (s) => { const sd = an.sides[s]; return `<div class="card overflow-hidden">
     <div class="px-3 py-2 text-white flex items-center justify-between" style="background:${COL[s]}"><b>${s === 'R' ? 'Rechts' : 'Links'}</b><span class="text-sm">${sd.avg != null ? `${Math.round(sd.avg)} kgf${an.cal ? '' : '*'} · stand ${sd.avgR.toFixed(1)} · ±${Math.round(sd.maxDev)} %` : '–'}</span></div>
-    <div class="p-2 space-y-1">${sd.actions.length ? sd.actions.map(x => `<button data-e="${s}${x.i}" class="btn w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-left ${x.urgent ? 'bg-rose-50' : 'bg-amber-50'}"><span class="w-12 font-extrabold text-lg">${s}${x.no}</span><span class="flex-1 font-bold">${x.turn} slag ${x.dir.toUpperCase()}</span><span class="text-xs text-slate-500">${x.dev > 0 ? '+' : ''}${Math.round(x.dev)} %</span></button>`).join('') : '<div class="px-3 py-2 text-sm text-emerald-700 font-semibold">Alles binnen tolerantie</div>'}</div>
+    <div class="p-2 space-y-1">${sd.actions.length ? sd.actions.map(x => `<button data-e="${s}${x.i}" class="btn w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-left ${x.urgent ? 'bg-rose-50' : x.comp ? 'bg-slate-50' : 'bg-amber-50'}"><span class="w-12 font-extrabold text-lg">${s}${x.no}</span><span class="flex-1 font-bold">${x.turn} slag ${x.dir.toUpperCase()}</span><span class="text-xs text-slate-500">${x.comp ? 'compensatie' : (x.dev > 0 ? '+' : '') + Math.round(x.dev) + ' %'}</span></button>`).join('') : '<div class="px-3 py-2 text-sm text-emerald-700 font-semibold">Niets verstellen</div>'}</div>
     <div class="px-2 pb-2 grid grid-cols-8 gap-1">${sd.spokes.map(x => `<button data-e="${s}${x.i}" class="btn rounded-md py-1 ${devCls(x.dev)}"><div class="text-[9px] text-slate-500">${x.no}</div><div class="font-bold text-sm">${x.r ?? '·'}</div></button>`).join('')}</div></div>`; };
   const hist = w.measurements.filter(x => x.done);
   $('#view').innerHTML = `<div class="lg:grid lg:grid-cols-5 lg:gap-5"><div class="lg:col-span-3 space-y-3">
       ${hist.length > 1 ? `<div class="flex gap-2 overflow-x-auto">${hist.map((x, k) => `<a href="#/result/${wid}/${x.id}" class="shrink-0 rounded-lg px-3 py-1.5 text-xs font-semibold border ${x.id === m.id ? 'bg-slate-900 text-white border-slate-900' : 'bg-white border-slate-200'}">${k + 1}. ${PHASE[x.phase]} ${analyze(x, w).score}</a>`).join('')}</div>` : ''}
       <div class="card p-3 flex items-center gap-4">${ring(an.score, 84, 9)}<div class="flex-1"><div class="text-xs font-bold text-slate-500">${PHASE[m.phase].toUpperCase()} · ${fmtDate(m.updatedAt)}</div><div class="text-xl font-extrabold ${inf.cls}">${inf.label}</div><div class="text-sm text-slate-600">${an.within}/${an.n} binnen ±${TOL_OK} %${nulScore != null ? ` · nul ${nulScore} → ${an.score}` : ''}</div><div class="mt-1.5 h-2 rounded-full bg-slate-200 overflow-hidden"><div class="scorebar h-full" style="width:${an.score}%"></div></div></div></div>
       ${!an.complete ? `<a href="#/measure/${wid}" class="block rounded-lg bg-amber-100 p-3 text-sm font-semibold">Nog niet alles gemeten · verder meten</a>` : ''}
-      ${sideBlock('R')}${sideBlock('L')}</div>
+      ${sideBlock('R')}${sideBlock('L')}
+      <div class="card p-3"><div class="flex items-center justify-between"><span class="font-bold">Slag in de richtbank</span><button id="wbAdd" class="btn bg-slate-900 text-white rounded-lg px-3 py-1.5 text-sm font-bold">+ Slag</button></div>
+        ${(m.wobbles || []).length ? `<div class="flex flex-wrap gap-1.5 mt-2">${m.wobbles.map((x, k) => `<span class="inline-flex items-center gap-1 rounded-full bg-slate-100 pl-3 pr-1 py-1 text-sm font-semibold">${WOBBLE_KINDS[x.kind]} bij ${x.pos % 2 ? 'L' : 'R'}${Math.floor(x.pos / 2) + 1}${x.size === 2 ? ' (groot)' : ''}<button data-wbdel="${k}" class="btn w-6 h-6 rounded-full hover:bg-slate-200 text-slate-500">✕</button></span>`).join('')}</div>` : '<div class="text-sm text-slate-500 mt-1">Geen slag opgegeven; advies op basis van spanning alleen.</div>'}</div></div>
     <div class="lg:col-span-2 space-y-3 mt-3 lg:mt-0"><div class="card p-3 hidden lg:block" id="acts"></div><div class="card p-3">${radialChart(an, w, 360)}</div>
       <button id="del" class="hidden lg:block w-full py-2 text-sm font-semibold text-rose-600">Wiel verwijderen</button></div></div>
     <div id="bar" class="lg:hidden fixed inset-x-0 z-20 bg-white border-t border-slate-200 p-2" style="bottom:calc(3.5rem + env(safe-area-inset-bottom))"></div>`;
   const acts = (v) => `<div class="${v ? 'space-y-2' : 'grid grid-cols-2 gap-2'}">
-    ${nAct ? `<button data-a="re" class="btn w-full bg-slate-900 text-white rounded-lg py-3 font-bold">Nameten (${nAct})</button>` : ''}
+    ${nAct ? `<button data-a="re" class="btn w-full bg-slate-900 text-white rounded-lg py-3 font-bold">Nameten (${nAct + an.affected.length})</button>` : ''}
     ${an.complete && m.phase !== 'eind' ? `<button data-a="fin" class="btn w-full ${nAct ? 'bg-white border border-slate-300' : 'bg-emerald-600 text-white'} rounded-lg py-3 font-bold">Eindmeting</button>` : ''}
     <a href="#/report/${wid}" class="btn w-full flex items-center justify-center bg-white border border-slate-300 rounded-lg py-3 font-bold ${!nAct && m.phase === 'eind' ? 'col-span-2' : ''}">Certificaat</a>
     <button data-a="all" class="btn w-full py-2 text-sm font-semibold text-slate-500 ${v ? '' : 'col-span-2'}">Alles opnieuw</button></div>`;
   $('#acts').innerHTML = acts(true); $('#bar').innerHTML = acts(false);
   const start = (only) => { const nm = newMeasurement(w, m, only, 'tussen'); w.measurements.push(nm); DB.meta.active = { wheelId: wid, mId: nm.id, side: nm.todo.R.length ? 'R' : 'L', idx: 0 }; upsert(DB.wheels, w); pad = ''; nav('measure/' + wid); };
-  $$('[data-a="re"]').forEach(b => b.onclick = () => start({ R: an.sides.R.actions.map(x => x.i), L: an.sides.L.actions.map(x => x.i) }));
+  $$('[data-a="re"]').forEach(b => b.onclick = () => { const only = { R: an.sides.R.actions.map(x => x.i), L: an.sides.L.actions.map(x => x.i) }; for (const k of an.affected) { const sd = k % 2 ? 'L' : 'R', i = Math.floor(k / 2); if (!only[sd].includes(i)) only[sd].push(i); } start(only); });
   $$('[data-a="all"]').forEach(b => b.onclick = () => start(null));
   $$('[data-a="fin"]').forEach(b => b.onclick = async () => { if (nAct && !(await confirmM(`${nAct} spaken buiten tolerantie. Toch eindmeting?`))) return; w.measurements.forEach(x => { if (x.phase === 'eind') x.phase = 'tussen'; }); m.phase = 'eind'; m.updatedAt = now(); upsert(DB.wheels, w); save(true); feedback('done'); if (S().autoSync && Drive.hasToken()) Drive.sync(true); render(); });
   $('#del').onclick = async () => { if (await confirmM('Wiel verwijderen?', 'Verwijder', true)) { remove(DB.wheels, wid); nav('wheels'); } };
   $$('[data-e]').forEach(b => b.onclick = () => editSpoke(w, m, b.dataset.e[0], +b.dataset.e.slice(1)));
+  $('#wbAdd').onclick = () => wobbleForm(w, m);
+  $$('[data-wbdel]').forEach(b => b.onclick = () => { m.wobbles.splice(+b.dataset.wbdel, 1); m.updatedAt = now(); upsert(DB.wheels, w); render(); });
   return { title: 'Resultaat', sub: (c ? c.name + ' · ' : '') + wheelLabel(w), back: 'wheels', tall: true, right: `<a href="#/report/${wid}" class="btn text-sm font-semibold px-3 py-2">Certificaat</a><button id="delM" class="btn lg:hidden text-sm font-semibold px-2 py-2 text-rose-600">✕</button>` };
 };
 document.addEventListener('click', async e => { if (e.target.id === 'delM') { const wid = cur.params[0]; if (await confirmM('Wiel verwijderen?', 'Verwijder', true)) { remove(DB.wheels, wid); nav('wheels'); } } });
@@ -407,6 +441,24 @@ function editSpoke(w, m, s, i) {
     <div class="grid grid-cols-3 gap-2">${[1, 2, 3, 4, 5, 6, 7, 8, 9].map(k => `<button data-k="${k}" class="btn key">${k}</button>`).join('')}<button data-k="del" class="btn key !bg-slate-200">⌫</button><button data-k="0" class="btn key">0</button><button data-k="ok" class="btn key !bg-emerald-600 !text-white">OK</button></div></div>`);
   const commit = (v) => { if (!(v >= MIN_READ && v <= MAX_READ)) { p = ''; $('#eD').textContent = '–'; return; } m[s][i] = v; m.todo[s] = m.todo[s].filter(x => x !== i); if (!m.todo.R.length && !m.todo.L.length) m.done = true; m.updatedAt = now(); upsert(DB.wheels, w); feedback('ok'); closeModal(); render(); };
   $$('#modalHost [data-k]').forEach(b => b.onclick = () => { const k = b.dataset.k; if (k === 'del') p = p.slice(0, -1); else if (k === 'ok') { if (p) commit(+p); return; } else { if (p.length >= 2) p = ''; p += k; if (p.length === 2) setTimeout(() => commit(+p), 100); } $('#eD').textContent = p || '–'; });
+}
+
+function wobbleForm(w, m) {
+  const st = { kind: 'left', pos: null, size: 1 }, half = w.spokes / 2;
+  const paint = () => {
+    modal(`<div class="p-4 space-y-3">
+      <div class="grid grid-cols-2 gap-2">${Object.entries(WOBBLE_KINDS).map(([k, l]) => `<button data-wk="${k}" class="btn opt py-2.5 text-sm ${st.kind === k ? 'on' : ''}">${l}</button>`).join('')}</div>
+      <div class="text-xs font-bold text-slate-500">BIJ WELKE SPAAK</div>
+      ${['R', 'L'].map(s => `<div class="grid grid-cols-8 gap-1">${[...Array(half).keys()].map(i => { const pos = s === 'R' ? 2 * i : 2 * i + 1; return `<button data-wp="${pos}" class="btn rounded-md py-1.5 text-sm font-bold border ${st.pos === pos ? 'text-white border-transparent' : 'bg-white border-slate-200'}" style="${st.pos === pos ? 'background:' + COL[s] : 'color:' + COL[s]}">${s}${i + 1}</button>`; }).join('')}</div>`).join('')}
+      <div class="grid grid-cols-2 gap-2"><button data-ws="1" class="btn opt py-2 text-sm ${st.size === 1 ? 'on' : ''}">Klein (tot 0.5 mm)</button><button data-ws="2" class="btn opt py-2 text-sm ${st.size === 2 ? 'on' : ''}">Groot (meer)</button></div>
+      <div class="grid grid-cols-2 gap-2 pt-1"><button id="wbC" class="btn py-3 rounded-lg border border-slate-300 font-semibold">Annuleer</button><button id="wbOk" class="btn py-3 rounded-lg bg-slate-900 text-white font-semibold" ${st.pos == null ? 'disabled' : ''}>Toevoegen</button></div></div>`);
+    $$('[data-wk]').forEach(b => b.onclick = () => { st.kind = b.dataset.wk; paint(); });
+    $$('[data-wp]').forEach(b => b.onclick = () => { st.pos = +b.dataset.wp; paint(); });
+    $$('[data-ws]').forEach(b => b.onclick = () => { st.size = +b.dataset.ws; paint(); });
+    $('#wbC').onclick = closeModal;
+    $('#wbOk').onclick = () => { (m.wobbles = m.wobbles || []).push({ kind: st.kind, pos: st.pos, size: st.size }); m.updatedAt = now(); upsert(DB.wheels, w); closeModal(); render(); };
+  };
+  paint();
 }
 
 /* ================= CERTIFICAAT ================= */
