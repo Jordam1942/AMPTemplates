@@ -137,7 +137,7 @@ const calLabel = (c) => UNIOR[c].label;
 const TOL_OK = 5, TOL_WARN = 10, MIN_READ = 1, MAX_READ = 90;
 const COL = { R: '#2563eb', L: '#ea580c' };
 const LS_KEY = 'spaakspanning_v3', DRIVE_FILE = 'spaakspanning-data.json', DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
-const APP_VERSION = '2026-10-29.11';
+const APP_VERSION = '2026-10-29.12';
 /* ================= TALEN =================
    Nieuwe taal toevoegen: kopieer het blok 'nl', vertaal de waarden en voeg de code toe aan LANGS. Ontbrekende sleutels vallen terug op 'nl'. */
 const LANGS = { nl: 'Nederlands', en: 'English', uk: 'Українська', ru: 'Русский' };
@@ -171,6 +171,7 @@ nl: {
   r_expl_b: 'Uw wiel is nagemeten met een professionele spaakspanningsmeter. Alle spaken zijn afzonderlijk gecontroleerd en waar nodig bijgesteld, zodat de spanning rondom gelijk is. Het resultaat is een wiel dat recht loopt, soepel rolt en bestand is tegen de belasting van alledag. Laat de spaakspanning na een harde klap of valpartij opnieuw controleren.',
   r_expl_c: 'Dit certificaat documenteert de spaakspanning per zijde, gemeten met een Unior spanningsmeter en omgerekend volgens de tabel van de fabrikant. Beoordeling: afwijking per spaak ten opzichte van het gemiddelde van de zijde, ideaal ≤ 5 %, acceptabel ≤ 10 %. Gelijkmatige spanning verdeelt de belasting over alle spaken, voorkomt het losraken van nippels en vermoeiing van spaak en velg, en houdt het wiel maatvast.',
   dish_rear_left_high: 'Links staat hoger dan rechts. Bij een cassettewiel hoort rechts strakker: kanten verwisseld of velg niet gecentreerd?', dish_rear_left_low: 'Links staat erg slap ten opzichte van rechts ({p} %). Controleer de centrering van de velg.', dish_front_diff: 'De kanten verschillen {p} % in spanning. Bij een voorwiel met velgrem hoort dat gelijk te zijn: velg mogelijk niet gecentreerd (bij schijfrem is links strakker normaal).',
+  expl_d: 'D · Technisch juist', r_expl_d: 'Een spaak breekt zelden doordat hij te strak staat, maar door vermoeiing: een spaak die bij elke wielomwenteling even slap komt te staan, buigt telkens iets bij de kop en breekt na verloop van tijd. Dat gebeurt bij te lage of ongelijke spanning; dan raken ook nippels los en loopt het wiel uit het spoor. Te hoge spanning belast juist de velg bij de spaakgaten. Bij deze controle is elke spaak gemeten en afgesteld op gelijke, passende spanning, zodat de belasting bij iedere omwenteling over alle spaken verdeeld blijft en het wiel recht blijft onder belasting.',
   r_mechanic: 'Monteur', r_signature: 'Handtekening', r_date: 'Datum', r_foot_table: 'Spanning in kgf volgens de Unior 1752/2 omrekentabel (v2)', r_foot_adj: ', aangepast voor dit instrument', r_foot_est: '* kgf indicatief, omgerekend uit de meterstand; de gelijkmatigheid is bepaald uit de onderlinge verhouding van de metingen.', r_tol: 'Tolerantie ±{a} % ideaal, ±{b} % acceptabel.', r_print: 'Print / PDF', r_lang: 'Taal certificaat',
 },
 en: {
@@ -201,6 +202,7 @@ en: {
   r_expl_b: 'Your wheel has been checked with a professional spoke tension meter. Every spoke was measured individually and adjusted where needed, so the tension is even all the way round. The result is a wheel that runs true, rolls smoothly and stands up to everyday loads. Have the spoke tension checked again after a hard impact or a crash.',
   r_expl_c: 'This certificate documents the spoke tension per side, measured with a Unior tension meter and converted using the manufacturer’s table. Assessment: deviation of each spoke from the side average, ideal ≤ 5 %, acceptable ≤ 10 %. Even tension distributes the load over all spokes, prevents nipples from loosening and fatigue of spoke and rim, and keeps the wheel dimensionally stable.',
   dish_rear_left_high: 'Left side is tighter than right. On a cassette wheel the right side should be tighter: sides swapped or rim not centred?', dish_rear_left_low: 'Left side is very slack compared with right ({p} %). Check the rim centring.', dish_front_diff: 'The sides differ {p} % in tension. On a rim-brake front wheel they should be equal: rim may not be centred (with disc brakes a tighter left side is normal).',
+  expl_d: 'D · Technically accurate', r_expl_d: 'Spokes rarely break because they are too tight, but through fatigue: a spoke that goes slack for a moment on every wheel revolution flexes slightly at the head each time and eventually breaks. That happens with low or uneven tension, which also lets nipples work loose and the wheel go out of true. Excessive tension, on the other hand, overloads the rim at the spoke holes. In this check every spoke was measured and set to even, appropriate tension, so the load stays shared between all spokes on every revolution and the wheel stays true under load.',
   r_mechanic: 'Mechanic', r_signature: 'Signature', r_date: 'Date', r_foot_table: 'Tension in kgf according to the Unior 1752/2 conversion table (v2)', r_foot_adj: ', adjusted for this instrument', r_foot_est: '* kgf indicative, converted from the meter reading; evenness is determined from the ratio between measurements.', r_tol: 'Tolerance ±{a} % ideal, ±{b} % acceptable.', r_print: 'Print / PDF', r_lang: 'Certificate language',
 },
 uk: {
@@ -231,6 +233,7 @@ uk: {
   r_expl_b: 'Ваше колесо перевірено професійним тензометром спиць. Кожну спицю виміряно окремо і за потреби відрегульовано, щоб натяг був однаковим по всьому колу. Результат: колесо котиться рівно, плавно і витримує щоденні навантаження. Після сильного удару або падіння радимо перевірити натяг спиць знову.',
   r_expl_c: 'Цей сертифікат документує натяг спиць по сторонах, виміряний тензометром Unior і перерахований за таблицею виробника. Оцінка: відхилення кожної спиці від середнього по стороні, ідеально ≤ 5 %, прийнятно ≤ 10 %. Рівномірний натяг розподіляє навантаження на всі спиці, запобігає послабленню ніпелів і втомі спиці та обода, зберігає геометрію колеса.',
   dish_rear_left_high: 'Ліва сторона натягнута сильніше за праву. На колесі з касетою права має бути тугішою: сторони переплутано або обід не відцентровано?', dish_rear_left_low: 'Ліва сторона дуже слабка порівняно з правою ({p} %). Перевірте центрування обода.', dish_front_diff: 'Сторони відрізняються на {p} %. На передньому колесі з ободовим гальмом натяг має бути однаковим: обід може бути не відцентрований (з дисковим гальмом тугіша ліва сторона — норма).',
+  expl_d: 'D · Технічно точне', r_expl_d: 'Спиці рідко ламаються через надмірний натяг; головна причина — втома металу: спиця, що на кожному оберті колеса на мить послаблюється, щоразу трохи згинається біля головки і з часом ламається. Так буває при замалому або нерівномірному натягу; тоді також відкручуються ніпелі й колесо втрачає рівність. Надмірний натяг натомість перевантажує обід біля отворів спиць. Під час цієї перевірки кожну спицю виміряно й налаштовано на рівномірний, відповідний натяг, щоб навантаження на кожному оберті розподілялося між усіма спицями і колесо залишалося рівним під навантаженням.',
   r_mechanic: 'Механік', r_signature: 'Підпис', r_date: 'Дата', r_foot_table: 'Натяг у кгс за таблицею перерахунку Unior 1752/2 (v2)', r_foot_adj: ', скориговано для цього приладу', r_foot_est: '* кгс орієнтовно, перераховано з показу приладу; рівномірність визначено за співвідношенням вимірювань.', r_tol: 'Допуск ±{a} % ідеально, ±{b} % прийнятно.', r_print: 'Друк / PDF', r_lang: 'Мова сертифіката',
 },
 ru: {
@@ -261,6 +264,7 @@ ru: {
   r_expl_b: 'Ваше колесо проверено профессиональным тензометром спиц. Каждая спица измерена отдельно и при необходимости отрегулирована, чтобы натяжение было одинаковым по всему кругу. Результат: колесо катится ровно, плавно и выдерживает повседневные нагрузки. После сильного удара или падения рекомендуем проверить натяжение спиц снова.',
   r_expl_c: 'Этот сертификат документирует натяжение спиц по сторонам, измеренное тензометром Unior и пересчитанное по таблице производителя. Оценка: отклонение каждой спицы от среднего по стороне, идеально ≤ 5 %, приемлемо ≤ 10 %. Равномерное натяжение распределяет нагрузку на все спицы, предотвращает ослабление ниппелей и усталость спицы и обода, сохраняет геометрию колеса.',
   dish_rear_left_high: 'Левая сторона натянута сильнее правой. На колесе с кассетой правая должна быть туже: стороны перепутаны или обод не отцентрован?', dish_rear_left_low: 'Левая сторона очень слабая по сравнению с правой ({p} %). Проверьте центровку обода.', dish_front_diff: 'Стороны отличаются на {p} %. На переднем колесе с ободным тормозом натяжение должно быть одинаковым: обод может быть не отцентрован (с дисковым тормозом более тугая левая сторона — норма).',
+  expl_d: 'D · Технически точное', r_expl_d: 'Спицы редко ломаются из-за слишком сильного натяжения; главная причина — усталость металла: спица, которая на каждом обороте колеса на миг ослабляется, каждый раз немного изгибается у головки и со временем ломается. Так бывает при слишком слабом или неравномерном натяжении; тогда также откручиваются ниппели и колесо теряет ровность. Чрезмерное натяжение, напротив, перегружает обод у отверстий спиц. При этой проверке каждая спица измерена и настроена на равномерное, подходящее натяжение, чтобы нагрузка на каждом обороте распределялась между всеми спицами и колесо оставалось ровным под нагрузкой.',
   r_mechanic: 'Механик', r_signature: 'Подпись', r_date: 'Дата', r_foot_table: 'Натяжение в кгс по таблице пересчёта Unior 1752/2 (v2)', r_foot_adj: ', скорректировано для этого прибора', r_foot_est: '* кгс ориентировочно, пересчитано из показаний прибора; равномерность определена по соотношению измерений.', r_tol: 'Допуск ±{a} % идеально, ±{b} % приемлемо.', r_print: 'Печать / PDF', r_lang: 'Язык сертификата',
 },
 };
@@ -272,7 +276,7 @@ const phaseLbl = (p, l) => t('ph_' + p, null, l);
 /* ================= STORE ================= */
 const now = () => Date.now();
 const uid = (p) => p + '_' + now().toString(36) + Math.random().toString(36).slice(2, 6);
-const defSettings = () => ({ shop: '', mechanic: '', meter: '1752/6', sound: true, vibrate: true, calib: {}, driveClientId: '', autoSync: false, lastSync: null, lang: 'nl', reportLang: '', expl: 'a' });
+const defSettings = () => ({ shop: '', mechanic: '', meter: '1752/6', sound: true, vibrate: true, calib: {}, driveClientId: '', autoSync: false, lastSync: null, lang: 'nl', reportLang: '', expl: 'd' });
 const emptyDB = () => ({ v: 3, customers: [], wheels: [], settings: defSettings(), meta: { active: null } });
 let DB = (() => { try { const d = JSON.parse(localStorage.getItem(LS_KEY)); if (d && d.v === 3) { d.settings = Object.assign(defSettings(), d.settings || {}); return d; } } catch (e) {} return emptyDB(); })();
 let saveT = null;
@@ -649,10 +653,10 @@ ROUTES.report = (wid) => {
   const row = (k, v) => v ? `<tr><td class="py-0.5 pr-3 text-[10px] font-bold tracking-wider text-slate-500 uppercase align-top whitespace-nowrap w-24">${k}</td><td class="py-0.5 font-medium text-left">${v}</td></tr>` : '';
   const sideName = (s) => s === 'R' ? r('right') + (w.type === 'rear' ? ' (' + r('drive_side') + ')' : '') : r('left');
   const cmpRow = (lbl, a) => `<tr><td class="py-1 font-semibold">${lbl}</td><td class="py-1 text-right">${a.score}/100</td><td class="py-1 text-right">${a.within}/${a.n}</td><td class="py-1 text-right">±${Math.round(a.maxDev)} %</td><td class="py-1 text-right">${Math.round(a.sides.R.avg)} / ${Math.round(a.sides.L.avg)}</td></tr>`;
-  const sec = (n, title) => `<div class="flex items-center gap-2 mt-2.5 mb-1"><span class="w-5 h-5 rounded-full bg-slate-900 text-white text-[10px] font-bold flex items-center justify-center">${n}</span><span class="text-[10px] font-bold tracking-[.18em] text-slate-700 uppercase">${title}</span><span class="flex-1 border-t border-slate-200"></span></div>`;
+  const sec = (n, title) => `<div class="flex items-center gap-2 mt-2 mb-1"><span class="w-5 h-5 rounded-full bg-slate-900 text-white text-[10px] font-bold flex items-center justify-center">${n}</span><span class="text-[10px] font-bold tracking-[.18em] text-slate-700 uppercase">${title}</span><span class="flex-1 border-t border-slate-200"></span></div>`;
   const tile = (lbl, val, sub) => `<div class="rounded-lg border border-slate-200 px-2.5 py-1.5"><div class="text-[9px] font-bold tracking-wider text-slate-500 uppercase">${lbl}</div><div class="text-base font-extrabold leading-tight">${val}</div>${sub ? `<div class="text-[9px] text-slate-500">${sub}</div>` : ''}</div>`;
   const ok = an.score >= 75 && an.maxDev <= TOL_WARN;
-  const expl = r('r_expl_' + ((S().expl in { a: 1, b: 1, c: 1 }) ? S().expl : 'a'));
+  const expl = r('r_expl_' + ((S().expl in { a: 1, b: 1, c: 1, d: 1 }) ? S().expl : 'd'));
   const sheet = `
     <div class="flex items-end justify-between pb-2.5 border-b-2 border-slate-900">
       <div><div class="text-xl font-extrabold tracking-tight">${h(S().shop || r('r_default_shop'))}</div><div class="text-[11px] text-slate-500">${r('r_tagline')}</div></div>
@@ -671,7 +675,7 @@ ROUTES.report = (wid) => {
         ${anN ? `<table class="w-full text-[11px] mt-2"><thead><tr class="text-slate-500 border-b border-slate-200"><th class="text-left py-0.5 font-semibold">${r('r_measurement')}</th><th class="text-right font-semibold">${r('r_score_h')}</th><th class="text-right font-semibold">${r('r_within', { t: TOL_OK })}</th><th class="text-right font-semibold">${r('r_maxdev')}</th><th class="text-right font-semibold">${r('r_avg_kgf')}${an.cal ? '' : '*'} R / L</th></tr></thead><tbody>${cmpRow(r('r_before'), anN)}${cmpRow(r('r_after'), an)}</tbody></table>` : ''}</div></div>
     ${sec(3, r('r_s3'))}
     <div class="avoid-break flex gap-5 items-start">
-      <div class="w-[64mm] shrink-0">${radialChart(an, w, 300)}<div class="text-[8.5px] text-slate-500 mt-0.5 text-center">${r('r_chart_note', { t: TOL_WARN })}</div></div>
+      <div class="w-[60mm] shrink-0">${radialChart(an, w, 300)}<div class="text-[8.5px] text-slate-500 mt-0.5 text-center">${r('r_chart_note', { t: TOL_WARN })}</div></div>
       <div class="flex-1 text-sm">
         <table class="w-full"><thead><tr class="text-[10px] text-slate-500 border-b border-slate-300"><th class="text-left py-1 font-semibold">${r('r_side')}</th><th class="text-right font-semibold">${r('r_avg_kgf')}${an.cal ? '' : '*'}</th><th class="text-right font-semibold">${r('r_minmax')}</th><th class="text-right font-semibold">${r('r_maxdev')}</th><th class="text-right font-semibold">${r('r_within_tol')}</th></tr></thead>
           <tbody>${['R', 'L'].map(s => { const sd = an.sides[s]; return `<tr class="border-b border-slate-100"><td class="py-1 font-semibold text-xs"><span class="inline-block w-2 h-2 rounded-full mr-1.5 align-middle" style="background:${COL[s]}"></span>${sideName(s)}</td><td class="text-right text-xs">${Math.round(sd.avg)}</td><td class="text-right text-xs">${Math.round(sd.min)}–${Math.round(sd.max)}</td><td class="text-right text-xs">±${Math.round(sd.maxDev)} %</td><td class="text-right text-xs">${sd.within}/${sd.spokes.length}</td></tr>`; }).join('')}</tbody></table>
@@ -679,7 +683,7 @@ ROUTES.report = (wid) => {
         ${['R', 'L'].map(s => `<div class="flex items-center gap-1 mb-1"><span class="w-4 text-[10px] font-bold" style="color:${COL[s]}">${s}</span><div class="flex-1 grid gap-0.5 text-[8.5px] text-center" style="grid-template-columns:repeat(${w.spokes / 2},minmax(0,1fr))">${an.sides[s].spokes.map(x => `<div class="${devCls(x.dev)} rounded-sm py-0.5"><div class="text-slate-500">${x.no}</div><div class="font-bold">${x.r ?? '–'}</div></div>`).join('')}</div></div>`).join('')}
         <div class="text-[8.5px] text-slate-500 mt-1"><span class="inline-block w-2 h-2 rounded-full bg-emerald-500"></span> ${r('r_legend1', { a: TOL_OK })} <span class="inline-block w-2 h-2 rounded-full bg-amber-500 ml-2"></span> ${r('r_legend2', { b: TOL_WARN })} <span class="inline-block w-2 h-2 rounded-full bg-rose-500 ml-2"></span> ${r('r_legend3', { b: TOL_WARN })}</div></div></div>
     ${sec(4, r('r_s4'))}
-    <div class="avoid-break text-xs text-slate-700 leading-snug">${expl}</div>
+    <div class="avoid-break text-[11px] text-slate-700 leading-snug">${expl}</div>
     ${sec(5, r('r_s5'))}
     <div class="avoid-break grid grid-cols-3 gap-8 text-xs pt-2">
       <div><div class="border-b border-slate-800 h-8"></div><div class="mt-1 text-slate-500">${r('r_mechanic')}${S().mechanic ? ' · <span class="text-slate-800 font-semibold">' + h(S().mechanic) + '</span>' : ''}</div></div>
@@ -736,8 +740,8 @@ ROUTES.settings = () => {
       <div class="grid grid-cols-2 gap-2">${['1752/2', '1752/6'].map(mt => `<button data-m="${mt}" class="btn opt py-2.5 ${s.meter === mt ? 'on' : ''}">Unior ${mt}</button>`).join('')}</div>
       <div class="divide-y divide-slate-100">${tgl('sound', t('sound'))}${tgl('vibrate', t('vibrate'))}</div></div>
     <div class="card p-4 space-y-2"><div class="font-bold">${t('expl_title')}</div>
-      <div class="grid grid-cols-3 gap-2">${['a', 'b', 'c'].map(k => `<button data-expl="${k}" class="btn opt py-2 text-xs ${(s.expl || 'a') === k ? 'on' : ''}">${t('expl_' + k)}</button>`).join('')}</div>
-      <div class="text-xs text-slate-600 leading-relaxed">${t('r_expl_' + (s.expl || 'a'), null, (s.reportLang in I18N) ? s.reportLang : lang())}</div></div>
+      <div class="grid grid-cols-2 gap-2">${['d', 'a', 'b', 'c'].map(k => `<button data-expl="${k}" class="btn opt py-2 text-xs ${(s.expl || 'd') === k ? 'on' : ''}">${t('expl_' + k)}</button>`).join('')}</div>
+      <div class="text-xs text-slate-600 leading-relaxed">${t('r_expl_' + (s.expl || 'd'), null, (s.reportLang in I18N) ? s.reportLang : lang())}</div></div>
     <div class="card p-4 space-y-2"><div class="font-bold">${t('drive')}</div>
       <div class="text-sm text-slate-600">${!s.driveClientId ? t('not_set') : Drive.hasToken() ? t('connected') : t('not_connected')}${s.lastSync ? ` · ${t('last')} ${fmtDate(s.lastSync)} ${fmtTime(s.lastSync)}` : ''}</div>
       <input id="sCid" type="text" placeholder="OAuth Client ID (…apps.googleusercontent.com)" value="${h(s.driveClientId)}" class="!font-mono !text-sm">
