@@ -130,13 +130,15 @@ function midProps(mid) {
 }
 const SPOKE_TYPES = {};
 for (const [brandId, brand, model, sub, mid, col] of SPOKES) { const id = brandId + '_' + model.toLowerCase().replace(/[^a-z0-9]+/g, ''); SPOKE_TYPES[id] = Object.assign({ id, brand, model, label: brand === 'Anders' ? model : brand + ' ' + model, sub, mid, cal: col }, midProps(mid)); }
-for (const [old, nw] of [['r20', 'x_20rond'], ['r18', 'x_18rond'], ['r15', 'x_15rond'], ['aero', 'x_plat09x22'], ['race', 'sapim_race'], ['leader', 'sapim_leader20'], ['strong', 'sapim_strong'], ['force', 'sapim_force'], ['dlight', 'sapim_dlight'], ['laser', 'sapim_laser'], ['cxray', 'sapim_cxray'], ['cxsprint', 'sapim_cxsprint']]) SPOKE_TYPES[old] = SPOKE_TYPES[nw];
+const byModel = (brand, model) => Object.values(SPOKE_TYPES).find(t => t.brand === brand && t.model === model);
+for (const [old, brand, model] of [['r20', 'Anders', '2.0 rond'], ['r18', 'Anders', '1.8 rond'], ['r15', 'Anders', '1.5 rond'], ['aero', 'Anders', 'plat 0.9×2.2'], ['race', 'Sapim', 'Race'], ['leader', 'Sapim', 'Leader 2.0'], ['strong', 'Sapim', 'Strong'], ['force', 'Sapim', 'Force'], ['dlight', 'Sapim', 'D-Light'], ['laser', 'Sapim', 'Laser'], ['cxray', 'Sapim', 'CX-Ray'], ['cxsprint', 'Sapim', 'CX-Sprint']]) { const t = byModel(brand, model); if (t) SPOKE_TYPES[old] = t; }
 const CAL_CLASSES = Object.keys(UNIOR);
 const calLabel = (c) => UNIOR[c].label;
 const TOL_OK = 5, TOL_WARN = 10, MIN_READ = 1, MAX_READ = 90;
 const COL = { R: '#2563eb', L: '#ea580c' };
 const LS_KEY = 'spaakspanning_v3', DRIVE_FILE = 'spaakspanning-data.json', DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
 const PHASE = { nul: 'Nulmeting', tussen: 'Tussenmeting', eind: 'Eindmeting' };
+const APP_VERSION = '2026-10-29.7';
 
 /* ================= STORE ================= */
 const now = () => Date.now();
@@ -364,13 +366,13 @@ function spokePicker(curId, done) {
   let q = '';
   const list = () => {
     const f = q.trim().toLowerCase();
-    const items = Object.values(SPOKE_TYPES).filter((t, i, arr) => arr.indexOf(t) === i).filter(t => !f || (t.label + ' ' + t.sub).toLowerCase().includes(f));
+    const items = Object.values(SPOKE_TYPES).filter((t, i, arr) => t && arr.indexOf(t) === i).filter(t => !f || (t.label + ' ' + t.sub).toLowerCase().includes(f));
     const groups = [...new Set(items.map(t => t.brand))];
     return groups.map(b => `<div class="text-[11px] font-bold text-slate-500 px-1 pt-2">${h(b).toUpperCase()}</div>` + items.filter(t => t.brand === b).map(t => `<button data-id="${t.id}" class="btn w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-left ${t.id === curId ? 'bg-slate-900 text-white' : 'hover:bg-slate-100'}"><span class="font-semibold">${h(t.model)}</span><span class="text-sm ${t.id === curId ? 'opacity-80' : 'text-slate-500'}">${h(t.sub)}</span></button>`).join('')).join('') || '<div class="p-4 text-slate-400 text-sm">Niets gevonden</div>';
   };
-  modal(`<div class="p-3"><input id="spQ" type="search" placeholder="Zoek merk, type of maat"><div id="spL" class="mt-2 max-h-[65vh] overflow-y-auto">${list()}</div></div>`);
+  modal(`<div class="p-3"><input id="spQ" type="search" placeholder="Zoek merk, type of maat"><div id="spL" class="mt-2 max-h-[70vh] overflow-y-auto">${list()}</div></div>`);
   const bind = () => $$('#spL [data-id]').forEach(b => b.onclick = () => { closeModal(); done(b.dataset.id); });
-  bind(); setTimeout(() => $('#spQ').focus(), 50);
+  bind();
   $('#spQ').addEventListener('input', e => { q = e.target.value; $('#spL').innerHTML = list(); bind(); });
 }
 
@@ -591,7 +593,7 @@ ROUTES.settings = () => {
       <div class="grid grid-cols-3 gap-1.5">${CAL_CLASSES.map(c => `<button data-c="${c}" class="btn opt py-1.5 text-xs ${calT === c ? 'on' : ''}">${calLabel(c)}${((s.calib || {})[c] || []).length >= 2 ? ' ✓' : ''}</button>`).join('')}</div>
       <div class="space-y-1">${pts.map((p, i) => `<div class="flex items-center gap-2 bg-slate-50 rounded-lg px-3 py-1.5 text-sm"><span class="flex-1">${p[0]} → ${p[1]} kgf</span><button data-cd="${i}" class="btn text-rose-600 font-bold px-2">✕</button></div>`).join('') || `<div class="text-xs text-slate-500">Unior-tabel: ${UNIOR[calT].pts.filter((x, i) => i % 3 === 0).map(x => x[0] + '→' + x[1]).join(' · ')}</div>`}</div>
       <div class="grid grid-cols-5 gap-2"><input id="cR" type="number" inputmode="numeric" placeholder="stand" class="col-span-2"><input id="cK" type="number" inputmode="numeric" placeholder="kgf" class="col-span-2"><button id="cA" class="btn bg-slate-900 text-white rounded-lg font-bold">+</button></div></div>
-    <div class="card p-4"><button id="wipe" class="btn w-full py-2.5 rounded-lg border border-rose-300 text-rose-700 font-bold">Alles wissen</button></div></div>`;
+    <div class="card p-4"><button id="wipe" class="btn w-full py-2.5 rounded-lg border border-rose-300 text-rose-700 font-bold">Alles wissen</button><div class="text-center text-xs text-slate-400 mt-3">Versie ${APP_VERSION}</div></div></div>`;
   $('#sShop').oninput = e => { s.shop = e.target.value; save(); }; $('#sMech').oninput = e => { s.mechanic = e.target.value; save(); };
   $('#sCid').oninput = e => { s.driveClientId = e.target.value.trim(); save(); $('#dCon').disabled = $('#dSync').disabled = !s.driveClientId; };
   $$('[data-m]').forEach(b => b.onclick = () => { s.meter = b.dataset.m; save(); render(); });
