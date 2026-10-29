@@ -1,0 +1,958 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0f172a">
+<meta name="description" content="Spaakspanning meten en corrigeren met een Unior Spoke Tension Meter (1752/2 en 1752/6). Werkt volledig offline in de browser.">
+<title>Spaakspanning Meter</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  html { -webkit-tap-highlight-color: transparent; }
+  body { overscroll-behavior: none; -webkit-user-select: none; user-select: none; touch-action: manipulation; }
+  input, textarea { -webkit-user-select: text; user-select: text; }
+  .btn { transition: transform .06s ease, filter .06s ease; }
+  .btn:active { transform: scale(.96); filter: brightness(.92); }
+  .screen { display: none; }
+  .screen.active { display: block; }
+  .key { min-height: 4.25rem; border-radius: 1rem; background: #f1f5f9; font-size: 2rem; font-weight: 800; line-height: 1; }
+  .scorebar { background: linear-gradient(90deg, #dc2626 0%, #f59e0b 50%, #16a34a 100%); }
+  .safe-bottom { padding-bottom: max(1rem, env(safe-area-inset-bottom)); }
+  .flash { animation: flash .25s ease; }
+  @keyframes flash { 0% { background-color: #bbf7d0; } 100% { background-color: transparent; } }
+
+  /* ---------- PRINT: alleen het A4-rapport ---------- */
+  @page { size: A4 portrait; margin: 12mm; }
+  @media print {
+    html, body { background: #fff !important; margin: 0; padding: 0; }
+    body * { visibility: hidden; }
+    #sheet, #sheet * { visibility: visible; }
+    #sheet {
+      position: absolute; left: 0; top: 0; width: 100%;
+      margin: 0; padding: 0; box-shadow: none !important; border: 0 !important;
+      border-radius: 0 !important;
+    }
+    .no-print { display: none !important; }
+    #sheet { font-size: 10.5pt; }
+    .avoid-break { break-inside: avoid; page-break-inside: avoid; }
+  }
+</style>
+</head>
+<body class="bg-slate-100 text-slate-900 min-h-screen">
+
+<div id="app" class="max-w-md mx-auto min-h-screen flex flex-col">
+
+  <!-- ===== HEADER ===== -->
+  <header class="no-print sticky top-0 z-20 bg-slate-900 text-white shadow">
+    <div class="flex items-center h-14 px-2">
+      <button id="btnBack" class="btn w-12 h-12 rounded-xl text-2xl flex items-center justify-center" aria-label="Terug">‹</button>
+      <div id="hdrTitle" class="flex-1 text-center font-bold text-lg truncate">Spaakspanning</div>
+      <button id="btnSettings" class="btn w-12 h-12 rounded-xl text-2xl flex items-center justify-center" aria-label="Instellingen">⚙</button>
+    </div>
+  </header>
+
+  <main class="flex-1 px-4 pt-4 safe-bottom">
+
+    <!-- ===== HOME ===== -->
+    <section id="screen-home" class="screen">
+      <div class="text-center mb-6">
+        <div class="text-6xl mb-2">🛞</div>
+        <h1 class="text-2xl font-extrabold">Spaakspanning Meter</h1>
+        <p class="text-slate-600 mt-1">Voor de Unior 1752/2 en 1752/6</p>
+      </div>
+      <div id="resumeBox" class="hidden mb-4"></div>
+      <button id="btnNew" class="btn w-full bg-blue-600 text-white rounded-2xl py-6 text-2xl font-bold shadow-lg">＋ Nieuw wiel meten</button>
+      <div id="homeHistory" class="mt-6"></div>
+      <p class="text-center text-xs text-slate-400 mt-8">Alle gegevens blijven op dit apparaat (offline, geen account nodig).</p>
+    </section>
+
+    <!-- ===== STAP 1: WIEL ===== -->
+    <section id="screen-wiz1" class="screen">
+      <div class="text-sm font-semibold text-blue-700 mb-1">STAP 1 VAN 3</div>
+      <h2 class="text-2xl font-extrabold mb-4">Welk wiel?</h2>
+      <div class="grid grid-cols-2 gap-3 mb-6" id="wheelTypeBtns">
+        <button data-type="front" class="btn opt rounded-2xl bg-white border-4 border-slate-200 py-6 flex flex-col items-center">
+          <span class="text-5xl">🚲</span><span class="text-xl font-bold mt-2">Voorwiel</span>
+        </button>
+        <button data-type="rear" class="btn opt rounded-2xl bg-white border-4 border-slate-200 py-6 flex flex-col items-center">
+          <span class="text-5xl">⚙️</span><span class="text-xl font-bold mt-2">Achterwiel</span>
+        </button>
+      </div>
+      <h2 class="text-xl font-extrabold mb-3">Hoeveel spaken?</h2>
+      <div class="grid grid-cols-4 gap-3 mb-6" id="spokeCountBtns">
+        <button data-n="24" class="btn opt rounded-2xl bg-white border-4 border-slate-200 py-5 text-3xl font-extrabold">24</button>
+        <button data-n="28" class="btn opt rounded-2xl bg-white border-4 border-slate-200 py-5 text-3xl font-extrabold">28</button>
+        <button data-n="32" class="btn opt rounded-2xl bg-white border-4 border-slate-200 py-5 text-3xl font-extrabold">32</button>
+        <button data-n="36" class="btn opt rounded-2xl bg-white border-4 border-slate-200 py-5 text-3xl font-extrabold">36</button>
+      </div>
+      <h2 class="text-base font-bold mb-2 text-slate-700">Aan welke kant zit de eerste spaak naast het ventiel?</h2>
+      <div class="grid grid-cols-2 gap-3 mb-6" id="firstSideBtns">
+        <button data-side="R" class="btn opt rounded-2xl bg-white border-4 border-slate-200 py-3 text-lg font-bold">Rechts</button>
+        <button data-side="L" class="btn opt rounded-2xl bg-white border-4 border-slate-200 py-3 text-lg font-bold">Links</button>
+      </div>
+      <button id="btnWiz1Next" class="btn w-full bg-blue-600 disabled:bg-slate-300 text-white rounded-2xl py-5 text-2xl font-bold shadow-lg">Volgende ›</button>
+    </section>
+
+    <!-- ===== STAP 2: SPAAK ===== -->
+    <section id="screen-wiz2" class="screen">
+      <div class="text-sm font-semibold text-blue-700 mb-1">STAP 2 VAN 3</div>
+      <h2 class="text-2xl font-extrabold mb-4">Welke spaak?</h2>
+      <div class="grid grid-cols-1 gap-3 mb-6" id="spokeTypeBtns"></div>
+      <h2 class="text-base font-bold mb-2 text-slate-700">Welke meter gebruik je?</h2>
+      <div class="grid grid-cols-2 gap-3 mb-6" id="meterBtns">
+        <button data-meter="1752/2" class="btn opt rounded-2xl bg-white border-4 border-slate-200 py-3 text-lg font-bold">Unior 1752/2</button>
+        <button data-meter="1752/6" class="btn opt rounded-2xl bg-white border-4 border-slate-200 py-3 text-lg font-bold">Unior 1752/6</button>
+      </div>
+      <button id="btnWiz2Next" class="btn w-full bg-blue-600 disabled:bg-slate-300 text-white rounded-2xl py-5 text-2xl font-bold shadow-lg">Volgende ›</button>
+    </section>
+
+    <!-- ===== STAP 3: START ===== -->
+    <section id="screen-start" class="screen">
+      <div class="text-sm font-semibold text-blue-700 mb-1">STAP 3 VAN 3</div>
+      <h2 class="text-2xl font-extrabold mb-4">Klaar om te meten</h2>
+      <div id="startSummary" class="bg-white rounded-2xl p-4 mb-4 shadow text-lg"></div>
+      <div class="bg-amber-50 border-2 border-amber-200 rounded-2xl p-4 mb-6 text-base space-y-2">
+        <div class="font-bold">Zo doe je het:</div>
+        <div>1️⃣ Begin bij de spaak <b>direct naast het ventiel</b>.</div>
+        <div>2️⃣ Werk <b>met de klok mee</b> het hele wiel rond. De spaken wisselen om en om van kant.</div>
+        <div>3️⃣ Zet de meter steeds <b>halverwege de spaak</b> (bij verjongde spaken op het dunne deel).</div>
+        <div>4️⃣ Tik de <b>meterstand</b> in. De app springt vanzelf naar de volgende spaak.</div>
+      </div>
+      <button id="btnStart" class="btn w-full bg-green-600 text-white rounded-2xl py-6 text-2xl font-bold shadow-lg">▶ Start meting</button>
+    </section>
+
+    <!-- ===== METEN ===== -->
+    <section id="screen-measure" class="screen">
+      <div class="flex items-center justify-between text-sm font-semibold text-slate-600 mb-1">
+        <span id="mProgressText">Spaak 1 van 32</span>
+        <span id="mFilledText"></span>
+      </div>
+      <div class="h-3 bg-slate-200 rounded-full overflow-hidden mb-3">
+        <div id="mProgressBar" class="h-full bg-blue-600 transition-all" style="width:0%"></div>
+      </div>
+
+      <div id="mCard" class="rounded-3xl p-4 text-white shadow-lg mb-3 flex items-center gap-3">
+        <div class="flex-1">
+          <div class="text-base opacity-90">Meet nu</div>
+          <div class="text-4xl font-extrabold leading-tight">Spaak <span id="mSpokeNo">#1</span></div>
+          <div id="mSide" class="mt-1 inline-block bg-white/25 rounded-full px-3 py-1 text-lg font-bold">Rechts</div>
+          <div id="mCurVal" class="mt-1 text-sm opacity-90"></div>
+        </div>
+        <div id="mMini" class="w-24 h-24 shrink-0"></div>
+      </div>
+
+      <div id="mQuick" class="mb-3"></div>
+
+      <div class="bg-white rounded-2xl shadow p-3 mb-3">
+        <div class="flex items-center justify-between mb-2 px-1">
+          <div class="text-slate-500 text-sm">Meterstand</div>
+          <div id="mPad" class="text-4xl font-extrabold tabular-nums tracking-widest min-w-[4ch] text-right">–</div>
+        </div>
+        <div class="grid grid-cols-3 gap-2" id="numpad">
+          <button data-k="1" class="btn key">1</button><button data-k="2" class="btn key">2</button><button data-k="3" class="btn key">3</button>
+          <button data-k="4" class="btn key">4</button><button data-k="5" class="btn key">5</button><button data-k="6" class="btn key">6</button>
+          <button data-k="7" class="btn key">7</button><button data-k="8" class="btn key">8</button><button data-k="9" class="btn key">9</button>
+          <button data-k="del" class="btn key bg-slate-200">⌫</button><button data-k="0" class="btn key">0</button><button data-k="ok" class="btn key bg-green-600 text-white">OK</button>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-3 gap-2">
+        <button id="mPrev" class="btn bg-white rounded-2xl py-4 font-bold text-lg shadow">‹ Vorige</button>
+        <button id="mSkip" class="btn bg-white rounded-2xl py-4 font-bold text-lg shadow">Overslaan ›</button>
+        <button id="mDone" class="btn bg-slate-800 text-white rounded-2xl py-4 font-bold text-lg shadow">Resultaat</button>
+      </div>
+    </section>
+
+    <!-- ===== RESULTAAT ===== -->
+    <section id="screen-result" class="screen"><div id="resultBody"></div></section>
+
+    <!-- ===== RAPPORT ===== -->
+    <section id="screen-report" class="screen">
+      <div class="no-print bg-white rounded-2xl shadow p-4 mb-4">
+        <label class="block text-sm font-semibold text-slate-600 mb-1">Wielidentificatie (optioneel, bijv. klantnaam of fiets)</label>
+        <input id="wheelIdInput" type="text" class="w-full border-2 border-slate-300 rounded-xl px-3 py-3 text-lg" placeholder="bijv. J. Jansen – Trek achterwiel">
+        <button id="btnPrint" class="btn w-full mt-3 bg-blue-600 text-white rounded-2xl py-5 text-2xl font-bold shadow-lg">🖨 Print Klantrapport</button>
+        <p class="text-xs text-slate-500 mt-2 text-center">Kies in het printvenster "Opslaan als PDF" om een PDF te maken.</p>
+      </div>
+      <div id="sheet" class="bg-white rounded-2xl shadow p-5 text-slate-900"></div>
+    </section>
+
+    <!-- ===== INSTELLINGEN ===== -->
+    <section id="screen-settings" class="screen"><div id="settingsBody"></div></section>
+
+    <!-- ===== GESCHIEDENIS ===== -->
+    <section id="screen-history" class="screen"><div id="historyBody"></div></section>
+
+  </main>
+</div>
+
+<!-- Modal voor waarde aanpassen -->
+<div id="modal" class="no-print hidden fixed inset-0 z-50 bg-black/60 flex items-end justify-center">
+  <div class="bg-white w-full max-w-md rounded-t-3xl p-4 safe-bottom">
+    <div class="flex items-center justify-between mb-2">
+      <div id="modalTitle" class="text-xl font-extrabold">Spaak #1</div>
+      <button id="modalClose" class="btn w-12 h-12 rounded-xl bg-slate-200 text-2xl">✕</button>
+    </div>
+    <div class="flex items-center justify-between mb-2 px-1">
+      <div class="text-slate-500 text-sm">Nieuwe meterstand</div>
+      <div id="modalPad" class="text-4xl font-extrabold tabular-nums tracking-widest min-w-[4ch] text-right">–</div>
+    </div>
+    <div class="grid grid-cols-3 gap-2" id="modalNumpad">
+      <button data-k="1" class="btn key">1</button><button data-k="2" class="btn key">2</button><button data-k="3" class="btn key">3</button>
+      <button data-k="4" class="btn key">4</button><button data-k="5" class="btn key">5</button><button data-k="6" class="btn key">6</button>
+      <button data-k="7" class="btn key">7</button><button data-k="8" class="btn key">8</button><button data-k="9" class="btn key">9</button>
+      <button data-k="del" class="btn key bg-slate-200">⌫</button><button data-k="0" class="btn key">0</button><button data-k="ok" class="btn key bg-green-600 text-white">OK</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* =====================================================================
+   SPAAKSPANNING METER – volledig client-side, geen build tools nodig.
+   ===================================================================== */
+'use strict';
+
+const LS_STATE = 'spaak_app_state_v1';
+const LS_HIST  = 'spaak_app_history_v1';
+const LS_SET   = 'spaak_app_settings_v1';
+
+/* Spaaktypes.
+   R100   = indicatieve meterstand bij 100 kgf (Unior-schaal 0–90).
+   p      = exponent van de indicatieve omrekencurve (licht progressief).
+   perTurn= indicatieve verandering in kgf per HELE slag nippel.
+   De indicatieve waarden kunnen vervangen worden door kalibratiepunten
+   uit de tabel die bij de meter zit (Instellingen → Kalibratie).        */
+const SPOKE_TYPES = {
+  r20:  { label: '2.0 mm rond',             sub: 'Standaard (niet of enkel verjongd)',             R100: 57, p: 1.3, perTurn: 40 },
+  r18:  { label: '1.8 mm rond',             sub: 'Ook 2.0 / 1.8 / 2.0 dubbel verjongd',             R100: 52, p: 1.3, perTurn: 33 },
+  r15:  { label: '1.5 mm dubbel verjongd',  sub: '2.0 / 1.5 / 2.0 (bijv. Sapim Laser, DT Revolution)', R100: 45, p: 1.3, perTurn: 25 },
+  aero: { label: 'Plat / aero',             sub: 'bijv. Sapim CX-Ray, DT Aerolite',                  R100: 50, p: 1.3, perTurn: 28 },
+};
+const SPOKE_ICONS = { r20: '━', r18: '─', r15: '┄', aero: '▬' };
+
+const TOL_OK   = 5;   // % afwijking: perfect
+const TOL_WARN = 10;  // % afwijking: licht bijstellen; daarboven dringend
+const MIN_READ = 1, MAX_READ = 90;
+
+/* ---------------- STATE ---------------- */
+let S = loadJSON(LS_STATE) || freshState();
+let SET = Object.assign({ meter: '1752/6', sound: true, vibrate: true, shop: '', calib: {} }, loadJSON(LS_SET) || {});
+let HIST = loadJSON(LS_HIST) || [];
+let pad = '';            // getypte cijfers op het meetscherm
+let modalPad = '';
+let modalSpoke = null;
+let audioCtx = null;
+
+function freshState() {
+  return { screen: 'home', prev: 'home', wheel: null, rounds: [], cur: 0 };
+}
+function loadJSON(k) { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } }
+function saveAll() {
+  try {
+    localStorage.setItem(LS_STATE, JSON.stringify(S));
+    localStorage.setItem(LS_SET, JSON.stringify(SET));
+    localStorage.setItem(LS_HIST, JSON.stringify(HIST));
+  } catch (e) { /* opslag vol of geblokkeerd: app blijft werken */ }
+}
+
+/* ---------------- HELPERS ---------------- */
+const $ = (sel) => document.querySelector(sel);
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const curRound = () => S.rounds[S.rounds.length - 1];
+function fmtDate(ts) { return new Date(ts).toLocaleDateString('nl-NL', { day: '2-digit', month: 'long', year: 'numeric' }); }
+function fmtTime(ts) { return new Date(ts).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' }); }
+
+function sideOf(i) { // i = 0-based spaakindex
+  const first = S.wheel.firstSide || 'R';
+  const other = first === 'R' ? 'L' : 'R';
+  return i % 2 === 0 ? first : other;
+}
+function sideLabel(side, wheel) {
+  wheel = wheel || S.wheel;
+  if (wheel.type === 'rear') return side === 'R' ? 'Rechts (aandrijfzijde)' : 'Links';
+  return side === 'R' ? 'Rechts' : 'Links';
+}
+function sideShort(side) { return side === 'R' ? 'Rechts' : 'Links'; }
+function wheelLabel(w) { return (w.type === 'rear' ? 'Achterwiel' : 'Voorwiel') + ', ' + w.spokes + ' spaken, ' + SPOKE_TYPES[w.spokeType].label; }
+
+/* Feedback: klik + trilling */
+function feedback(kind) {
+  if (SET.vibrate && navigator.vibrate) { try { navigator.vibrate(kind === 'done' ? [40, 60, 40] : 25); } catch (e) {} }
+  if (!SET.sound) return;
+  try {
+    audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    const t = audioCtx.currentTime;
+    const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+    o.type = 'sine';
+    o.frequency.setValueAtTime(kind === 'done' ? 1200 : kind === 'key' ? 700 : 950, t);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.25, t + 0.005);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + (kind === 'done' ? 0.25 : 0.07));
+    o.connect(g); g.connect(audioCtx.destination);
+    o.start(t); o.stop(t + 0.3);
+  } catch (e) {}
+}
+
+/* ---------------- OMREKENEN ---------------- */
+function calibPoints(type) {
+  const pts = (SET.calib && SET.calib[type]) || [];
+  return pts.filter(p => p && p.length === 2 && isFinite(p[0]) && isFinite(p[1])).slice().sort((a, b) => a[0] - b[0]);
+}
+function isCalibrated(type) { return calibPoints(type).length >= 2; }
+function toKgf(reading, type) {
+  const pts = calibPoints(type);
+  if (pts.length >= 2) { // lineair interpoleren / extrapoleren langs de kalibratiepunten
+    let a = pts[0], b = pts[1];
+    for (let i = 0; i < pts.length - 1; i++) { if (reading >= pts[i][0]) { a = pts[i]; b = pts[i + 1]; } }
+    const slope = (b[1] - a[1]) / ((b[0] - a[0]) || 1);
+    return Math.max(0, a[1] + (reading - a[0]) * slope);
+  }
+  const st = SPOKE_TYPES[type];
+  return 100 * Math.pow(reading / st.R100, st.p);
+}
+function turnLabel(t) {
+  if (t < 0.19) return '1/8';
+  if (t < 0.375) return '1/4';
+  if (t < 0.625) return '1/2';
+  if (t < 0.875) return '3/4';
+  return '1';
+}
+
+/* ---------------- ANALYSE ---------------- */
+function analyze(readings, wheel) {
+  const n = wheel.spokes, type = wheel.spokeType;
+  const first = wheel.firstSide || 'R';
+  const sides = { R: { spokes: [] }, L: { spokes: [] } };
+  for (let i = 0; i < n; i++) {
+    const side = i % 2 === 0 ? first : (first === 'R' ? 'L' : 'R');
+    const r = readings[i];
+    sides[side].spokes.push({ i, no: i + 1, side, r, kgf: (r == null ? null : toKgf(r, type)) });
+  }
+  let allDev = [], maxDev = 0, filled = 0;
+  for (const s of ['R', 'L']) {
+    const sd = sides[s];
+    const valid = sd.spokes.filter(x => x.kgf != null);
+    sd.count = valid.length;
+    filled += valid.length;
+    sd.avg = valid.length ? valid.reduce((a, x) => a + x.kgf, 0) / valid.length : null;
+    sd.avgR = valid.length ? valid.reduce((a, x) => a + x.r, 0) / valid.length : null;
+    sd.min = valid.length ? Math.min(...valid.map(x => x.kgf)) : null;
+    sd.max = valid.length ? Math.max(...valid.map(x => x.kgf)) : null;
+    sd.maxDev = 0; sd.meanDev = 0;
+    for (const x of sd.spokes) {
+      if (x.kgf == null || !sd.avg) { x.dev = null; continue; }
+      x.dev = (x.kgf - sd.avg) / sd.avg * 100;
+      x.delta = x.kgf - sd.avg;
+      const ad = Math.abs(x.dev);
+      allDev.push(ad);
+      sd.maxDev = Math.max(sd.maxDev, ad);
+    }
+    if (valid.length) sd.meanDev = valid.reduce((a, x) => a + Math.abs(x.dev), 0) / valid.length;
+    maxDev = Math.max(maxDev, sd.maxDev);
+  }
+  const meanDev = allDev.length ? allDev.reduce((a, b) => a + b, 0) / allDev.length : 0;
+  const score = allDev.length ? clamp(Math.round(100 - 1.5 * maxDev - 2 * meanDev), 0, 100) : 0;
+
+  // Acties
+  const perTurn = SPOKE_TYPES[type].perTurn;
+  const actions = [], perfect = [], missing = [];
+  for (const s of ['R', 'L']) for (const x of sides[s].spokes) {
+    if (x.kgf == null) { missing.push(x.no); continue; }
+    const ad = Math.abs(x.dev);
+    if (ad <= TOL_OK) { perfect.push(x.no); continue; }
+    actions.push({
+      no: x.no, side: x.side, dev: x.dev, abs: ad,
+      dir: x.dev < 0 ? 'tighten' : 'loosen',
+      turns: turnLabel(Math.abs(x.delta) / perTurn),
+      urgent: ad > TOL_WARN,
+    });
+  }
+  actions.sort((a, b) => b.abs - a.abs);
+  perfect.sort((a, b) => a - b);
+
+  // Absoluut niveau (indicatief) – alleen voor de "strakke" kant
+  let levelMsg = null;
+  const hiSide = wheel.type === 'rear' ? 'R' : (sides.R.avg >= (sides.L.avg || 0) ? 'R' : 'L');
+  const hi = sides[hiSide];
+  if (hi.avg != null && hi.count >= 3) {
+    if (hi.avg < 75) levelMsg = { kind: 'low', side: hiSide, text: `Het hele wiel staat vrij slap (gemiddeld ≈ ${Math.round(hi.avg)} kgf ${sideShort(hiSide).toLowerCase()}). Draai, nadat de balans goed is, ALLE spaken ${sideShort(hiSide).toLowerCase()} 1/4 slag vaster en meet opnieuw.` };
+    else if (hi.avg > 140) levelMsg = { kind: 'high', side: hiSide, text: `Het wiel staat erg strak (gemiddeld ≈ ${Math.round(hi.avg)} kgf ${sideShort(hiSide).toLowerCase()}). Draai, nadat de balans goed is, ALLE spaken ${sideShort(hiSide).toLowerCase()} 1/4 slag losser en meet opnieuw.` };
+  }
+
+  return { sides, score, maxDev, meanDev, actions, perfect, missing, filled, n, complete: filled === n, levelMsg,
+           calibrated: isCalibrated(type) };
+}
+function scoreText(score) {
+  if (score >= 90) return { label: 'Perfecte balans', color: 'text-green-700', emoji: '🏆' };
+  if (score >= 75) return { label: 'Goede balans', color: 'text-green-700', emoji: '👍' };
+  if (score >= 55) return { label: 'Matig – bijstellen aanbevolen', color: 'text-amber-700', emoji: '⚠️' };
+  return { label: 'Onvoldoende – bijstellen nodig', color: 'text-red-700', emoji: '🔧' };
+}
+
+/* ---------------- GRAFIEK (SVG) ---------------- */
+function chartSVG(an, wheel, size, withLabels) {
+  const n = wheel.spokes, c = size / 2, R0 = size * 0.33, labelR = size * 0.445;
+  const ang = (i) => (-90 + i * 360 / n) * Math.PI / 180;
+  const pt = (i, r) => [c + r * Math.cos(ang(i)), c + r * Math.sin(ang(i))];
+  const H = size * 1.13;
+  let out = `<svg viewBox="0 0 ${size} ${H}" width="100%" xmlns="http://www.w3.org/2000/svg" font-family="system-ui, sans-serif">`;
+  // tolerantieband ±10 %
+  out += `<circle cx="${c}" cy="${c}" r="${R0 * 1.1}" fill="#dcfce7"/><circle cx="${c}" cy="${c}" r="${R0 * 0.9}" fill="#ffffff"/>`;
+  out += `<circle cx="${c}" cy="${c}" r="${R0}" fill="none" stroke="#16a34a" stroke-width="1.5" stroke-dasharray="4 4"/>`;
+  // spaaklijnen
+  for (let i = 0; i < n; i++) { const [x, y] = pt(i, R0 * 1.25); out += `<line x1="${c}" y1="${c}" x2="${x}" y2="${y}" stroke="#e2e8f0" stroke-width="1"/>`; }
+  // ventiel: tussen de laatste en de eerste spaak
+  { const va = (-90 - 180 / n) * Math.PI / 180, vx = c + labelR * Math.cos(va), vy = c + labelR * Math.sin(va);
+    out += `<polygon points="${(vx - size * 0.014).toFixed(1)},${(vy - size * 0.012).toFixed(1)} ${(vx + size * 0.014).toFixed(1)},${(vy - size * 0.012).toFixed(1)} ${vx.toFixed(1)},${(vy + size * 0.014).toFixed(1)}" fill="#0f172a"/>`; }
+  // polygonen per kant
+  const col = { R: '#2563eb', L: '#ea580c' };
+  for (const s of ['R', 'L']) {
+    const sd = an.sides[s]; if (!sd.avg) continue;
+    const pts = sd.spokes.filter(x => x.kgf != null).map(x => pt(x.i, R0 * clamp(x.kgf / sd.avg, 0.4, 1.6)));
+    if (pts.length >= 3) out += `<path d="M${pts.map(p => p.map(v => v.toFixed(1)).join(',')).join(' L')} Z" fill="${col[s]}" fill-opacity="0.08" stroke="${col[s]}" stroke-width="2.2" stroke-linejoin="round"/>`;
+  }
+  // punten + nummers
+  for (const s of ['R', 'L']) for (const x of an.sides[s].spokes) {
+    if (withLabels) { const [lx, ly] = pt(x.i, labelR); out += `<text x="${lx.toFixed(1)}" y="${(ly + size * 0.012).toFixed(1)}" text-anchor="middle" font-size="${size * 0.034}" fill="#64748b">${x.no}</text>`; }
+    if (x.kgf == null || !an.sides[s].avg) continue;
+    const [px, py] = pt(x.i, R0 * clamp(x.kgf / an.sides[s].avg, 0.4, 1.6));
+    const ad = Math.abs(x.dev);
+    const fill = ad <= TOL_OK ? '#16a34a' : ad <= TOL_WARN ? '#f59e0b' : '#dc2626';
+    out += `<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="${size * 0.014}" fill="${fill}" stroke="#fff" stroke-width="1.5"/>`;
+  }
+  // legenda
+  const ls = size * 0.034, ly = size * 1.03;
+  out += `<g font-size="${ls}" fill="#475569">
+    <rect x="${size * 0.02}" y="${ly - ls * 0.45}" width="${ls}" height="${ls * 0.4}" fill="${col.R}"/><text x="${size * 0.02 + ls * 1.3}" y="${ly}">Rechts</text>
+    <rect x="${size * 0.22}" y="${ly - ls * 0.45}" width="${ls}" height="${ls * 0.4}" fill="${col.L}"/><text x="${size * 0.22 + ls * 1.3}" y="${ly}">Links</text>
+    <text x="${size * 0.02}" y="${ly + ls * 1.4}">▼ ventiel · groene band = ±${TOL_WARN} % · stippellijn = gemiddelde</text>
+  </g></svg>`;
+  return out;
+}
+
+/* Mini-wiel op het meetscherm: welke spaak is aan de beurt */
+function miniWheelSVG(readings, n, cur) {
+  const size = 100, c = 50;
+  let out = `<svg viewBox="0 0 ${size} ${size}" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">`;
+  out += `<circle cx="${c}" cy="${c}" r="44" fill="none" stroke="rgba(255,255,255,.5)" stroke-width="3"/>`;
+  out += `<circle cx="${c}" cy="${c}" r="9" fill="rgba(255,255,255,.6)"/>`;
+  for (let i = 0; i < n; i++) {
+    const a = (-90 + i * 360 / n) * Math.PI / 180;
+    const x1 = c + 11 * Math.cos(a), y1 = c + 11 * Math.sin(a), x2 = c + 42 * Math.cos(a), y2 = c + 42 * Math.sin(a);
+    const done = readings[i] != null;
+    const isCur = i === cur;
+    out += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${isCur ? '#fde047' : done ? '#ffffff' : 'rgba(255,255,255,.3)'}" stroke-width="${isCur ? 4 : 2}" stroke-linecap="round"/>`;
+  }
+  out += `<polygon points="${c - 4},2 ${c + 4},2 ${c},8" fill="#ffffff"/></svg>`;
+  return out;
+}
+
+/* ---------------- NAVIGATIE ---------------- */
+const TITLES = { home: 'Spaakspanning', wiz1: 'Nieuw wiel', wiz2: 'Nieuw wiel', start: 'Nieuw wiel', measure: 'Meten', result: 'Resultaat', report: 'Klantrapport', settings: 'Instellingen', history: 'Eerdere wielen' };
+const BACK_TO = { home: null, wiz1: 'home', wiz2: 'wiz1', start: 'wiz2', measure: 'home', result: 'measure', report: 'result', settings: '__prev', history: '__prev' };
+
+function go(screen) {
+  if (screen === 'settings' || screen === 'history') { if (S.screen !== 'settings' && S.screen !== 'history') S.prev = S.screen; }
+  S.screen = screen;
+  saveAll();
+  render();
+  window.scrollTo(0, 0);
+}
+function render() {
+  document.querySelectorAll('.screen').forEach(el => el.classList.toggle('active', el.id === 'screen-' + S.screen));
+  $('#hdrTitle').textContent = TITLES[S.screen] || 'Spaakspanning';
+  $('#btnBack').style.visibility = S.screen === 'home' ? 'hidden' : 'visible';
+  $('#btnSettings').style.visibility = (S.screen === 'settings') ? 'hidden' : 'visible';
+  ({ home: renderHome, wiz1: renderWiz1, wiz2: renderWiz2, start: renderStart, measure: renderMeasure,
+     result: renderResult, report: renderReport, settings: renderSettings, history: renderHistory })[S.screen]();
+}
+$('#btnBack').addEventListener('click', () => {
+  let to = BACK_TO[S.screen];
+  if (to === '__prev') to = S.prev || 'home';
+  if (S.screen === 'result' && !S.wheel) to = 'home';
+  if (to) go(to);
+});
+$('#btnSettings').addEventListener('click', () => go('settings'));
+
+/* ---------------- HOME ---------------- */
+function renderHome() {
+  const box = $('#resumeBox');
+  const r = S.wheel && curRound();
+  if (r && !r.done) {
+    const filled = r.readings.filter(v => v != null).length;
+    box.classList.remove('hidden');
+    box.innerHTML = `<button id="btnResume" class="btn w-full bg-green-600 text-white rounded-2xl py-5 text-xl font-bold shadow-lg">
+        ▶ Verder met meting<div class="text-sm font-normal opacity-90 mt-1">${esc(wheelLabel(S.wheel))} · ${filled} van ${S.wheel.spokes} gemeten</div></button>`;
+    $('#btnResume').addEventListener('click', () => go('measure'));
+  } else if (r && r.done) {
+    box.classList.remove('hidden');
+    box.innerHTML = `<button id="btnResume" class="btn w-full bg-white border-4 border-slate-200 rounded-2xl py-4 text-lg font-bold shadow">
+        📊 Laatste resultaat bekijken<div class="text-sm font-normal text-slate-500 mt-1">${esc(wheelLabel(S.wheel))}</div></button>`;
+    $('#btnResume').addEventListener('click', () => go('result'));
+  } else { box.classList.add('hidden'); box.innerHTML = ''; }
+
+  const h = $('#homeHistory');
+  if (HIST.length) {
+    h.innerHTML = `<button id="btnHist" class="btn w-full bg-white rounded-2xl py-4 text-lg font-bold shadow flex items-center justify-center gap-2">🗂 Eerdere wielen <span class="bg-slate-200 rounded-full px-2 text-sm">${HIST.length}</span></button>`;
+    $('#btnHist').addEventListener('click', () => go('history'));
+  } else h.innerHTML = '';
+}
+$('#btnNew').addEventListener('click', () => {
+  const r = S.wheel && curRound();
+  if (r && !r.done && r.readings.some(v => v != null)) {
+    if (!confirm('Er is nog een meting bezig. Nieuw wiel starten? De lopende meting wordt dan gewist.')) return;
+  }
+  S.wheel = { type: null, spokes: 32, spokeType: null, firstSide: 'R', id: '', created: Date.now(), uid: 'w' + Date.now().toString(36) };
+  S.rounds = []; S.cur = 0; pad = '';
+  go('wiz1');
+});
+
+/* ---------------- WIZARD ---------------- */
+function mark(groupSel, attr, value) {
+  document.querySelectorAll(groupSel + ' .opt').forEach(b => {
+    const on = b.dataset[attr] === String(value);
+    b.classList.toggle('border-blue-600', on); b.classList.toggle('bg-blue-50', on);
+    b.classList.toggle('border-slate-200', !on); b.classList.toggle('bg-white', !on);
+  });
+}
+function renderWiz1() {
+  mark('#wheelTypeBtns', 'type', S.wheel.type);
+  mark('#spokeCountBtns', 'n', S.wheel.spokes);
+  mark('#firstSideBtns', 'side', S.wheel.firstSide);
+  $('#btnWiz1Next').disabled = !(S.wheel.type && S.wheel.spokes);
+}
+document.querySelectorAll('#wheelTypeBtns .opt').forEach(b => b.addEventListener('click', () => { S.wheel.type = b.dataset.type; feedback('key'); renderWiz1(); saveAll(); }));
+document.querySelectorAll('#spokeCountBtns .opt').forEach(b => b.addEventListener('click', () => { S.wheel.spokes = +b.dataset.n; feedback('key'); renderWiz1(); saveAll(); }));
+document.querySelectorAll('#firstSideBtns .opt').forEach(b => b.addEventListener('click', () => { S.wheel.firstSide = b.dataset.side; feedback('key'); renderWiz1(); saveAll(); }));
+$('#btnWiz1Next').addEventListener('click', () => go('wiz2'));
+
+function renderWiz2() {
+  const box = $('#spokeTypeBtns');
+  box.innerHTML = Object.entries(SPOKE_TYPES).map(([k, t]) => `
+    <button data-st="${k}" class="btn opt rounded-2xl bg-white border-4 border-slate-200 py-4 px-4 text-left flex items-center gap-4">
+      <span class="text-3xl w-10 text-center text-slate-500">${SPOKE_ICONS[k]}</span>
+      <span><span class="block text-xl font-bold">${esc(t.label)}</span><span class="block text-sm text-slate-500">${esc(t.sub)}</span></span>
+      ${isCalibrated(k) ? '<span class="ml-auto text-xs bg-green-100 text-green-800 rounded-full px-2 py-1">gekalibreerd</span>' : ''}
+    </button>`).join('');
+  box.querySelectorAll('.opt').forEach(b => b.addEventListener('click', () => { S.wheel.spokeType = b.dataset.st; feedback('key'); renderWiz2(); saveAll(); }));
+  mark('#spokeTypeBtns', 'st', S.wheel.spokeType);
+  mark('#meterBtns', 'meter', SET.meter);
+  $('#btnWiz2Next').disabled = !S.wheel.spokeType;
+}
+document.querySelectorAll('#meterBtns .opt').forEach(b => b.addEventListener('click', () => { SET.meter = b.dataset.meter; feedback('key'); renderWiz2(); saveAll(); }));
+$('#btnWiz2Next').addEventListener('click', () => go('start'));
+
+function renderStart() {
+  const w = S.wheel;
+  $('#startSummary').innerHTML = `
+    <div class="flex justify-between"><span class="text-slate-500">Wiel</span><b>${w.type === 'rear' ? 'Achterwiel' : 'Voorwiel'}</b></div>
+    <div class="flex justify-between"><span class="text-slate-500">Spaken</span><b>${w.spokes}</b></div>
+    <div class="flex justify-between"><span class="text-slate-500">Spaaktype</span><b>${esc(SPOKE_TYPES[w.spokeType].label)}</b></div>
+    <div class="flex justify-between"><span class="text-slate-500">Meter</span><b>Unior ${esc(SET.meter)}</b></div>
+    <div class="flex justify-between"><span class="text-slate-500">Spaak #1</span><b>${sideLabel(w.firstSide)}</b></div>`;
+}
+$('#btnStart').addEventListener('click', () => {
+  if (!S.rounds.length) S.rounds.push({ readings: Array(S.wheel.spokes).fill(null), done: false, ts: Date.now() });
+  S.cur = 0; pad = '';
+  feedback('key');
+  go('measure');
+});
+
+/* ---------------- METEN ---------------- */
+function renderMeasure() {
+  const w = S.wheel, r = curRound(), n = w.spokes, i = S.cur;
+  const filled = r.readings.filter(v => v != null).length;
+  const side = sideOf(i);
+  $('#mProgressText').textContent = `Spaak ${i + 1} van ${n}`;
+  $('#mFilledText').textContent = `${filled} gemeten`;
+  $('#mProgressBar').style.width = (filled / n * 100) + '%';
+  const card = $('#mCard');
+  card.className = 'rounded-3xl p-4 text-white shadow-lg mb-3 flex items-center gap-3 ' + (side === 'R' ? 'bg-blue-600' : 'bg-orange-600');
+  $('#mSpokeNo').textContent = '#' + (i + 1);
+  $('#mSide').textContent = sideLabel(side);
+  $('#mCurVal').textContent = r.readings[i] != null ? `Huidige waarde: ${r.readings[i]} (tik een nieuwe waarde om te wijzigen)` : '';
+  $('#mMini').innerHTML = miniWheelSVG(r.readings, n, i);
+  $('#mPad').textContent = pad || '–';
+
+  // Snelkeuze: 5 knoppen rond de laatste waarde aan dezelfde kant
+  let ref = null;
+  for (let k = 1; k <= n; k++) { const j = ((i - k) % n + n) % n; if (sideOf(j) === side && r.readings[j] != null) { ref = r.readings[j]; break; } }
+  if (ref == null) for (let k = 1; k <= n; k++) { const j = ((i - k) % n + n) % n; if (r.readings[j] != null) { ref = r.readings[j]; break; } }
+  const q = $('#mQuick');
+  if (ref == null) {
+    q.innerHTML = `<div class="text-center text-slate-500 text-sm">Tik de meterstand in (bijv. 5 en 6 voor 56)</div>`;
+  } else {
+    const vals = [ref - 2, ref - 1, ref, ref + 1, ref + 2].filter(v => v >= MIN_READ && v <= MAX_READ);
+    q.innerHTML = `<div class="text-xs text-slate-500 mb-1 px-1">Snelkeuze (1 tik):</div><div class="grid grid-cols-5 gap-2">` +
+      vals.map(v => `<button data-v="${v}" class="btn quick rounded-2xl py-4 text-2xl font-extrabold shadow ${v === ref ? 'bg-slate-800 text-white' : 'bg-white'}">${v}</button>`).join('') + `</div>`;
+    q.querySelectorAll('.quick').forEach(b => b.addEventListener('click', () => commitReading(+b.dataset.v)));
+  }
+  $('#mDone').textContent = filled === n ? 'Resultaat ✓' : 'Resultaat';
+}
+function nextOpen(from) {
+  const r = curRound(), n = S.wheel.spokes;
+  for (let k = 1; k <= n; k++) { const j = (from + k) % n; if (r.readings[j] == null) return j; }
+  return -1;
+}
+function commitReading(v) {
+  const r = curRound();
+  if (!(v >= MIN_READ && v <= MAX_READ)) { pad = ''; renderMeasure(); return; }
+  r.readings[S.cur] = v;
+  pad = '';
+  $('#mPad').textContent = v;
+  const nxt = nextOpen(S.cur);
+  if (nxt === -1) {
+    r.done = true; feedback('done'); saveAll();
+    setTimeout(() => go('result'), 250);
+    return;
+  }
+  feedback('ok');
+  S.cur = nxt;
+  saveAll();
+  setTimeout(renderMeasure, 120);
+}
+function padKey(k, getPad, setPad, onCommit, display) {
+  if (k === 'del') { setPad(getPad().slice(0, -1)); feedback('key'); display(); return; }
+  if (k === 'ok') { if (getPad()) onCommit(+getPad()); else feedback('key'); return; }
+  let p = getPad();
+  if (p.length >= 2) p = '';
+  p += k;
+  setPad(p);
+  display();
+  if (p.length === 2) { if (+p >= MIN_READ) setTimeout(() => onCommit(+p), 120); else { setPad(''); display(); } }
+  else feedback('key');
+}
+document.querySelectorAll('#numpad .key').forEach(b => b.addEventListener('click', () =>
+  padKey(b.dataset.k, () => pad, (v) => { pad = v; }, commitReading, () => { $('#mPad').textContent = pad || '–'; })));
+$('#mPrev').addEventListener('click', () => { const n = S.wheel.spokes; S.cur = (S.cur - 1 + n) % n; pad = ''; feedback('key'); saveAll(); renderMeasure(); });
+$('#mSkip').addEventListener('click', () => { const n = S.wheel.spokes; S.cur = (S.cur + 1) % n; pad = ''; feedback('key'); saveAll(); renderMeasure(); });
+$('#mDone').addEventListener('click', () => {
+  const r = curRound(), n = S.wheel.spokes;
+  const filled = r.readings.filter(v => v != null).length;
+  if (filled < n && !confirm(`Nog ${n - filled} spaken niet gemeten. Toch resultaat bekijken?`)) return;
+  if (filled === n) r.done = true;
+  go('result');
+});
+
+/* ---------------- RESULTAAT ---------------- */
+function upsertHistory(an) {
+  const w = S.wheel;
+  const entry = { uid: w.uid, wheel: JSON.parse(JSON.stringify(w)), rounds: JSON.parse(JSON.stringify(S.rounds)), finishedAt: Date.now(), score: an.score, meter: SET.meter };
+  const idx = HIST.findIndex(h => h.uid === w.uid);
+  if (idx >= 0) HIST[idx] = entry; else HIST.unshift(entry);
+  HIST = HIST.slice(0, 30);
+}
+function actionRow(a) {
+  const up = a.dir === 'tighten';
+  const bg = a.urgent ? 'bg-red-50 border-red-300' : 'bg-amber-50 border-amber-300';
+  const ic = a.urgent ? (up ? '🔴⬆️' : '🔴⬇️') : (up ? '🟠⬆️' : '🟠⬇️');
+  return `<button data-no="${a.no}" class="btn edit-spoke w-full text-left ${bg} border-2 rounded-2xl p-3 flex items-center gap-3">
+      <span class="text-2xl shrink-0">${ic}</span>
+      <span class="flex-1"><span class="block text-lg font-bold">Spaak #${a.no} (${sideShort(a.side)})</span>
+        <span class="block text-base">Draai <b>${a.turns} slag ${up ? 'VASTER' : 'LOSSER'}</b> <span class="text-slate-500 text-sm">(${a.dev > 0 ? '+' : ''}${Math.round(a.dev)} %)</span></span></span>
+      <span class="text-slate-400 text-xl">›</span></button>`;
+}
+function renderResult() {
+  if (!S.wheel || !S.rounds.length) { go('home'); return; }
+  const w = S.wheel, r = curRound();
+  const an = analyze(r.readings, w);
+  if (an.complete) upsertHistory(an);
+  const st = scoreText(an.score);
+  const roundNo = S.rounds.length;
+  const prevScore = roundNo > 1 ? analyze(S.rounds[roundNo - 2].readings, w).score : null;
+  const ready = an.complete && an.score >= 90 && !an.actions.some(a => a.urgent);
+
+  let html = `
+    <div class="bg-white rounded-2xl shadow p-4 mb-3">
+      <div class="text-sm text-slate-500">${esc(wheelLabel(w))} · Ronde ${roundNo}</div>
+      <div class="flex items-end justify-between mt-1">
+        <div class="text-5xl font-extrabold ${st.color}">${an.score}%</div>
+        <div class="text-right"><div class="text-2xl">${st.emoji}</div><div class="font-bold ${st.color}">${st.label}</div></div>
+      </div>
+      <div class="mt-3 h-6 rounded-full bg-slate-200 overflow-hidden relative">
+        <div class="scorebar h-full rounded-full transition-all" style="width:${an.score}%"></div>
+      </div>
+      <div class="flex justify-between text-xs text-slate-500 mt-1"><span>Ongelijk</span><span>Spanning gereed</span></div>
+      ${prevScore != null ? `<div class="text-sm mt-2 text-slate-600">Vorige ronde: <b>${prevScore}%</b> → nu <b>${an.score}%</b> ${an.score > prevScore ? '📈' : an.score < prevScore ? '📉' : ''}</div>` : ''}
+    </div>`;
+
+  if (!an.complete) html += `<div class="bg-amber-100 border-2 border-amber-300 rounded-2xl p-3 mb-3 font-semibold">⚠️ Nog niet alle spaken gemeten (${an.missing.length} ontbreken). <button id="btnGoMeasure" class="underline">Verder meten</button></div>`;
+
+  if (ready) html += `<div class="bg-green-600 text-white rounded-2xl p-5 mb-3 text-center shadow-lg"><div class="text-4xl">✅</div><div class="text-2xl font-extrabold">Spanning gereed!</div><div class="opacity-90">Alle spaken zitten binnen de tolerantie.</div></div>`;
+
+  // Gemiddelden per kant
+  html += `<div class="grid grid-cols-2 gap-3 mb-3">`;
+  for (const s of ['R', 'L']) {
+    const sd = an.sides[s];
+    html += `<div class="rounded-2xl p-3 text-white ${s === 'R' ? 'bg-blue-600' : 'bg-orange-600'}">
+      <div class="text-sm opacity-90">${sideLabel(s)}</div>
+      ${sd.avg != null ? `<div class="text-3xl font-extrabold">${Math.round(sd.avg)} <span class="text-base font-normal">kgf</span></div>${an.calibrated ? '' : '<div class="text-xs opacity-80 -mt-1">indicatieve waarde</div>'}
+      <div class="text-sm opacity-90">gem. meterstand ${sd.avgR.toFixed(1)} · spreiding ±${Math.round(sd.maxDev)} %</div>` : '<div class="text-xl">geen meting</div>'}
+    </div>`;
+  }
+  html += `</div>`;
+
+  if (an.levelMsg) html += `<div class="bg-slate-800 text-white rounded-2xl p-3 mb-3 text-base">💡 ${esc(an.levelMsg.text)}</div>`;
+
+  // Acties
+  html += `<h3 class="text-xl font-extrabold mb-2">Wat moet je doen?</h3>`;
+  if (an.actions.length) {
+    html += `<div class="text-sm text-slate-600 mb-2">Werk van boven naar beneden. Draai steeds in kleine stapjes en meet daarna opnieuw.</div><div class="space-y-2 mb-3">` + an.actions.map(actionRow).join('') + `</div>`;
+  } else if (an.filled) {
+    html += `<div class="bg-green-50 border-2 border-green-300 rounded-2xl p-3 mb-3 text-lg">✅ Geen enkele spaak hoeft bijgesteld te worden.</div>`;
+  }
+  if (an.perfect.length) html += `<div class="bg-green-50 border-2 border-green-300 rounded-2xl p-3 mb-3 flex gap-3 items-start"><span class="text-2xl">✅</span><span><span class="block font-bold text-lg">Perfect, niet aankomen!</span><span class="text-base">Spaken ${an.perfect.join(', ')}</span></span></div>`;
+  html += `<div class="text-xs text-slate-500 mb-4">💡 Tip: kijk je vanaf de band naar de nippel, dan is <b>met de klok mee = vaster</b>. Tik op een spaak om de waarde te corrigeren.</div>`;
+
+  // Grafiek
+  html += `<div class="bg-white rounded-2xl shadow p-3 mb-3"><div class="font-bold mb-1">Spaakgrafiek</div><div class="text-xs text-slate-500 mb-2">Hoe ronder de lijn, hoe gelijkmatiger de spanning. Tik op een spaaknummer in de lijst hieronder om te wijzigen.</div>${chartSVG(an, w, 360, true)}</div>`;
+
+  // Alle waarden
+  html += `<div class="bg-white rounded-2xl shadow p-3 mb-4"><div class="font-bold mb-2">Alle metingen</div><div class="grid grid-cols-4 gap-2">` +
+    r.readings.map((v, i) => {
+      const x = an.sides[sideOf(i)].spokes.find(q => q.i === i);
+      const ad = x && x.dev != null ? Math.abs(x.dev) : null;
+      const cls = ad == null ? 'bg-slate-100' : ad <= TOL_OK ? 'bg-green-100' : ad <= TOL_WARN ? 'bg-amber-100' : 'bg-red-100';
+      return `<button data-no="${i + 1}" class="btn edit-spoke ${cls} rounded-xl py-2 text-center"><div class="text-xs text-slate-500">#${i + 1} ${sideOf(i)}</div><div class="text-xl font-extrabold">${v == null ? '–' : v}</div></button>`;
+    }).join('') + `</div></div>`;
+
+  // Knoppen
+  html += `
+    <button id="btnReport" class="btn w-full bg-blue-600 text-white rounded-2xl py-5 text-2xl font-bold shadow-lg mb-3">🖨 Print Klantrapport</button>
+    <button id="btnNewRound" class="btn w-full bg-white border-4 border-slate-300 rounded-2xl py-4 text-xl font-bold shadow mb-3">🔁 Opnieuw meten na bijstellen</button>
+    <button id="btnFinish" class="btn w-full bg-slate-200 rounded-2xl py-4 text-lg font-bold mb-6">✔ Klaar, terug naar start</button>`;
+
+  $('#resultBody').innerHTML = html;
+  $('#btnReport').addEventListener('click', () => go('report'));
+  $('#btnNewRound').addEventListener('click', () => {
+    S.rounds.push({ readings: Array(w.spokes).fill(null), done: false, ts: Date.now() });
+    S.cur = 0; pad = ''; feedback('key'); go('measure');
+  });
+  $('#btnFinish').addEventListener('click', () => { if (an.complete) upsertHistory(an); S.wheel = null; S.rounds = []; S.cur = 0; go('home'); });
+  const gm = $('#btnGoMeasure'); if (gm) gm.addEventListener('click', () => { S.cur = Math.max(0, nextOpen(-1)); go('measure'); });
+  document.querySelectorAll('.edit-spoke').forEach(b => b.addEventListener('click', () => openModal(+b.dataset.no)));
+  saveAll();
+}
+
+/* Modal: één spaak corrigeren */
+function openModal(no) {
+  modalSpoke = no - 1; modalPad = '';
+  $('#modalTitle').textContent = `Spaak #${no} (${sideShort(sideOf(modalSpoke))}) – nu: ${curRound().readings[modalSpoke] ?? '–'}`;
+  $('#modalPad').textContent = '–';
+  $('#modal').classList.remove('hidden');
+}
+function closeModal() { $('#modal').classList.add('hidden'); modalSpoke = null; }
+$('#modalClose').addEventListener('click', closeModal);
+$('#modal').addEventListener('click', (e) => { if (e.target.id === 'modal') closeModal(); });
+document.querySelectorAll('#modalNumpad .key').forEach(b => b.addEventListener('click', () =>
+  padKey(b.dataset.k, () => modalPad, (v) => { modalPad = v; }, (v) => {
+    if (!(v >= MIN_READ && v <= MAX_READ)) { modalPad = ''; $('#modalPad').textContent = '–'; return; }
+    const r = curRound(); r.readings[modalSpoke] = v;
+    if (r.readings.every(x => x != null)) r.done = true;
+    feedback('ok'); closeModal(); saveAll(); renderResult();
+  }, () => { $('#modalPad').textContent = modalPad || '–'; })));
+
+/* ---------------- RAPPORT ---------------- */
+function buildSheet(entry) {
+  const w = entry.wheel, rounds = entry.rounds;
+  const last = rounds[rounds.length - 1];
+  const an = analyze(last.readings, w);
+  const st = scoreText(an.score);
+  const calibrated = isCalibrated(w.spokeType);
+  const unit = calibrated ? 'kgf' : 'kgf*';
+  const sideRows = ['R', 'L'].map(s => {
+    const sd = an.sides[s];
+    return `<tr><td class="py-1 pr-2 font-semibold">${sideLabel(s, w)}</td>
+      <td class="py-1 px-2 text-right">${sd.count}</td>
+      <td class="py-1 px-2 text-right">${sd.avg != null ? Math.round(sd.avg) : '–'}</td>
+      <td class="py-1 px-2 text-right">${sd.min != null ? Math.round(sd.min) + ' – ' + Math.round(sd.max) : '–'}</td>
+      <td class="py-1 pl-2 text-right">${sd.avg != null ? '±' + Math.round(sd.maxDev) + ' %' : '–'}</td></tr>`;
+  }).join('');
+  const progression = rounds.length > 1 ? `<div class="text-sm mt-2">Verloop tijdens het richten: ` + rounds.map((rr, i) => `ronde ${i + 1}: <b>${analyze(rr.readings, w).score}%</b>`).join(' → ') + `</div>` : '';
+  const verdict = an.score >= 90 ? 'Uw wiel is kaarsrecht afgesteld en alle spaken staan gelijkmatig op spanning.'
+    : an.score >= 75 ? 'Uw wiel is netjes afgesteld; de spaakspanning is goed verdeeld.'
+    : 'Bij dit wiel is de spaakspanning gemeten; de afwijkingen zijn in dit rapport weergegeven.';
+
+  return `
+    <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-1 border-b-2 border-slate-800 pb-2 mb-3">
+      <div>
+        <div class="text-2xl font-extrabold">Spaakspanningsrapport</div>
+        <div class="text-sm text-slate-600">${esc(SET.shop || 'Wielservice')}</div>
+      </div>
+      <div class="sm:text-right text-sm">
+        <div><b>Datum:</b> ${fmtDate(entry.finishedAt)}</div>
+        <div><b>Tijd:</b> ${fmtTime(entry.finishedAt)}</div>
+      </div>
+    </div>
+
+    <table class="w-full text-sm mb-3"><tbody>
+      <tr><td class="py-1 pr-3 text-slate-600 w-40">Wielidentificatie</td><td class="py-1 font-semibold">${esc(w.id || '–')}</td></tr>
+      <tr><td class="py-1 pr-3 text-slate-600">Wiel</td><td class="py-1 font-semibold">${w.type === 'rear' ? 'Achterwiel' : 'Voorwiel'}, ${w.spokes} spaken</td></tr>
+      <tr><td class="py-1 pr-3 text-slate-600">Spaaktype</td><td class="py-1 font-semibold">${esc(SPOKE_TYPES[w.spokeType].label)}</td></tr>
+      <tr><td class="py-1 pr-3 text-slate-600">Meetinstrument</td><td class="py-1 font-semibold">Unior spaakspanningsmeter ${esc(entry.meter || SET.meter)}</td></tr>
+    </tbody></table>
+
+    <div class="avoid-break border-2 border-slate-800 rounded-xl p-3 mb-3 flex items-center gap-4">
+      <div class="text-4xl font-extrabold ${st.color}">${an.score}%</div>
+      <div class="flex-1">
+        <div class="text-lg font-bold">Wielkwaliteit: ${an.score}% – ${st.label}</div>
+        <div class="h-3 rounded-full bg-slate-200 overflow-hidden mt-1"><div class="scorebar h-full" style="width:${an.score}%"></div></div>
+        <div class="text-sm mt-1">${verdict}</div>
+        ${progression}
+      </div>
+    </div>
+
+    <div class="avoid-break flex flex-col sm:flex-row gap-4 mb-3 items-center sm:items-start">
+      <div class="w-full sm:w-1/2 shrink-0 max-w-[88mm]">${chartSVG(an, w, 300, true)}</div>
+      <div class="flex-1 text-sm">
+        <div class="font-bold mb-1">Spanning per kant</div>
+        <table class="w-full border-t border-b border-slate-300"><thead><tr class="text-slate-600 text-xs">
+          <th class="text-left py-1 pr-2">Kant</th><th class="text-right py-1 px-2">Spaken</th><th class="text-right py-1 px-2">Gem. (${unit})</th><th class="text-right py-1 px-2">Laagste – hoogste</th><th class="text-right py-1 pl-2">Max. afw.</th>
+        </tr></thead><tbody>${sideRows}</tbody></table>
+        <div class="mt-3 text-xs text-slate-600">
+          <div><span class="inline-block w-3 h-3 rounded-full bg-green-600 align-middle"></span> binnen ±${TOL_OK} % van het gemiddelde</div>
+          <div><span class="inline-block w-3 h-3 rounded-full bg-amber-500 align-middle"></span> ${TOL_OK}–${TOL_WARN} % afwijking</div>
+          <div><span class="inline-block w-3 h-3 rounded-full bg-red-600 align-middle"></span> meer dan ${TOL_WARN} % afwijking</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="avoid-break mb-3">
+      <div class="font-bold text-sm mb-1">Alle gemeten spaken (meterstand)</div>
+      <div class="grid gap-1 text-xs text-center" style="grid-template-columns: repeat(16, minmax(0, 1fr))">
+        ${last.readings.map((v, i) => { const x = an.sides[i % 2 === 0 ? (w.firstSide || 'R') : ((w.firstSide || 'R') === 'R' ? 'L' : 'R')].spokes.find(q => q.i === i); const ad = x && x.dev != null ? Math.abs(x.dev) : null; const c = ad == null ? 'bg-slate-100' : ad <= TOL_OK ? 'bg-green-100' : ad <= TOL_WARN ? 'bg-amber-100' : 'bg-red-100'; return `<div class="${c} rounded py-1"><div class="text-slate-500">#${i + 1}</div><div class="font-bold">${v == null ? '–' : v}</div></div>`; }).join('')}
+      </div>
+    </div>
+
+    <div class="avoid-break bg-slate-50 border border-slate-300 rounded-xl p-3 text-sm mb-2">
+      <div class="font-bold mb-1">Waarom is dit belangrijk?</div>
+      <p>Gelijke spaakspanning voorkomt spaakbreuk en verlengt de levensduur van uw wiel. Een wiel waarvan alle spaken even strak staan, blijft langer recht, rolt soepeler en kan beter tegen klappen van gaten en stoepranden. De ronde grafiek laat zien hoe gelijkmatig uw wiel op spanning staat: hoe ronder de lijn, hoe beter.</p>
+    </div>
+    <div class="text-[10px] text-slate-500">
+      ${calibrated ? 'Spanningswaarden in kgf volgens de omrekentabel van de gebruikte meter.' : '* Spanningswaarden in kgf zijn indicatief (omgerekend uit de meterstand). De gelijkmatigheid is bepaald uit de onderlinge verhouding van de metingen.'}
+      Meting uitgevoerd volgens de methode van de fabrikant van de spanningsmeter.
+    </div>`;
+}
+let reportEntry = null; // null = huidig wiel
+function renderReport() {
+  let entry;
+  if (reportEntry) entry = reportEntry;
+  else {
+    if (!S.wheel || !S.rounds.length) { go('home'); return; }
+    entry = { wheel: S.wheel, rounds: S.rounds, finishedAt: Date.now(), meter: SET.meter };
+  }
+  const inp = $('#wheelIdInput');
+  inp.value = entry.wheel.id || '';
+  inp.oninput = () => { entry.wheel.id = inp.value; if (reportEntry) { } saveAll(); $('#sheet').innerHTML = buildSheet(entry); };
+  $('#sheet').innerHTML = buildSheet(entry);
+}
+$('#btnPrint').addEventListener('click', () => { feedback('key'); window.print(); });
+
+/* ---------------- GESCHIEDENIS ---------------- */
+function renderHistory() {
+  const b = $('#historyBody');
+  if (!HIST.length) { b.innerHTML = `<div class="text-center text-slate-500 py-10">Nog geen opgeslagen wielen.</div>`; return; }
+  b.innerHTML = HIST.map((h, i) => `
+    <div class="bg-white rounded-2xl shadow p-3 mb-3">
+      <div class="flex items-center gap-3">
+        <div class="text-3xl font-extrabold ${scoreText(h.score).color}">${h.score}%</div>
+        <div class="flex-1 min-w-0"><div class="font-bold truncate">${esc(h.wheel.id || wheelLabel(h.wheel))}</div><div class="text-sm text-slate-500">${esc(wheelLabel(h.wheel))}<br>${fmtDate(h.finishedAt)} ${fmtTime(h.finishedAt)}</div></div>
+      </div>
+      <div class="grid grid-cols-3 gap-2 mt-3">
+        <button data-i="${i}" class="btn h-open bg-blue-600 text-white rounded-xl py-3 font-bold">Rapport</button>
+        <button data-i="${i}" class="btn h-load bg-white border-2 border-slate-300 rounded-xl py-3 font-bold">Verder</button>
+        <button data-i="${i}" class="btn h-del bg-white border-2 border-slate-300 rounded-xl py-3 font-bold text-red-600">Wis</button>
+      </div>
+    </div>`).join('');
+  b.querySelectorAll('.h-open').forEach(x => x.addEventListener('click', () => { reportEntry = HIST[+x.dataset.i]; S.prev = 'history'; go('report'); }));
+  b.querySelectorAll('.h-load').forEach(x => x.addEventListener('click', () => {
+    const h = HIST[+x.dataset.i];
+    const r = S.wheel && curRound();
+    if (r && !r.done && r.readings.some(v => v != null) && !confirm('Er is nog een meting bezig. Dit wiel laden? De lopende meting wordt dan gewist.')) return;
+    S.wheel = JSON.parse(JSON.stringify(h.wheel)); S.rounds = JSON.parse(JSON.stringify(h.rounds)); S.cur = 0; reportEntry = null; go('result');
+  }));
+  b.querySelectorAll('.h-del').forEach(x => x.addEventListener('click', () => { if (confirm('Dit wiel uit de geschiedenis wissen?')) { HIST.splice(+x.dataset.i, 1); saveAll(); renderHistory(); } }));
+}
+// Rapport van huidig wiel heeft voorrang als we vanuit resultaat komen
+$('#btnBack').addEventListener('click', () => { if (S.screen !== 'report') reportEntry = null; });
+
+/* ---------------- INSTELLINGEN ---------------- */
+let calibType = 'r20';
+function renderSettings() {
+  const b = $('#settingsBody');
+  const toggle = (key, label, sub) => `
+    <button data-key="${key}" class="btn tgl w-full bg-white rounded-2xl shadow p-4 flex items-center justify-between mb-3">
+      <span class="text-left"><span class="block text-lg font-bold">${label}</span><span class="block text-sm text-slate-500">${sub}</span></span>
+      <span class="w-16 h-9 rounded-full ${SET[key] ? 'bg-green-500' : 'bg-slate-300'} relative shrink-0"><span class="absolute top-1 ${SET[key] ? 'right-1' : 'left-1'} w-7 h-7 bg-white rounded-full shadow"></span></span>
+    </button>`;
+  const pts = calibPoints(calibType);
+  b.innerHTML = `
+    ${toggle('sound', 'Geluid', 'Klik bij elke invoer')}
+    ${toggle('vibrate', 'Trillen', 'Haptische klik (indien ondersteund)')}
+    <div class="bg-white rounded-2xl shadow p-4 mb-3">
+      <label class="block text-lg font-bold mb-1">Naam werkplaats</label>
+      <div class="text-sm text-slate-500 mb-2">Komt bovenaan het klantrapport (optioneel).</div>
+      <input id="shopInput" type="text" value="${esc(SET.shop)}" class="w-full border-2 border-slate-300 rounded-xl px-3 py-3 text-lg" placeholder="bijv. Fietsenmaker De Vries">
+    </div>
+    <div class="bg-white rounded-2xl shadow p-4 mb-3">
+      <div class="text-lg font-bold mb-1">Meter</div>
+      <div class="grid grid-cols-2 gap-3" id="setMeterBtns">
+        <button data-meter="1752/2" class="btn opt rounded-2xl bg-white border-4 border-slate-200 py-3 text-lg font-bold">Unior 1752/2</button>
+        <button data-meter="1752/6" class="btn opt rounded-2xl bg-white border-4 border-slate-200 py-3 text-lg font-bold">Unior 1752/6</button>
+      </div>
+    </div>
+    <div class="bg-white rounded-2xl shadow p-4 mb-3">
+      <div class="text-lg font-bold mb-1">Kalibratie (optioneel, aanbevolen)</div>
+      <div class="text-sm text-slate-600 mb-3">Zonder kalibratie zijn kgf-waarden indicatief; het bijstel-advies werkt dan nog steeds op basis van de verhouding tussen de spaken. Voor exacte kgf: neem 2 of meer regels over uit de <b>omrekentabel die bij je meter zit</b> (meterstand → kgf) voor dit spaaktype.</div>
+      <div class="grid grid-cols-2 gap-2 mb-3" id="calibTypeBtns">
+        ${Object.entries(SPOKE_TYPES).map(([k, t]) => `<button data-ct="${k}" class="btn opt rounded-xl bg-white border-4 border-slate-200 py-2 text-sm font-bold">${esc(t.label)}${isCalibrated(k) ? ' ✓' : ''}</button>`).join('')}
+      </div>
+      <div class="space-y-2 mb-3" id="calibList">
+        ${pts.length ? pts.map((p, i) => `<div class="flex items-center gap-2 bg-slate-50 rounded-xl p-2"><span class="flex-1">meterstand <b>${p[0]}</b> → <b>${p[1]} kgf</b></span><button data-i="${i}" class="btn cal-del w-10 h-10 rounded-lg bg-slate-200 text-red-600 font-bold">✕</button></div>`).join('') : '<div class="text-sm text-slate-500">Nog geen punten voor dit spaaktype (indicatieve omrekening actief).</div>'}
+      </div>
+      <div class="grid grid-cols-5 gap-2 items-end">
+        <label class="col-span-2 text-xs text-slate-500">Meterstand<input id="calR" type="number" inputmode="numeric" min="1" max="90" class="w-full border-2 border-slate-300 rounded-xl px-2 py-3 text-lg mt-1"></label>
+        <label class="col-span-2 text-xs text-slate-500">kgf<input id="calK" type="number" inputmode="numeric" min="1" max="300" class="w-full border-2 border-slate-300 rounded-xl px-2 py-3 text-lg mt-1"></label>
+        <button id="calAdd" class="btn bg-blue-600 text-white rounded-xl py-3 text-xl font-bold">＋</button>
+      </div>
+    </div>
+    <div class="bg-white rounded-2xl shadow p-4 mb-3 text-sm text-slate-600">
+      <div class="text-lg font-bold text-slate-900 mb-1">Over deze app</div>
+      Werkt volledig op dit apparaat; er wordt niets verstuurd. Gegevens staan in de browseropslag (localStorage). Tolerantie: perfect binnen ±${TOL_OK} %, bijstellen vanaf ±${TOL_OK} %, dringend boven ±${TOL_WARN} %.
+    </div>
+    <button id="btnWipe" class="btn w-full bg-white border-2 border-red-300 text-red-700 rounded-2xl py-4 font-bold mb-6">🗑 Alle gegevens wissen</button>`;
+
+  b.querySelectorAll('.tgl').forEach(t => t.addEventListener('click', () => { SET[t.dataset.key] = !SET[t.dataset.key]; feedback('key'); saveAll(); renderSettings(); }));
+  $('#shopInput').addEventListener('input', (e) => { SET.shop = e.target.value; saveAll(); });
+  mark('#setMeterBtns', 'meter', SET.meter);
+  b.querySelectorAll('#setMeterBtns .opt').forEach(x => x.addEventListener('click', () => { SET.meter = x.dataset.meter; feedback('key'); saveAll(); renderSettings(); }));
+  mark('#calibTypeBtns', 'ct', calibType);
+  b.querySelectorAll('#calibTypeBtns .opt').forEach(x => x.addEventListener('click', () => { calibType = x.dataset.ct; renderSettings(); }));
+  b.querySelectorAll('.cal-del').forEach(x => x.addEventListener('click', () => { const p = calibPoints(calibType); p.splice(+x.dataset.i, 1); SET.calib[calibType] = p; saveAll(); renderSettings(); }));
+  $('#calAdd').addEventListener('click', () => {
+    const r = +$('#calR').value, k = +$('#calK').value;
+    if (!(r >= 1 && r <= 90) || !(k > 0)) { alert('Vul een meterstand (1–90) en een kgf-waarde in.'); return; }
+    const p = calibPoints(calibType).filter(q => q[0] !== r); p.push([r, k]); SET.calib[calibType] = p.sort((a, b) => a[0] - b[0]);
+    feedback('ok'); saveAll(); renderSettings();
+  });
+  $('#btnWipe').addEventListener('click', () => {
+    if (!confirm('Echt ALLE gegevens wissen (metingen, geschiedenis, kalibratie)?')) return;
+    localStorage.removeItem(LS_STATE); localStorage.removeItem(LS_HIST); localStorage.removeItem(LS_SET);
+    S = freshState(); SET = { meter: '1752/6', sound: true, vibrate: true, shop: '', calib: {} }; HIST = [];
+    go('home');
+  });
+}
+
+/* ---------------- START ---------------- */
+// Schermen die zonder wiel niet bestaan: terug naar start
+if (['wiz1', 'wiz2', 'start', 'measure', 'result', 'report'].includes(S.screen) && !S.wheel) S.screen = 'home';
+if (S.screen === 'measure' && !S.rounds.length) S.screen = 'start';
+if (S.screen === 'settings' || S.screen === 'history') S.screen = S.prev && S.prev !== 'settings' && S.prev !== 'history' ? S.prev : 'home';
+render();
+window.addEventListener('beforeunload', saveAll);
+document.addEventListener('visibilitychange', () => { if (document.hidden) saveAll(); });
+</script>
+</body>
+</html>
