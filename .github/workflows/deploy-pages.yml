@@ -1,0 +1,23 @@
+name: Publiceer Spaakspanning naar Cloudflare Pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'spaakspanning/**'
+      - '.github/workflows/deploy-pages.yml'
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy met Wrangler
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy spaakspanning --project-name=spaakspanning-app --branch=main --commit-dirty=true
