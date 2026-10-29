@@ -137,7 +137,7 @@ const calLabel = (c) => UNIOR[c].label;
 const TOL_OK = 5, TOL_WARN = 10, MIN_READ = 1, MAX_READ = 90;
 const COL = { R: '#2563eb', L: '#ea580c' };
 const LS_KEY = 'spaakspanning_v3', DRIVE_FILE = 'spaakspanning-data.json', DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
-const APP_VERSION = '2026-10-29.9';
+const APP_VERSION = '2026-10-29.10';
 /* ================= TALEN =================
    Nieuwe taal toevoegen: kopieer het blok 'nl', vertaal de waarden en voeg de code toe aan LANGS. Ontbrekende sleutels vallen terug op 'nl'. */
 const LANGS = { nl: 'Nederlands', en: 'English', uk: 'Українська', ru: 'Русский' };
@@ -171,6 +171,7 @@ nl: {
   r_expl_a: 'Gelijkmatige spaakspanning is bepalend voor een sterk en recht wiel. Bij deze controle is de spanning van elke spaak gemeten en waar nodig afgesteld binnen de tolerantie. Een correct gespannen wiel blijft langer recht, belast alle spaken gelijkmatig en voorkomt spaakbreuk.',
   r_expl_b: 'Uw wiel is nagemeten met een professionele spaakspanningsmeter. Alle spaken zijn afzonderlijk gecontroleerd en waar nodig bijgesteld, zodat de spanning rondom gelijk is. Het resultaat is een wiel dat recht loopt, soepel rolt en langer meegaat. Laat de spaakspanning bij voorkeur jaarlijks of na een harde klap opnieuw controleren.',
   r_expl_c: 'Dit certificaat documenteert de spaakspanning per zijde, gemeten met een Unior spanningsmeter en omgerekend volgens de tabel van de fabrikant. Beoordeling: afwijking per spaak ten opzichte van het gemiddelde van de zijde, ideaal ≤ 5 %, acceptabel ≤ 10 %. Gelijkmatige spanning verdeelt de belasting over alle spaken, beperkt vermoeiing van spaak en velg en houdt het wiel maatvast.',
+  dish_rear_left_high: 'Links staat hoger dan rechts. Bij een cassettewiel hoort rechts strakker: kanten verwisseld of velg niet gecentreerd?', dish_rear_left_low: 'Links staat erg slap ten opzichte van rechts ({p} %). Controleer de centrering van de velg.', dish_front_diff: 'De kanten verschillen {p} % in spanning. Bij een voorwiel met velgrem hoort dat gelijk te zijn: velg mogelijk niet gecentreerd (bij schijfrem is links strakker normaal).',
   r_mechanic: 'Monteur', r_signature: 'Handtekening', r_date: 'Datum', r_foot_table: 'Spanning in kgf volgens de Unior 1752/2 omrekentabel (v2)', r_foot_adj: ', aangepast voor dit instrument', r_foot_est: '* kgf indicatief, omgerekend uit de meterstand; de gelijkmatigheid is bepaald uit de onderlinge verhouding van de metingen.', r_tol: 'Tolerantie ±{a} % ideaal, ±{b} % acceptabel.', r_print: 'Print / PDF', r_lang: 'Taal certificaat',
 },
 en: {
@@ -201,6 +202,7 @@ en: {
   r_expl_a: 'Even spoke tension is what makes a wheel strong and true. During this check the tension of every spoke was measured and, where necessary, adjusted within tolerance. A correctly tensioned wheel stays true longer, loads all spokes evenly and prevents spoke breakage.',
   r_expl_b: 'Your wheel has been checked with a professional spoke tension meter. Every spoke was measured individually and adjusted where needed, so the tension is even all the way round. The result is a wheel that runs true, rolls smoothly and lasts longer. Have the spoke tension checked again yearly or after a hard impact.',
   r_expl_c: 'This certificate documents the spoke tension per side, measured with a Unior tension meter and converted using the manufacturer’s table. Assessment: deviation of each spoke from the side average, ideal ≤ 5 %, acceptable ≤ 10 %. Even tension distributes the load over all spokes, limits fatigue of spoke and rim and keeps the wheel dimensionally stable.',
+  dish_rear_left_high: 'Left side is tighter than right. On a cassette wheel the right side should be tighter: sides swapped or rim not centred?', dish_rear_left_low: 'Left side is very slack compared with right ({p} %). Check the rim centring.', dish_front_diff: 'The sides differ {p} % in tension. On a rim-brake front wheel they should be equal: rim may not be centred (with disc brakes a tighter left side is normal).',
   r_mechanic: 'Mechanic', r_signature: 'Signature', r_date: 'Date', r_foot_table: 'Tension in kgf according to the Unior 1752/2 conversion table (v2)', r_foot_adj: ', adjusted for this instrument', r_foot_est: '* kgf indicative, converted from the meter reading; evenness is determined from the ratio between measurements.', r_tol: 'Tolerance ±{a} % ideal, ±{b} % acceptable.', r_print: 'Print / PDF', r_lang: 'Certificate language',
 },
 uk: {
@@ -231,6 +233,7 @@ uk: {
   r_expl_a: 'Рівномірний натяг спиць визначає міцність і рівність колеса. Під час цієї перевірки натяг кожної спиці виміряно і за потреби відрегульовано в межах допуску. Правильно натягнуте колесо довше залишається рівним, рівномірно навантажує всі спиці та запобігає їх поломці.',
   r_expl_b: 'Ваше колесо перевірено професійним тензометром спиць. Кожну спицю виміряно окремо і за потреби відрегульовано, щоб натяг був однаковим по всьому колу. Результат: колесо котиться рівно, плавно і служить довше. Радимо перевіряти натяг спиць щороку або після сильного удару.',
   r_expl_c: 'Цей сертифікат документує натяг спиць по сторонах, виміряний тензометром Unior і перерахований за таблицею виробника. Оцінка: відхилення кожної спиці від середнього по стороні, ідеально ≤ 5 %, прийнятно ≤ 10 %. Рівномірний натяг розподіляє навантаження на всі спиці, зменшує втому спиці та обода і зберігає геометрію колеса.',
+  dish_rear_left_high: 'Ліва сторона натягнута сильніше за праву. На колесі з касетою права має бути тугішою: сторони переплутано або обід не відцентровано?', dish_rear_left_low: 'Ліва сторона дуже слабка порівняно з правою ({p} %). Перевірте центрування обода.', dish_front_diff: 'Сторони відрізняються на {p} %. На передньому колесі з ободовим гальмом натяг має бути однаковим: обід може бути не відцентрований (з дисковим гальмом тугіша ліва сторона — норма).',
   r_mechanic: 'Механік', r_signature: 'Підпис', r_date: 'Дата', r_foot_table: 'Натяг у кгс за таблицею перерахунку Unior 1752/2 (v2)', r_foot_adj: ', скориговано для цього приладу', r_foot_est: '* кгс орієнтовно, перераховано з показу приладу; рівномірність визначено за співвідношенням вимірювань.', r_tol: 'Допуск ±{a} % ідеально, ±{b} % прийнятно.', r_print: 'Друк / PDF', r_lang: 'Мова сертифіката',
 },
 ru: {
@@ -261,6 +264,7 @@ ru: {
   r_expl_a: 'Равномерное натяжение спиц определяет прочность и ровность колеса. При этой проверке натяжение каждой спицы измерено и при необходимости отрегулировано в пределах допуска. Правильно натянутое колесо дольше остаётся ровным, равномерно нагружает все спицы и предотвращает их поломку.',
   r_expl_b: 'Ваше колесо проверено профессиональным тензометром спиц. Каждая спица измерена отдельно и при необходимости отрегулирована, чтобы натяжение было одинаковым по всему кругу. Результат: колесо катится ровно, плавно и служит дольше. Рекомендуем проверять натяжение спиц ежегодно или после сильного удара.',
   r_expl_c: 'Этот сертификат документирует натяжение спиц по сторонам, измеренное тензометром Unior и пересчитанное по таблице производителя. Оценка: отклонение каждой спицы от среднего по стороне, идеально ≤ 5 %, приемлемо ≤ 10 %. Равномерное натяжение распределяет нагрузку на все спицы, снижает усталость спицы и обода и сохраняет геометрию колеса.',
+  dish_rear_left_high: 'Левая сторона натянута сильнее правой. На колесе с кассетой правая должна быть туже: стороны перепутаны или обод не отцентрован?', dish_rear_left_low: 'Левая сторона очень слабая по сравнению с правой ({p} %). Проверьте центровку обода.', dish_front_diff: 'Стороны отличаются на {p} %. На переднем колесе с ободным тормозом натяжение должно быть одинаковым: обод может быть не отцентрован (с дисковым тормозом более тугая левая сторона — норма).',
   r_mechanic: 'Механик', r_signature: 'Подпись', r_date: 'Дата', r_foot_table: 'Натяжение в кгс по таблице пересчёта Unior 1752/2 (v2)', r_foot_adj: ', скорректировано для этого прибора', r_foot_est: '* кгс ориентировочно, пересчитано из показаний прибора; равномерность определена по соотношению измерений.', r_tol: 'Допуск ±{a} % идеально, ±{b} % приемлемо.', r_print: 'Печать / PDF', r_lang: 'Язык сертификата',
 },
 };
@@ -378,6 +382,13 @@ function analyze(m, w) {
   const meanDev = out.filled ? sumDev / out.filled : 0;
   out.score = out.filled ? clamp(Math.round(100 - 1.5 * maxDev - 2 * meanDev), 0, 100) : 0;
   out.maxDev = maxDev; out.complete = out.filled === n; out.cal = isCal(t);
+  // Centrering (dish): verhouding tussen de kanten
+  out.dish = null;
+  const R = out.sides.R.avg, Lv = out.sides.L.avg;
+  if (R && Lv && out.sides.R.count >= 4 && out.sides.L.count >= 4) {
+    if (w.type === 'rear') { if (Lv > R * 1.05) out.dish = 'rear_left_high'; else if (Lv < R * 0.45) out.dish = 'rear_left_low'; }
+    else if (Math.abs(R - Lv) / Math.max(R, Lv) > 0.15 && !w.disc) out.dish = 'front_diff';
+  }
   return out;
 }
 const scoreInfo = (s, l) => s >= 90 ? { label: t('sc_perfect', null, l), hex: '#10b981', cls: 'text-emerald-700' } : s >= 75 ? { label: t('sc_good', null, l), hex: '#34d399', cls: 'text-emerald-700' } : s >= 55 ? { label: t('sc_moderate', null, l), hex: '#f59e0b', cls: 'text-amber-700' } : { label: t('sc_poor', null, l), hex: '#f43f5e', cls: 'text-rose-700' };
@@ -580,6 +591,7 @@ ROUTES.result = (wid, mid) => {
       ${hist.length > 1 ? `<div class="flex gap-2 overflow-x-auto">${hist.map((x, k) => `<a href="#/result/${wid}/${x.id}" class="shrink-0 rounded-lg px-3 py-1.5 text-xs font-semibold border ${x.id === m.id ? 'bg-slate-900 text-white border-slate-900' : 'bg-white border-slate-200'}">${k + 1}. ${phaseLbl(x.phase)} ${analyze(x, w).score}</a>`).join('')}</div>` : ''}
       <div class="card p-3 flex items-center gap-4">${ring(an.score, 84, 9)}<div class="flex-1"><div class="text-xs font-bold text-slate-500">${phaseLbl(m.phase).toUpperCase()} · ${fmtDate(m.updatedAt)}</div><div class="text-xl font-extrabold ${inf.cls}">${inf.label}</div><div class="text-sm text-slate-600">${t('within', { a: an.within, n: an.n, t: TOL_OK })}${nulScore != null ? ' · ' + t('zero_to', { a: nulScore, b: an.score }) : ''}</div><div class="mt-1.5 h-2 rounded-full bg-slate-200 overflow-hidden"><div class="scorebar h-full" style="width:${an.score}%"></div></div></div></div>
       ${!an.complete ? `<a href="#/measure/${wid}" class="block rounded-lg bg-amber-100 p-3 text-sm font-semibold">${t('not_all')}</a>` : ''}
+      ${an.dish ? `<div class="rounded-lg bg-rose-50 border border-rose-200 p-3 text-sm font-semibold text-rose-800">${t('dish_' + an.dish, { p: Math.round(Math.abs(an.sides.R.avg - an.sides.L.avg) / Math.max(an.sides.R.avg, an.sides.L.avg) * 100) })}</div>` : ''}
       ${sideBlock('R')}${sideBlock('L')}
       <div class="card p-3"><div class="flex items-center justify-between"><span class="font-bold">${t('wobble_title')}</span><button id="wbAdd" class="btn bg-slate-900 text-white rounded-lg px-3 py-1.5 text-sm font-bold">${t('add_wobble')}</button></div>
         ${(m.wobbles || []).length ? `<div class="flex flex-wrap gap-1.5 mt-2">${m.wobbles.map((x, k) => `<span class="inline-flex items-center gap-1 rounded-full bg-slate-100 pl-3 pr-1 py-1 text-sm font-semibold">${t('wb_' + x.kind)} ${t('at')} ${x.pos % 2 ? 'L' : 'R'}${Math.floor(x.pos / 2) + 1}${x.size === 2 ? ' (' + t('big') + ')' : ''}<button data-wbdel="${k}" class="btn w-6 h-6 rounded-full hover:bg-slate-200 text-slate-500">✕</button></span>`).join('')}</div>` : `<div class="text-sm text-slate-500 mt-1">${t('no_wobble')}</div>`}</div></div>
