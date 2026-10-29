@@ -85,7 +85,8 @@
         <button data-n="32" class="btn opt rounded-2xl bg-white border-4 border-slate-200 py-5 text-3xl font-extrabold">32</button>
         <button data-n="36" class="btn opt rounded-2xl bg-white border-4 border-slate-200 py-5 text-3xl font-extrabold">36</button>
       </div>
-      <h2 class="text-base font-bold mb-2 text-slate-700">Aan welke kant zit de eerste spaak naast het ventiel?</h2>
+      <h2 class="text-base font-bold mb-1 text-slate-700">Spaak #1 = de spaak direct naast het ventiel. Aan welke kant van de naaf zit die?</h2>
+      <div class="text-sm text-slate-500 mb-2">Rechts = kant van de tandwielen/cassette. Twijfel je? Laat Rechts staan.</div>
       <div class="grid grid-cols-2 gap-3 mb-6" id="firstSideBtns">
         <button data-side="R" class="btn opt rounded-2xl bg-white border-4 border-slate-200 py-3 text-lg font-bold">Rechts</button>
         <button data-side="L" class="btn opt rounded-2xl bg-white border-4 border-slate-200 py-3 text-lg font-bold">Links</button>
@@ -260,6 +261,15 @@ const $ = (sel) => document.querySelector(sel);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const curRound = () => S.rounds[S.rounds.length - 1];
+function todoOf(r) { // spaken die in deze ronde nog gemeten moeten worden
+  if (!Array.isArray(r.todo)) { r.todo = r.readings.map((v, i) => v == null ? i : -1).filter(i => i >= 0); r.total = r.total || r.readings.length; }
+  return r.todo;
+}
+function newRound(w, prev, onlyIdx) {
+  const n = w.spokes;
+  if (onlyIdx && prev) return { readings: prev.readings.slice(), todo: onlyIdx.slice().sort((a, b) => a - b), total: onlyIdx.length, partial: true, done: false, ts: Date.now() };
+  return { readings: Array(n).fill(null), todo: Array.from({ length: n }, (_, i) => i), total: n, partial: false, done: false, ts: Date.now() };
+}
 function fmtDate(ts) { return new Date(ts).toLocaleDateString('nl-NL', { day: '2-digit', month: 'long', year: 'numeric' }); }
 function fmtTime(ts) { return new Date(ts).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' }); }
 
@@ -481,10 +491,10 @@ function renderHome() {
   const box = $('#resumeBox');
   const r = S.wheel && curRound();
   if (r && !r.done) {
-    const filled = r.readings.filter(v => v != null).length;
+    const todo = todoOf(r);
     box.classList.remove('hidden');
     box.innerHTML = `<button id="btnResume" class="btn w-full bg-green-600 text-white rounded-2xl py-5 text-xl font-bold shadow-lg">
-        ▶ Verder met meting<div class="text-sm font-normal opacity-90 mt-1">${esc(wheelLabel(S.wheel))} · ${filled} van ${S.wheel.spokes} gemeten</div></button>`;
+        ▶ Verder met meting<div class="text-sm font-normal opacity-90 mt-1">${esc(wheelLabel(S.wheel))} · nog ${todo.length} spaken te meten</div></button>`;
     $('#btnResume').addEventListener('click', () => go('measure'));
   } else if (r && r.done) {
     box.classList.remove('hidden');
@@ -554,8 +564,8 @@ function renderStart() {
     <div class="flex justify-between"><span class="text-slate-500">Spaak #1</span><b>${sideLabel(w.firstSide)}</b></div>`;
 }
 $('#btnStart').addEventListener('click', () => {
-  if (!S.rounds.length) S.rounds.push({ readings: Array(S.wheel.spokes).fill(null), done: false, ts: Date.now() });
-  S.cur = 0; pad = '';
+  if (!S.rounds.length) S.rounds.push(newRound(S.wheel));
+  S.cur = Math.max(0, nextOpen(-1)); pad = '';
   feedback('key');
   go('measure');
 });
@@ -563,11 +573,11 @@ $('#btnStart').addEventListener('click', () => {
 /* ---------------- METEN ---------------- */
 function renderMeasure() {
   const w = S.wheel, r = curRound(), n = w.spokes, i = S.cur;
-  const filled = r.readings.filter(v => v != null).length;
+  const todo = todoOf(r), total = r.total || n, measured = total - todo.length;
   const side = sideOf(i);
-  $('#mProgressText').textContent = `Spaak ${i + 1} van ${n}`;
-  $('#mFilledText').textContent = `${filled} gemeten`;
-  $('#mProgressBar').style.width = (filled / n * 100) + '%';
+  $('#mProgressText').textContent = r.partial ? `Alleen bijgestelde spaken · nog ${todo.length}` : `Spaak ${i + 1} van ${n}`;
+  $('#mFilledText').textContent = `${measured} van ${total} gemeten`;
+  $('#mProgressBar').style.width = (measured / total * 100) + '%';
   const card = $('#mCard');
   card.className = 'rounded-3xl p-4 text-white shadow-lg mb-3 flex items-center gap-3 ' + (side === 'R' ? 'bg-blue-600' : 'bg-orange-600');
   $('#mSpokeNo').textContent = '#' + (i + 1);
@@ -589,17 +599,18 @@ function renderMeasure() {
       vals.map(v => `<button data-v="${v}" class="btn quick rounded-2xl py-4 text-2xl font-extrabold shadow ${v === ref ? 'bg-slate-800 text-white' : 'bg-white'}">${v}</button>`).join('') + `</div>`;
     q.querySelectorAll('.quick').forEach(b => b.addEventListener('click', () => commitReading(+b.dataset.v)));
   }
-  $('#mDone').textContent = filled === n ? 'Resultaat ✓' : 'Resultaat';
+  $('#mDone').textContent = todo.length === 0 ? 'Resultaat ✓' : 'Resultaat';
 }
 function nextOpen(from) {
-  const r = curRound(), n = S.wheel.spokes;
-  for (let k = 1; k <= n; k++) { const j = (from + k) % n; if (r.readings[j] == null) return j; }
+  const r = curRound(), n = S.wheel.spokes, todo = todoOf(r);
+  for (let k = 1; k <= n; k++) { const j = (from + k) % n; if (todo.includes(j)) return j; }
   return -1;
 }
 function commitReading(v) {
   const r = curRound();
   if (!(v >= MIN_READ && v <= MAX_READ)) { pad = ''; renderMeasure(); return; }
   r.readings[S.cur] = v;
+  r.todo = todoOf(r).filter(j => j !== S.cur);
   pad = '';
   $('#mPad').textContent = v;
   const nxt = nextOpen(S.cur);
@@ -627,12 +638,11 @@ function padKey(k, getPad, setPad, onCommit, display) {
 document.querySelectorAll('#numpad .key').forEach(b => b.addEventListener('click', () =>
   padKey(b.dataset.k, () => pad, (v) => { pad = v; }, commitReading, () => { $('#mPad').textContent = pad || '–'; })));
 $('#mPrev').addEventListener('click', () => { const n = S.wheel.spokes; S.cur = (S.cur - 1 + n) % n; pad = ''; feedback('key'); saveAll(); renderMeasure(); });
-$('#mSkip').addEventListener('click', () => { const n = S.wheel.spokes; S.cur = (S.cur + 1) % n; pad = ''; feedback('key'); saveAll(); renderMeasure(); });
+$('#mSkip').addEventListener('click', () => { const n = S.wheel.spokes; const nx = nextOpen(S.cur); S.cur = nx >= 0 ? nx : (S.cur + 1) % n; pad = ''; feedback('key'); saveAll(); renderMeasure(); });
 $('#mDone').addEventListener('click', () => {
-  const r = curRound(), n = S.wheel.spokes;
-  const filled = r.readings.filter(v => v != null).length;
-  if (filled < n && !confirm(`Nog ${n - filled} spaken niet gemeten. Toch resultaat bekijken?`)) return;
-  if (filled === n) r.done = true;
+  const r = curRound(), todo = todoOf(r);
+  if (todo.length && !confirm(`Nog ${todo.length} spaken niet gemeten. Toch resultaat bekijken?`)) return;
+  if (!todo.length) r.done = true;
   go('result');
 });
 
@@ -682,6 +692,17 @@ function renderResult() {
 
   if (ready) html += `<div class="bg-green-600 text-white rounded-2xl p-5 mb-3 text-center shadow-lg"><div class="text-4xl">✅</div><div class="text-2xl font-extrabold">Spanning gereed!</div><div class="opacity-90">Alle spaken zitten binnen de tolerantie.</div></div>`;
 
+
+  // Acties
+  html += `<h3 class="text-xl font-extrabold mb-2">Wat moet je doen?</h3>`;
+  if (an.actions.length) {
+    html += `<div class="text-sm text-slate-600 mb-2">Werk van boven naar beneden. Draai steeds in kleine stapjes. Daarna: knop <b>Opnieuw meten</b> onderaan; je meet dan alleen deze ${an.actions.length} spaken opnieuw.</div><div class="space-y-2 mb-3">` + an.actions.map(actionRow).join('') + `</div>`;
+  } else if (an.filled) {
+    html += `<div class="bg-green-50 border-2 border-green-300 rounded-2xl p-3 mb-3 text-lg">✅ Geen enkele spaak hoeft bijgesteld te worden.</div>`;
+  }
+  if (an.perfect.length) html += `<div class="bg-green-50 border-2 border-green-300 rounded-2xl p-3 mb-3 flex gap-3 items-start"><span class="text-2xl">✅</span><span><span class="block font-bold text-lg">Perfect, niet aankomen!</span><span class="text-base">Spaken ${an.perfect.join(', ')}</span></span></div>`;
+  html += `<div class="text-xs text-slate-500 mb-4">💡 Tip: kijk je vanaf de band naar de nippel, dan is <b>met de klok mee = vaster</b>. Tik op een spaak om de waarde te corrigeren.</div>`;
+
   // Gemiddelden per kant
   html += `<div class="grid grid-cols-2 gap-3 mb-3">`;
   for (const s of ['R', 'L']) {
@@ -695,17 +716,6 @@ function renderResult() {
   html += `</div>`;
 
   if (an.levelMsg) html += `<div class="bg-slate-800 text-white rounded-2xl p-3 mb-3 text-base">💡 ${esc(an.levelMsg.text)}</div>`;
-
-  // Acties
-  html += `<h3 class="text-xl font-extrabold mb-2">Wat moet je doen?</h3>`;
-  if (an.actions.length) {
-    html += `<div class="text-sm text-slate-600 mb-2">Werk van boven naar beneden. Draai steeds in kleine stapjes en meet daarna opnieuw.</div><div class="space-y-2 mb-3">` + an.actions.map(actionRow).join('') + `</div>`;
-  } else if (an.filled) {
-    html += `<div class="bg-green-50 border-2 border-green-300 rounded-2xl p-3 mb-3 text-lg">✅ Geen enkele spaak hoeft bijgesteld te worden.</div>`;
-  }
-  if (an.perfect.length) html += `<div class="bg-green-50 border-2 border-green-300 rounded-2xl p-3 mb-3 flex gap-3 items-start"><span class="text-2xl">✅</span><span><span class="block font-bold text-lg">Perfect, niet aankomen!</span><span class="text-base">Spaken ${an.perfect.join(', ')}</span></span></div>`;
-  html += `<div class="text-xs text-slate-500 mb-4">💡 Tip: kijk je vanaf de band naar de nippel, dan is <b>met de klok mee = vaster</b>. Tik op een spaak om de waarde te corrigeren.</div>`;
-
   // Grafiek
   html += `<div class="bg-white rounded-2xl shadow p-3 mb-3"><div class="font-bold mb-1">Spaakgrafiek</div><div class="text-xs text-slate-500 mb-2">Hoe ronder de lijn, hoe gelijkmatiger de spanning. Tik op een spaaknummer in de lijst hieronder om te wijzigen.</div>${chartSVG(an, w, 360, true)}</div>`;
 
@@ -718,19 +728,27 @@ function renderResult() {
       return `<button data-no="${i + 1}" class="btn edit-spoke ${cls} rounded-xl py-2 text-center"><div class="text-xs text-slate-500">#${i + 1} ${sideOf(i)}</div><div class="text-xl font-extrabold">${v == null ? '–' : v}</div></button>`;
     }).join('') + `</div></div>`;
 
-  // Knoppen
+  // Knoppen (onderaan de lijst)
   html += `
-    <button id="btnReport" class="btn w-full bg-blue-600 text-white rounded-2xl py-5 text-2xl font-bold shadow-lg mb-3">🖨 Print Klantrapport</button>
-    <button id="btnNewRound" class="btn w-full bg-white border-4 border-slate-300 rounded-2xl py-4 text-xl font-bold shadow mb-3">🔁 Opnieuw meten na bijstellen</button>
-    <button id="btnFinish" class="btn w-full bg-slate-200 rounded-2xl py-4 text-lg font-bold mb-6">✔ Klaar, terug naar start</button>`;
+    <button id="btnNewRoundAll" class="btn w-full bg-white border-2 border-slate-300 rounded-2xl py-3 text-base font-bold mb-3">🔄 Alle ${w.spokes} spaken opnieuw meten</button>
+    <button id="btnFinish" class="btn w-full bg-slate-200 rounded-2xl py-4 text-lg font-bold mb-3">✔ Klaar, terug naar start</button>`;
+
+  // Vaste knoppenbalk onderaan het scherm
+  const nAct = an.actions.length;
+  html += `<div class="sticky bottom-0 -mx-4 px-4 pt-2 pb-3 bg-slate-100 border-t border-slate-200 grid grid-cols-2 gap-2 safe-bottom">
+    ${nAct ? `<button id="btnNewRound" class="btn bg-green-600 text-white rounded-2xl py-4 text-lg font-bold shadow-lg leading-tight">🔁 Opnieuw meten<div class="text-xs font-normal opacity-90">alleen de ${nAct} bijgestelde</div></button>`
+           : `<button id="btnFinish2" class="btn bg-green-600 text-white rounded-2xl py-4 text-lg font-bold shadow-lg">✔ Klaar</button>`}
+    <button id="btnReport" class="btn bg-blue-600 text-white rounded-2xl py-4 text-lg font-bold shadow-lg">🖨 Klantrapport</button>
+  </div>`;
 
   $('#resultBody').innerHTML = html;
   $('#btnReport').addEventListener('click', () => go('report'));
-  $('#btnNewRound').addEventListener('click', () => {
-    S.rounds.push({ readings: Array(w.spokes).fill(null), done: false, ts: Date.now() });
-    S.cur = 0; pad = ''; feedback('key'); go('measure');
-  });
-  $('#btnFinish').addEventListener('click', () => { if (an.complete) upsertHistory(an); S.wheel = null; S.rounds = []; S.cur = 0; go('home'); });
+  const startRound = (onlyIdx) => { S.rounds.push(newRound(w, r, onlyIdx)); S.cur = Math.max(0, nextOpen(-1)); pad = ''; feedback('key'); go('measure'); };
+  const nr = $('#btnNewRound'); if (nr) nr.addEventListener('click', () => startRound(an.actions.map(a => a.no - 1)));
+  $('#btnNewRoundAll').addEventListener('click', () => startRound(null));
+  const finish = () => { if (an.complete) upsertHistory(an); S.wheel = null; S.rounds = []; S.cur = 0; go('home'); };
+  $('#btnFinish').addEventListener('click', finish);
+  const f2 = $('#btnFinish2'); if (f2) f2.addEventListener('click', finish);
   const gm = $('#btnGoMeasure'); if (gm) gm.addEventListener('click', () => { S.cur = Math.max(0, nextOpen(-1)); go('measure'); });
   document.querySelectorAll('.edit-spoke').forEach(b => b.addEventListener('click', () => openModal(+b.dataset.no)));
   saveAll();
@@ -750,7 +768,8 @@ document.querySelectorAll('#modalNumpad .key').forEach(b => b.addEventListener('
   padKey(b.dataset.k, () => modalPad, (v) => { modalPad = v; }, (v) => {
     if (!(v >= MIN_READ && v <= MAX_READ)) { modalPad = ''; $('#modalPad').textContent = '–'; return; }
     const r = curRound(); r.readings[modalSpoke] = v;
-    if (r.readings.every(x => x != null)) r.done = true;
+    r.todo = todoOf(r).filter(j => j !== modalSpoke);
+    if (!r.todo.length) r.done = true;
     feedback('ok'); closeModal(); saveAll(); renderResult();
   }, () => { $('#modalPad').textContent = modalPad || '–'; })));
 
