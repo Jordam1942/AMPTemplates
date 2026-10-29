@@ -59,11 +59,20 @@
 <script>
 'use strict';
 /* ================= CONFIG ================= */
+/* Meetdikte = het middenstuk van de spaak (daar zit de meter). kop / midden / nippeldraad in mm. */
 const SPOKE_TYPES = {
-  r20:  { label: '2.0 rond',   R100: 57, p: 1.3, perTurn: 40 },
-  r18:  { label: '1.8 rond',   R100: 52, p: 1.3, perTurn: 33 },
-  r15:  { label: '1.5 verjongd', R100: 45, p: 1.3, perTurn: 25 },
-  aero: { label: 'Plat/aero',  R100: 50, p: 1.3, perTurn: 28 },
+  leader:  { label: 'Sapim Leader',   sub: '2.0 recht',          R100: 57, p: 1.3, perTurn: 40 },
+  strong:  { label: 'Sapim Strong',   sub: '2.3 / 2.0',          R100: 57, p: 1.3, perTurn: 42 },
+  race:    { label: 'Sapim Race',     sub: '2.0 / 1.8 / 2.0',    R100: 52, p: 1.3, perTurn: 33 },
+  force:   { label: 'Sapim Force',    sub: '2.18 / 1.8 / 2.0',   R100: 52, p: 1.3, perTurn: 33 },
+  dlight:  { label: 'Sapim D-Light',  sub: '2.0 / 1.65 / 2.0',   R100: 48, p: 1.3, perTurn: 29 },
+  laser:   { label: 'Sapim Laser',    sub: '2.0 / 1.5 / 2.0',    R100: 45, p: 1.3, perTurn: 25 },
+  cxray:   { label: 'Sapim CX-Ray',   sub: '2.0 / 0.9×2.2 plat', R100: 50, p: 1.3, perTurn: 28 },
+  cxsprint:{ label: 'Sapim CX-Sprint',sub: '2.0 / 1.25×2.3 plat',R100: 53, p: 1.3, perTurn: 33 },
+  r20:     { label: 'Anders 2.0',     sub: 'rond, niet verjongd',R100: 57, p: 1.3, perTurn: 40 },
+  r18:     { label: 'Anders 1.8',     sub: 'midden 1.8',         R100: 52, p: 1.3, perTurn: 33 },
+  r15:     { label: 'Anders 1.5',     sub: 'midden 1.5',         R100: 45, p: 1.3, perTurn: 25 },
+  aero:    { label: 'Anders plat',    sub: 'aero',               R100: 50, p: 1.3, perTurn: 28 },
 };
 const TOL_OK = 5, TOL_WARN = 10, MIN_READ = 1, MAX_READ = 90;
 const COL = { R: '#2563eb', L: '#ea580c' };
@@ -229,7 +238,7 @@ ROUTES.wheels = () => {
 function live(id, set, re) { const el = $(id); if (!el) return; el.addEventListener('input', e => { set(e.target.value); const p = e.target.selectionStart; re(); const i = $(id); if (i) { i.focus(); try { i.setSelectionRange(p, p); } catch (x) {} } }); }
 
 /* ================= NIEUW WIEL ================= */
-let draft = { customer: '', type: 'rear', spokes: 32, spokeType: 'r20', label: '' };
+let draft = { customer: '', type: 'rear', spokes: 32, spokeType: 'race', label: '' };
 ROUTES.new = (cid) => {
   if (cid) { const c = getCustomer(cid); if (c) draft.customer = c.name; nav('new', true); return null; }
   const opt = (k, v, l) => `<button data-k="${k}" data-v="${v}" class="btn opt py-3 ${String(draft[k]) === String(v) ? 'on' : ''}">${l}</button>`;
@@ -237,7 +246,7 @@ ROUTES.new = (cid) => {
     <div><div class="text-xs font-bold text-slate-500 mb-1">KLANT</div><input id="nCust" type="text" list="custList" placeholder="Naam (leeg = zonder klant)" value="${h(draft.customer)}"><datalist id="custList">${customers().map(c => `<option value="${h(c.name)}">`).join('')}</datalist></div>
     <div><div class="text-xs font-bold text-slate-500 mb-1">WIEL</div><div class="grid grid-cols-2 gap-2">${opt('type', 'front', 'Voor')}${opt('type', 'rear', 'Achter')}</div></div>
     <div><div class="text-xs font-bold text-slate-500 mb-1">SPAKEN</div><div class="grid grid-cols-4 gap-2">${[24, 28, 32, 36].map(n => opt('spokes', n, n)).join('')}</div></div>
-    <div><div class="text-xs font-bold text-slate-500 mb-1">SPAAK</div><div class="grid grid-cols-4 gap-2">${Object.entries(SPOKE_TYPES).map(([k, t]) => opt('spokeType', k, t.label)).join('')}</div></div>
+    <div><div class="text-xs font-bold text-slate-500 mb-1">SPAAK <span class="font-normal">(kop / midden / draad)</span></div><div class="grid grid-cols-2 sm:grid-cols-3 gap-2">${Object.entries(SPOKE_TYPES).map(([k, t]) => `<button data-k="spokeType" data-v="${k}" class="btn opt py-2 px-2 text-left ${draft.spokeType === k ? 'on' : ''}"><div class="text-sm">${t.label}</div><div class="text-xs font-normal opacity-70">${t.sub}</div></button>`).join('')}</div></div>
     <input id="nLabel" type="text" placeholder="Omschrijving (optioneel)" value="${h(draft.label)}">
     <button id="nStart" class="btn w-full bg-slate-900 text-white rounded-lg py-4 text-lg font-bold">Start meting</button></div>`;
   $$('[data-k]').forEach(b => b.onclick = () => { draft[b.dataset.k] = b.dataset.k === 'spokes' ? +b.dataset.v : b.dataset.v; feedback('key'); render(); });
@@ -406,7 +415,7 @@ ROUTES.customer = (id) => {
 };
 
 /* ================= INSTELLINGEN ================= */
-let calT = 'r20';
+let calT = 'race';
 ROUTES.settings = () => {
   const s = S(), pts = calibPts(calT);
   const tgl = (k, l) => `<button data-t="${k}" class="btn w-full flex items-center justify-between py-2.5"><span class="font-semibold">${l}</span><span class="w-11 h-6 rounded-full relative ${s[k] ? 'bg-emerald-500' : 'bg-slate-300'}"><span class="absolute top-0.5 ${s[k] ? 'right-0.5' : 'left-0.5'} w-5 h-5 bg-white rounded-full"></span></span></button>`;
@@ -422,7 +431,7 @@ ROUTES.settings = () => {
       <details class="text-sm text-slate-600"><summary class="font-semibold cursor-pointer">Client ID aanmaken</summary><ol class="list-decimal pl-5 mt-1 space-y-0.5"><li>console.cloud.google.com → project → Google Drive API aan.</li><li>OAuth consent screen: External, jezelf als testgebruiker.</li><li>Credentials → OAuth client ID → Web application → JavaScript origin: <code>${h(location.origin)}</code>.</li><li>Client ID hierboven plakken → Verbinden.</li></ol></details>
       <div class="grid grid-cols-2 gap-2 pt-2"><button id="exp" class="btn bg-white border border-slate-300 rounded-lg py-2.5 text-sm font-semibold">Export JSON</button><button id="imp" class="btn bg-white border border-slate-300 rounded-lg py-2.5 text-sm font-semibold">Import JSON</button><input id="impF" type="file" accept=".json,application/json" class="hidden"></div></div>
     <div class="card p-4 space-y-2"><div class="font-bold">Kalibratie (tabel bij de meter: stand → kgf)</div>
-      <div class="grid grid-cols-4 gap-2">${Object.entries(SPOKE_TYPES).map(([k, t]) => `<button data-c="${k}" class="btn opt py-2 text-sm ${calT === k ? 'on' : ''}">${t.label}${isCal(k) ? ' ✓' : ''}</button>`).join('')}</div>
+      <div class="grid grid-cols-3 gap-1.5">${Object.entries(SPOKE_TYPES).map(([k, t]) => `<button data-c="${k}" class="btn opt py-1.5 text-xs ${calT === k ? 'on' : ''}">${t.label}${isCal(k) ? ' ✓' : ''}</button>`).join('')}</div>
       <div class="space-y-1">${pts.map((p, i) => `<div class="flex items-center gap-2 bg-slate-50 rounded-lg px-3 py-1.5 text-sm"><span class="flex-1">${p[0]} → ${p[1]} kgf</span><button data-cd="${i}" class="btn text-rose-600 font-bold px-2">✕</button></div>`).join('') || '<div class="text-sm text-slate-400">Geen punten (indicatief)</div>'}</div>
       <div class="grid grid-cols-5 gap-2"><input id="cR" type="number" inputmode="numeric" placeholder="stand" class="col-span-2"><input id="cK" type="number" inputmode="numeric" placeholder="kgf" class="col-span-2"><button id="cA" class="btn bg-slate-900 text-white rounded-lg font-bold">+</button></div></div>
     <div class="card p-4"><button id="wipe" class="btn w-full py-2.5 rounded-lg border border-rose-300 text-rose-700 font-bold">Alles wissen</button></div></div>`;
