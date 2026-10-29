@@ -1,32 +1,26 @@
-# Spaakspanning Meter
+# Spaakspanning Werkplaats
 
-Mobile-first webapp voor het meten en corrigeren van fietsspaakspanning met een
-Unior Spoke Tension Meter (1752/2 en 1752/6). Eén bestand (`index.html`),
-Tailwind CSS via CDN, vanilla JavaScript, geen build-stap.
+Single-page werkplaats-app voor het meten, balanceren en certificeren van
+spaakspanning met de Unior Spoke Tension Meter (1752/2 en 1752/6).
+Eén bestand (`index.html`): Tailwind CSS via CDN, vanilla JavaScript, geen build.
+
+## Functies
+
+- Klantenbestand (naam, telefoon, e-mail, fiets, framenummer) met zoeken en wielhistorie per klant.
+- Meetwizard, zero-typing meetscherm (snelkeuze + numpad, auto-advance, geluid/trilling), toetsenbordbediening op desktop.
+- Diagnose: kgf per spaak, balans per zijde, actielijst op prioriteit, notities over zijdelingse slag en rondheid, wielscore 0–100.
+- Nameten van alleen de bijgestelde spaken; nulmeting vs. eindmeting.
+- A4-certificaat (1 pagina) met klant- en fietsgegevens, radiale grafiek, uitleg en handtekeningveld.
+- Opslag in localStorage; optionele Google Drive-synchronisatie (OAuth Client ID, scope `drive.file`); JSON export/import.
 
 ## Hosten op Cloudflare Pages
 
-1. Cloudflare Dashboard → Workers & Pages → Create → Pages → Connect to Git.
-2. Kies deze repository.
-3. Build settings: **Framework preset: None**, **Build command: leeg**,
-   **Build output directory: `spaakspanning`**.
-4. Deploy. De app staat direct online; er is geen backend.
+Git: Build command leeg, Build output directory `spaakspanning`.
+Direct upload: upload `spaakspanning.zip` uit de root van deze repo als nieuwe deployment.
 
-Alternatief: sleep de map `spaakspanning` in "Direct Upload".
+## Google Drive-sync instellen (eenmalig)
 
-## Gebruik
-
-1. Nieuw wiel → kies voor/achter, spaakaantal en spaaktype.
-2. Begin bij de spaak naast het ventiel, werk met de klok mee, tik de meterstand in.
-3. Resultaat: balansscore, lijst "wat moet je doen" en ronde spaakgrafiek.
-4. Print Klantrapport → neutraal A4-rapport (of "Opslaan als PDF").
-
-## Kalibratie (aanbevolen)
-
-De ingebouwde omrekening meterstand → kgf is indicatief. Het bijstel-advies
-werkt op de onderlinge verhouding tussen de spaken en is daar niet van
-afhankelijk. Voor exacte kgf-waarden: Instellingen → Kalibratie en neem per
-spaaktype twee of meer regels over uit de omrekentabel die bij de meter zit.
-
-Alle gegevens worden lokaal opgeslagen (localStorage); een meting gaat niet
-verloren als de pagina sluit.
+1. console.cloud.google.com → project aanmaken → Google Drive API inschakelen.
+2. OAuth consent screen (External) invullen, jezelf als testgebruiker toevoegen.
+3. Credentials → OAuth client ID → Web application → Authorized JavaScript origin = het adres van de app.
+4. Client ID plakken in Instellingen → Verbinden.
