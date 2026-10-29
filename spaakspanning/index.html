@@ -146,7 +146,7 @@ const calLabel = (c) => UNIOR[c].label;
 const TOL_OK = 5, TOL_WARN = 10, MIN_READ = 1, MAX_READ = 90;
 const COL = { R: '#2563eb', L: '#ea580c' };
 const LS_KEY = 'spaakspanning_v3', DRIVE_FILE = 'spaakspanning-data.json', DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
-const APP_VERSION = '2026-10-29.20';
+const APP_VERSION = '2026-10-29.21';
 /* ================= TALEN =================
    Nieuwe taal toevoegen: kopieer het blok 'nl', vertaal de waarden en voeg de code toe aan LANGS. Ontbrekende sleutels vallen terug op 'nl'. */
 const LANGS = { nl: 'Nederlands', en: 'English', uk: 'Українська', ru: 'Русский' };
@@ -154,7 +154,7 @@ const LOCALES = { nl: 'nl-NL', en: 'en-GB', uk: 'uk-UA', ru: 'ru-RU' };
 const I18N = {
 nl: {
   nav_wheels: 'Wielen', nav_customers: 'Klanten', nav_settings: 'Instellingen',
-  search: 'Zoek', cancel: 'Annuleer', save: 'Opslaan', yes: 'Ja', no: 'Nee', ref: 'Ref.', r_ref: 'Referentie', nocenter: 'Velg bewust uit het midden', edit_title: 'Gegevens wijzigen', wheel_lbl: 'Wiel', dish_L_right_high: 'Rechts staat hoger dan links. Bij dit wiel hoort links strakker: kanten verwisseld of velg niet gecentreerd?', dish_L_right_low: 'Rechts staat erg slap ten opzichte van links ({p} %). Controleer de centrering van de velg.', dish_mid_diff: 'De kanten verschillen {p} % in spanning. Bij een symmetrisch wiel hoort dat gelijk te zijn: velg mogelijk niet gecentreerd.', r_expl_d_L: 'Het verschil tussen links en rechts hoort bij dit wiel: de velg staat uit het midden van de naaf, bijvoorbeeld door een remschijf, en de linkerzijde moet hoger gespannen staan om het wiel gecentreerd te houden.', r_expl_d_free: 'Bij dit wiel staat de velg bewust uit het midden van de naaf; daardoor verschilt de spanning tussen links en rechts. Elke zijde is afzonderlijk gelijkmatig afgesteld.', saved: 'Opgeslagen', customer_ph2: 'Naam (leeg = datum en referentie)', update_avail: 'Nieuwe versie {v} beschikbaar · tik om te vernieuwen', del: 'Verwijder', add: 'Toevoegen', stop: 'Stop',
+  search: 'Zoek', cancel: 'Annuleer', save: 'Opslaan', yes: 'Ja', no: 'Nee', first_spoke: 'Eerste spaak na ventiel', chart_valve: 'V = ventiel · tellen met de klok mee, gezien van rechts', ref: 'Ref.', r_ref: 'Referentie', nocenter: 'Velg bewust uit het midden', edit_title: 'Gegevens wijzigen', wheel_lbl: 'Wiel', dish_L_right_high: 'Rechts staat hoger dan links. Bij dit wiel hoort links strakker: kanten verwisseld of velg niet gecentreerd?', dish_L_right_low: 'Rechts staat erg slap ten opzichte van links ({p} %). Controleer de centrering van de velg.', dish_mid_diff: 'De kanten verschillen {p} % in spanning. Bij een symmetrisch wiel hoort dat gelijk te zijn: velg mogelijk niet gecentreerd.', r_expl_d_L: 'Het verschil tussen links en rechts hoort bij dit wiel: de velg staat uit het midden van de naaf, bijvoorbeeld door een remschijf, en de linkerzijde moet hoger gespannen staan om het wiel gecentreerd te houden.', r_expl_d_free: 'Bij dit wiel staat de velg bewust uit het midden van de naaf; daardoor verschilt de spanning tussen links en rechts. Elke zijde is afzonderlijk gelijkmatig afgesteld.', saved: 'Opgeslagen', customer_ph2: 'Naam (leeg = datum en referentie)', update_avail: 'Nieuwe versie {v} beschikbaar · tik om te vernieuwen', del: 'Verwijder', add: 'Toevoegen', stop: 'Stop',
   no_customer: 'Zonder klant', busy: 'bezig', final_chip: 'eind', zero_chip: 'nul', no_wheels: 'Geen wielen', new_wheel: '+ Wiel',
   front: 'Voor', rear: 'Achter', front_wheel: 'Voorwiel', rear_wheel: 'Achterwiel', spokes_word: 'spaken',
   new_title: 'Nieuw wiel', customer: 'KLANT', customer_ph: 'Naam (leeg = zonder klant)', wheel: 'WIEL', spokes: 'SPAKEN', spoke: 'SPAAK', desc_ph: 'Omschrijving (optioneel)', start: 'Start meting',
@@ -185,7 +185,7 @@ nl: {
 },
 en: {
   nav_wheels: 'Wheels', nav_customers: 'Customers', nav_settings: 'Settings',
-  search: 'Search', cancel: 'Cancel', save: 'Save', yes: 'Yes', no: 'No', ref: 'Ref.', r_ref: 'Reference', nocenter: 'Rim intentionally off-centre', edit_title: 'Edit details', wheel_lbl: 'Wheel', dish_L_right_high: 'Right side is tighter than left. On this wheel the left side should be tighter: sides swapped or rim not centred?', dish_L_right_low: 'Right side is very slack compared with left ({p} %). Check the rim centring.', dish_mid_diff: 'The sides differ {p} % in tension. On a symmetrical wheel they should be equal: rim may not be centred.', r_expl_d_L: 'The difference between left and right is inherent to this wheel: the rim sits off-centre on the hub, for example because of a brake disc, and the left side must carry higher tension to keep the wheel centred.', r_expl_d_free: 'On this wheel the rim is intentionally off-centre on the hub, so the tension differs between left and right. Each side has been evened out separately.', saved: 'Saved', customer_ph2: 'Name (blank = date and reference)', update_avail: 'New version {v} available · tap to refresh', del: 'Delete', add: 'Add', stop: 'Stop',
+  search: 'Search', cancel: 'Cancel', save: 'Save', yes: 'Yes', no: 'No', first_spoke: 'First spoke after valve', chart_valve: 'V = valve · count clockwise, seen from the right', ref: 'Ref.', r_ref: 'Reference', nocenter: 'Rim intentionally off-centre', edit_title: 'Edit details', wheel_lbl: 'Wheel', dish_L_right_high: 'Right side is tighter than left. On this wheel the left side should be tighter: sides swapped or rim not centred?', dish_L_right_low: 'Right side is very slack compared with left ({p} %). Check the rim centring.', dish_mid_diff: 'The sides differ {p} % in tension. On a symmetrical wheel they should be equal: rim may not be centred.', r_expl_d_L: 'The difference between left and right is inherent to this wheel: the rim sits off-centre on the hub, for example because of a brake disc, and the left side must carry higher tension to keep the wheel centred.', r_expl_d_free: 'On this wheel the rim is intentionally off-centre on the hub, so the tension differs between left and right. Each side has been evened out separately.', saved: 'Saved', customer_ph2: 'Name (blank = date and reference)', update_avail: 'New version {v} available · tap to refresh', del: 'Delete', add: 'Add', stop: 'Stop',
   no_customer: 'No customer', busy: 'in progress', final_chip: 'final', zero_chip: 'initial', no_wheels: 'No wheels', new_wheel: '+ Wheel',
   front: 'Front', rear: 'Rear', front_wheel: 'Front wheel', rear_wheel: 'Rear wheel', spokes_word: 'spokes',
   new_title: 'New wheel', customer: 'CUSTOMER', customer_ph: 'Name (blank = no customer)', wheel: 'WHEEL', spokes: 'SPOKES', spoke: 'SPOKE', desc_ph: 'Description (optional)', start: 'Start measuring',
@@ -216,7 +216,7 @@ en: {
 },
 uk: {
   nav_wheels: 'Колеса', nav_customers: 'Клієнти', nav_settings: 'Налаштування',
-  search: 'Пошук', cancel: 'Скасувати', save: 'Зберегти', yes: 'Так', no: 'Ні', ref: '№', r_ref: 'Номер', nocenter: 'Обід навмисно не по центру', edit_title: 'Змінити дані', wheel_lbl: 'Колесо', dish_L_right_high: 'Права сторона натягнута сильніше за ліву. На цьому колесі ліва має бути тугішою: сторони переплутано або обід не відцентровано?', dish_L_right_low: 'Права сторона дуже слабка порівняно з лівою ({p} %). Перевірте центрування обода.', dish_mid_diff: 'Сторони відрізняються на {p} %. На симетричному колесі натяг має бути однаковим: обід може бути не відцентрований.', r_expl_d_L: 'Різниця між сторонами властива цьому колесу: обід зміщений від середини втулки, наприклад через гальмівний диск, тому ліва сторона має вищий натяг для центрування колеса.', r_expl_d_free: 'У цього колеса обід навмисно зміщений від середини втулки, тому натяг лівої і правої сторін різний. Кожну сторону окремо відрегульовано рівномірно.', saved: 'Збережено', customer_ph2: 'Ім’я (порожньо = дата й номер)', update_avail: 'Доступна нова версія {v} · торкніться, щоб оновити', del: 'Видалити', add: 'Додати', stop: 'Стоп',
+  search: 'Пошук', cancel: 'Скасувати', save: 'Зберегти', yes: 'Так', no: 'Ні', first_spoke: 'Перша спиця після вентиля', chart_valve: 'V = вентиль · рахувати за годинниковою стрілкою, якщо дивитися справа', ref: '№', r_ref: 'Номер', nocenter: 'Обід навмисно не по центру', edit_title: 'Змінити дані', wheel_lbl: 'Колесо', dish_L_right_high: 'Права сторона натягнута сильніше за ліву. На цьому колесі ліва має бути тугішою: сторони переплутано або обід не відцентровано?', dish_L_right_low: 'Права сторона дуже слабка порівняно з лівою ({p} %). Перевірте центрування обода.', dish_mid_diff: 'Сторони відрізняються на {p} %. На симетричному колесі натяг має бути однаковим: обід може бути не відцентрований.', r_expl_d_L: 'Різниця між сторонами властива цьому колесу: обід зміщений від середини втулки, наприклад через гальмівний диск, тому ліва сторона має вищий натяг для центрування колеса.', r_expl_d_free: 'У цього колеса обід навмисно зміщений від середини втулки, тому натяг лівої і правої сторін різний. Кожну сторону окремо відрегульовано рівномірно.', saved: 'Збережено', customer_ph2: 'Ім’я (порожньо = дата й номер)', update_avail: 'Доступна нова версія {v} · торкніться, щоб оновити', del: 'Видалити', add: 'Додати', stop: 'Стоп',
   no_customer: 'Без клієнта', busy: 'триває', final_chip: 'фінал', zero_chip: 'початк.', no_wheels: 'Немає коліс', new_wheel: '+ Колесо',
   front: 'Переднє', rear: 'Заднє', front_wheel: 'Переднє колесо', rear_wheel: 'Заднє колесо', spokes_word: 'спиць',
   new_title: 'Нове колесо', customer: 'КЛІЄНТ', customer_ph: 'Ім’я (порожньо = без клієнта)', wheel: 'КОЛЕСО', spokes: 'СПИЦІ', spoke: 'СПИЦЯ', desc_ph: 'Опис (необов’язково)', start: 'Почати вимірювання',
@@ -247,7 +247,7 @@ uk: {
 },
 ru: {
   nav_wheels: 'Колёса', nav_customers: 'Клиенты', nav_settings: 'Настройки',
-  search: 'Поиск', cancel: 'Отмена', save: 'Сохранить', yes: 'Да', no: 'Нет', ref: '№', r_ref: 'Номер', nocenter: 'Обод намеренно не по центру', edit_title: 'Изменить данные', wheel_lbl: 'Колесо', dish_L_right_high: 'Правая сторона натянута сильнее левой. На этом колесе левая должна быть туже: стороны перепутаны или обод не отцентрован?', dish_L_right_low: 'Правая сторона очень слабая по сравнению с левой ({p} %). Проверьте центровку обода.', dish_mid_diff: 'Стороны отличаются на {p} %. На симметричном колесе натяжение должно быть одинаковым: обод может быть не отцентрован.', r_expl_d_L: 'Разница между сторонами свойственна этому колесу: обод смещён от середины втулки, например из-за тормозного диска, поэтому левая сторона имеет более высокое натяжение для центровки колеса.', r_expl_d_free: 'У этого колеса обод намеренно смещён от середины втулки, поэтому натяжение левой и правой сторон различается. Каждая сторона отдельно отрегулирована равномерно.', saved: 'Сохранено', customer_ph2: 'Имя (пусто = дата и номер)', update_avail: 'Доступна новая версия {v} · нажмите, чтобы обновить', del: 'Удалить', add: 'Добавить', stop: 'Стоп',
+  search: 'Поиск', cancel: 'Отмена', save: 'Сохранить', yes: 'Да', no: 'Нет', first_spoke: 'Первая спица после вентиля', chart_valve: 'V = вентиль · считать по часовой стрелке, если смотреть справа', ref: '№', r_ref: 'Номер', nocenter: 'Обод намеренно не по центру', edit_title: 'Изменить данные', wheel_lbl: 'Колесо', dish_L_right_high: 'Правая сторона натянута сильнее левой. На этом колесе левая должна быть туже: стороны перепутаны или обод не отцентрован?', dish_L_right_low: 'Правая сторона очень слабая по сравнению с левой ({p} %). Проверьте центровку обода.', dish_mid_diff: 'Стороны отличаются на {p} %. На симметричном колесе натяжение должно быть одинаковым: обод может быть не отцентрован.', r_expl_d_L: 'Разница между сторонами свойственна этому колесу: обод смещён от середины втулки, например из-за тормозного диска, поэтому левая сторона имеет более высокое натяжение для центровки колеса.', r_expl_d_free: 'У этого колеса обод намеренно смещён от середины втулки, поэтому натяжение левой и правой сторон различается. Каждая сторона отдельно отрегулирована равномерно.', saved: 'Сохранено', customer_ph2: 'Имя (пусто = дата и номер)', update_avail: 'Доступна новая версия {v} · нажмите, чтобы обновить', del: 'Удалить', add: 'Добавить', stop: 'Стоп',
   no_customer: 'Без клиента', busy: 'в работе', final_chip: 'финал', zero_chip: 'нач.', no_wheels: 'Нет колёс', new_wheel: '+ Колесо',
   front: 'Переднее', rear: 'Заднее', front_wheel: 'Переднее колесо', rear_wheel: 'Заднее колесо', spokes_word: 'спиц',
   new_title: 'Новое колесо', customer: 'КЛИЕНТ', customer_ph: 'Имя (пусто = без клиента)', wheel: 'КОЛЕСО', spokes: 'СПИЦЫ', spoke: 'СПИЦА', desc_ph: 'Описание (необязательно)', start: 'Начать измерение',
@@ -303,6 +303,9 @@ const custName = (id) => { const c = getCustomer(id); return c ? c.name : ''; };
 const DM = ['mid', 'R', 'L', 'free'];
 const dmDefault = (type) => type === 'rear' ? 'R' : 'mid';
 const dishMode = (w) => DM.includes(w.dish) ? w.dish : dmDefault(w.type);
+const firstSide = (w) => w.first === 'L' ? 'L' : 'R';
+const posOf = (w, s, i) => s === firstSide(w) ? 2 * i : 2 * i + 1; // plek rond de velg, 0 = eerste spaak na het ventiel
+const sideAt = (w, k) => k % 2 === 0 ? firstSide(w) : (firstSide(w) === 'R' ? 'L' : 'R');
 const wheelRef = (w) => (w.ref || w.id.slice(2, 8)).toUpperCase();
 const autoName = (w, l) => fmtDate(w.createdAt || w.updatedAt, l) + ' ' + fmtTime(w.createdAt || w.updatedAt, l) + ' · ' + wheelRef(w);
 const wName = (w, l) => { const c = getCustomer(w.customerId); return c ? c.name : autoName(w, l); };
@@ -348,7 +351,7 @@ const WOBBLE_KINDS = ['left', 'right', 'high', 'low'];
 function analyze(m, w) {
   const t = w.spokeType, perTurn = SPOKE_TYPES[t].perTurn, n = w.spokes, half = n / 2;
   const out = { sides: {}, actions: [], within: 0, filled: 0, n };
-  const g = (s, i) => s === 'R' ? 2 * i : 2 * i + 1;
+  const g = (s, i) => posOf(w, s, i);
   let maxDev = 0, sumDev = 0;
   const target = Array(n).fill(0), has = Array(n).fill(false);
   for (const s of ['R', 'L']) {
@@ -369,7 +372,7 @@ function analyze(m, w) {
   // Slag uit de richtbank: extra spanningsdoel rond de aangewezen positie
   for (const wb of (m.wobbles || [])) {
     const d = (wb.size === 2 ? 0.2 : 0.1) * perTurn;
-    const near = (side) => { const par = side === 'R' ? 0 : 1; return [...Array(n).keys()].filter(k => k % 2 === par).map(k => [Math.min(Math.abs(k - wb.pos), n - Math.abs(k - wb.pos)), k]).sort((a, b) => a[0] - b[0]).slice(0, 2).map(x => x[1]); };
+    const near = (side) => { const par = side === firstSide(w) ? 0 : 1; return [...Array(n).keys()].filter(k => k % 2 === par).map(k => [Math.min(Math.abs(k - wb.pos), n - Math.abs(k - wb.pos)), k]).sort((a, b) => a[0] - b[0]).slice(0, 2).map(x => x[1]); };
     const R = near('R'), L = near('L');
     const add = (k, v) => { target[k] += v; has[k] = true; };
     if (wb.kind === 'left') { R.forEach(k => add(k, d)); L.forEach(k => add(k, -d)); }
@@ -415,10 +418,15 @@ const devCls = (d) => d == null ? 'bg-slate-100 text-slate-400' : Math.abs(d) <=
 function radialChart(an, w, size) {
   const n = w.spokes, c = size / 2, R0 = size * .33, LR = size * .445;
   const ang = (k) => (-90 + k * 360 / n) * Math.PI / 180, pt = (k, r) => [c + r * Math.cos(ang(k)), c + r * Math.sin(ang(k))];
-  const idx = (x) => x.s === 'R' ? 2 * x.i : 2 * x.i + 1;
-  let o = `<svg viewBox="0 0 ${size} ${size}" width="100%" xmlns="http://www.w3.org/2000/svg" font-family="Inter,sans-serif">`;
+  const idx = (x) => posOf(w, x.s, x.i), aid = 'ar' + (++radialChart.n);
+  let o = `<svg viewBox="0 0 ${size} ${size}" width="100%" xmlns="http://www.w3.org/2000/svg" font-family="Inter,sans-serif"><defs><marker id="${aid}" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0,0L10,5L0,10z" fill="#64748b"/></marker></defs>`;
   o += `<circle cx="${c}" cy="${c}" r="${R0 * 1.1}" fill="#d1fae5"/><circle cx="${c}" cy="${c}" r="${R0 * .9}" fill="#fff"/><circle cx="${c}" cy="${c}" r="${R0}" fill="none" stroke="#059669" stroke-width="1.5" stroke-dasharray="4 4"/>`;
   for (let k = 0; k < n; k++) { const [x, y] = pt(k, R0 * 1.25); o += `<line x1="${c}" y1="${c}" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}" stroke="#e2e8f0"/>`; }
+  { // ventiel tussen de laatste en de eerste spaak, pijl = telrichting
+    const [vx, vy] = pt(-0.5, R0 * 1.2), ra = R0 * .72, [ax, ay] = pt(0.35, ra), [bx, by] = pt(Math.max(1.6, n * .1), ra);
+    o += `<path d="M${ax.toFixed(1)},${ay.toFixed(1)} A${ra.toFixed(1)},${ra.toFixed(1)} 0 0 1 ${bx.toFixed(1)},${by.toFixed(1)}" fill="none" stroke="#64748b" stroke-width="${(size * .007).toFixed(1)}" marker-end="url(#${aid})"/>`;
+    o += `<circle cx="${vx.toFixed(1)}" cy="${vy.toFixed(1)}" r="${(size * .027).toFixed(1)}" fill="#0f172a"/><text x="${vx.toFixed(1)}" y="${(vy + size * .0105).toFixed(1)}" text-anchor="middle" font-size="${(size * .03).toFixed(1)}" font-weight="800" fill="#fff">V</text>`;
+  }
   for (const s of ['R', 'L']) {
     const sd = an.sides[s]; if (!sd.avg) continue;
     const pts = sd.spokes.filter(x => x.kgf != null).map(x => pt(idx(x), R0 * clamp(x.kgf / sd.avg, .4, 1.6)));
@@ -431,6 +439,7 @@ function radialChart(an, w, size) {
   }
   return o + '</svg>';
 }
+radialChart.n = 0;
 function ring(score, size, st) {
   const r = (size - st) / 2, C = 2 * Math.PI * r, i = scoreInfo(score);
   return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}"><circle cx="${size / 2}" cy="${size / 2}" r="${r}" fill="none" stroke="#e2e8f0" stroke-width="${st}"/><circle cx="${size / 2}" cy="${size / 2}" r="${r}" fill="none" stroke="${i.hex}" stroke-width="${st}" stroke-linecap="round" transform="rotate(-90 ${size / 2} ${size / 2})" stroke-dasharray="${C}" stroke-dashoffset="${C * (1 - score / 100)}"/><text x="50%" y="50%" text-anchor="middle" dominant-baseline="central" font-size="${size * .32}" font-weight="800" fill="#0f172a">${score}</text></svg>`;
@@ -497,7 +506,7 @@ ROUTES.wheels = () => {
 function live(id, set, re) { const el = $(id); if (!el) return; el.addEventListener('input', e => { set(e.target.value); const p = e.target.selectionStart; re(); const i = $(id); if (i) { i.focus(); try { i.setSelectionRange(p, p); } catch (x) {} } }); }
 
 /* ================= NIEUW WIEL ================= */
-let draft = { customer: '', type: 'rear', spokes: 32, spokeType: 'x_20rond', label: '' };
+let draft = { customer: '', type: 'rear', spokes: 32, spokeType: 'x_20rond', label: '', first: 'R' };
 ROUTES.new = (cid) => {
   if (cid) { const c = getCustomer(cid); if (c) draft.customer = c.name; nav('new', true); return null; }
   const opt = (k, v, l) => `<button data-k="${k}" data-v="${v}" class="btn opt py-3 ${String(draft[k]) === String(v) ? 'on' : ''}">${l}</button>`;
@@ -506,6 +515,7 @@ ROUTES.new = (cid) => {
     <div><div class="text-xs font-bold text-slate-500 mb-1">${t('wheel')}</div><div class="grid grid-cols-2 gap-2">${opt('type', 'front', t('front'))}${opt('type', 'rear', t('rear'))}</div></div>
     <div><div class="text-xs font-bold text-slate-500 mb-1">${t('spokes')}</div><div class="grid grid-cols-4 gap-2">${[24, 28, 32, 36].map(n => opt('spokes', n, n)).join('')}</div></div>
     <div><div class="text-xs font-bold text-slate-500 mb-1">${t('spoke')}</div><button id="nSpoke" class="btn w-full card px-4 py-3 flex items-center justify-between text-left"><span><span class="font-bold">${h(SPOKE_TYPES[draft.spokeType].label)}</span><span class="block text-sm text-slate-500">${h(SPOKE_TYPES[draft.spokeType].sub)} mm</span></span><span class="text-slate-400 text-xl">▾</span></button></div>
+    <div><div class="text-xs font-bold text-slate-500 mb-1">${t('first_spoke')}</div><div class="grid grid-cols-2 gap-2">${opt('first', 'R', t('right'))}${opt('first', 'L', t('left'))}</div></div>
     <input id="nLabel" type="text" placeholder="${t('desc_ph')}" value="${h(draft.label)}">
     <button id="nStart" class="btn w-full bg-slate-900 text-white rounded-lg py-4 text-lg font-bold">${t('start')}</button></div>`;
   $$('[data-k]').forEach(b => b.onclick = () => { draft[b.dataset.k] = b.dataset.k === 'spokes' ? +b.dataset.v : b.dataset.v; feedback('key'); render(); });
@@ -516,6 +526,7 @@ ROUTES.new = (cid) => {
     const name = draft.customer.trim(); let cid = null;
     if (name) { let c = customers().find(c => c.name.toLowerCase() === name.toLowerCase()); if (!c) c = upsert(DB.customers, { id: uid('c'), name, phone: '', email: '', bike: '', frame: '', createdAt: now() }); cid = c.id; }
     const w = { id: uid('w'), customerId: cid, type: draft.type, spokes: draft.spokes, spokeType: draft.spokeType, label: draft.label.trim(), createdAt: now(), measurements: [] };
+    if (draft.first === 'L') w.first = 'L';
     w.measurements.push(newMeasurement(w, null, null, 'nul')); upsert(DB.wheels, w);
     DB.meta.active = { wheelId: w.id, mId: w.measurements[0].id, side: 'R', idx: 0 }; draft.customer = ''; draft.label = ''; save(true);
     nav('measure/' + w.id, true);
@@ -527,7 +538,7 @@ ROUTES.new = (cid) => {
 function wheelForm(w, done) {
   const c0 = getCustomer(w.customerId);
   const v0 = { name: c0 ? c0.name : '', phone: (c0 && c0.phone) || '', email: (c0 && c0.email) || '', bike: (c0 && c0.bike) || '', frame: (c0 && c0.frame) || '' };
-  const v = Object.assign({}, v0, { type: w.type, spokeType: w.spokeType, label: w.label || '', dish: dishMode(w) });
+  const v = Object.assign({}, v0, { type: w.type, spokeType: w.spokeType, label: w.label || '', dish: dishMode(w), first: firstSide(w) });
   const F = ['name', 'phone', 'email', 'bike', 'frame', 'label'];
   const read = () => F.forEach(k => { const el = $('#wf_' + k); if (el) v[k] = el.value; });
   const f = (k, ph, ty = 'text') => `<input id="wf_${k}" type="${ty}" placeholder="${h(ph)}" value="${h(v[k])}">`;
@@ -538,10 +549,12 @@ function wheelForm(w, done) {
       ${f('phone', t('phone'), 'tel')}${f('email', t('email'), 'email')}${f('bike', t('bike'))}${f('frame', t('frame'))}
       ${lbl(t('wheel_lbl') + ' · ' + t('ref') + ' ' + wheelRef(w))}<div class="grid grid-cols-2 gap-2">${['front', 'rear'].map(x => `<button data-wt="${x}" class="btn opt py-2.5 ${v.type === x ? 'on' : ''}">${t(x)}</button>`).join('')}</div>
       <button id="wf_spoke" class="btn w-full card px-4 py-3 flex items-center justify-between text-left"><span><span class="font-bold">${h(SPOKE_TYPES[v.spokeType].label)}</span><span class="block text-sm text-slate-500">${h(SPOKE_TYPES[v.spokeType].sub)} mm</span></span><span class="text-slate-400 text-xl">▾</span></button>
+      ${lbl(t('first_spoke'))}<div class="grid grid-cols-2 gap-2">${['R', 'L'].map(x => `<button data-wfs="${x}" class="btn opt py-2.5 ${v.first === x ? 'on' : ''}">${t(x === 'R' ? 'right' : 'left')}</button>`).join('')}</div>
       <button id="wf_free" class="btn w-full flex items-center justify-between py-2.5"><span class="font-semibold">${t('nocenter')}</span><span class="w-11 h-6 rounded-full relative ${v.dish === 'free' ? 'bg-emerald-500' : 'bg-slate-300'}"><span class="absolute top-0.5 ${v.dish === 'free' ? 'right-0.5' : 'left-0.5'} w-5 h-5 bg-white rounded-full"></span></span></button>
       ${f('label', t('desc_ph'))}
       <div class="grid grid-cols-2 gap-2 pt-2"><button id="wf_c" class="btn py-3 rounded-lg border border-slate-300 font-semibold">${t('cancel')}</button><button id="wf_s" class="btn py-3 rounded-lg bg-slate-900 text-white font-semibold">${t('save')}</button></div></div>`);
     $$('[data-wt]').forEach(b => b.onclick = () => { read(); if (v.dish === dmDefault(v.type)) v.dish = dmDefault(b.dataset.wt); v.type = b.dataset.wt; draw(); });
+    $$('[data-wfs]').forEach(b => b.onclick = () => { read(); v.first = b.dataset.wfs; draw(); });
     $('#wf_free').onclick = () => { read(); v.dish = v.dish === 'free' ? dmDefault(v.type) : 'free'; draw(); };
     $('#wf_spoke').onclick = () => { read(); spokePicker(v.spokeType, id => { v.spokeType = id; draw(); }); };
     $('#wf_c').onclick = closeModal;
@@ -557,7 +570,7 @@ function wheelForm(w, done) {
         }
         upsert(DB.customers, tg); w.customerId = tg.id;
       }
-      w.type = v.type; w.spokeType = v.spokeType; w.label = v.label.trim();
+      w.type = v.type; w.spokeType = v.spokeType; w.label = v.label.trim(); if (v.first === 'L') w.first = 'L'; else delete w.first;
       if (v.dish === dmDefault(v.type)) delete w.dish; else w.dish = v.dish;
       upsert(DB.wheels, w); save(true); closeModal(); toast(t('saved')); done && done();
     };
@@ -599,14 +612,14 @@ ROUTES.measure = (wid) => {
     $('#mp').innerHTML = `
       <div class="grid grid-cols-2 gap-2 mb-3">${['R', 'L'].map(side => `<button data-side="${side}" class="btn rounded-lg py-3 font-bold text-white ${side === s ? '' : 'opacity-40'}" style="background:${COL[side]}">${t(side === 'R' ? 'right' : 'left')} <span class="font-normal text-sm">${prog(side)}</span></button>`).join('')}</div>
       <div class="rounded-xl p-4 text-white mb-3 flex items-center justify-between" style="background:${COL[s]}">
-        <div class="text-5xl font-extrabold">${s}${i + 1}</div>
+        <div><div class="text-5xl font-extrabold">${s}${i + 1}</div>${i === 0 && s === firstSide(w) ? `<div class="text-sm font-semibold opacity-90 mt-1">${t('first_spoke')}</div>` : ''}</div>
         <div class="text-right text-sm opacity-90">${curV != null ? `${t('now')} ${String(curV).replace('.', ',')}` : ''}${m.partial ? `<div>${t('remeasure')}</div>` : ''}</div></div>
       <div class="grid grid-cols-8 gap-1 mb-3">${vals.map((v, k) => `<button data-i="${k}" class="btn rounded-md py-1.5 text-center ${k === i ? 'ring-2 ring-slate-900' : ''} ${v == null ? 'bg-white border border-slate-200 text-slate-300' : m.todo[s].includes(k) ? 'bg-amber-100' : 'bg-white border border-slate-200'}"><div class="text-[9px] text-slate-400">${k + 1}</div><div class="font-bold text-sm">${v == null ? '·' : String(v).replace('.', ',')}</div></button>`).join('')}</div>
       ${quick.length ? `<div class="grid grid-cols-5 gap-2 mb-3">${quick.map(v => `<button data-q="${v}" class="btn rounded-lg py-3.5 text-2xl font-extrabold border ${v === ref ? 'bg-slate-900 text-white border-slate-900' : 'bg-white border-slate-200'}">${String(v).replace('.', ',')}</button>`).join('')}</div>` : ''}
       <div class="card p-2.5 mb-3"><div class="text-right text-4xl font-extrabold tabular-nums px-2 mb-2 min-h-[2.5rem]" id="padD">${pad || '–'}</div>
         <div class="grid grid-cols-4 gap-2">${[1, 2, 3, 'del', 4, 5, 6, 'half', 7, 8, 9, 'ok', '', 0, '', ''].map(k => k === '' ? '<span></span>' : k === 'del' ? '<button data-key="del" class="btn key !bg-slate-200">⌫</button>' : k === 'half' ? '<button data-key="half" class="btn key !bg-slate-200">,5</button>' : k === 'ok' ? '<button data-key="ok" class="btn key !bg-emerald-600 !text-white row-span-2">OK</button>' : `<button data-key="${k}" class="btn key">${k}</button>`).join('')}</div></div>
       <div class="grid grid-cols-2 gap-2"><button id="mPrev" class="btn bg-white border border-slate-200 rounded-lg py-3 font-bold">${t('prev')}</button><button id="mDone" class="btn bg-slate-900 text-white rounded-lg py-3 font-bold">${t('result')}</button></div>`;
-    $('#lp').innerHTML = `<div class="card p-3 sticky top-16">${radialChart(an, w, 320)}<div class="grid grid-cols-2 gap-2 mt-2 text-sm">${['R', 'L'].map(side => `<div class="rounded-lg p-2 text-white" style="background:${COL[side]}">${t(side === 'R' ? 'right' : 'left')} <b>${an.sides[side].avgR != null ? an.sides[side].avgR.toFixed(1) : '–'}</b></div>`).join('')}</div></div>`;
+    $('#lp').innerHTML = `<div class="card p-3 sticky top-16">${radialChart(an, w, 320)}<div class="text-xs text-slate-500 text-center mt-1">${t('chart_valve')}</div><div class="grid grid-cols-2 gap-2 mt-2 text-sm">${['R', 'L'].map(side => `<div class="rounded-lg p-2 text-white" style="background:${COL[side]}">${t(side === 'R' ? 'right' : 'left')} <b>${an.sides[side].avgR != null ? an.sides[side].avgR.toFixed(1) : '–'}</b></div>`).join('')}</div></div>`;
     $$('[data-side]').forEach(b => b.onclick = () => { a.side = b.dataset.side; a.idx = m.todo[a.side].length ? m.todo[a.side][0] : 0; pad = ''; save(); paint(); });
     $$('[data-i]').forEach(b => b.onclick = () => { a.idx = +b.dataset.i; pad = ''; save(); paint(); });
     $$('[data-q]').forEach(b => b.onclick = () => commit(+b.dataset.q));
@@ -656,8 +669,8 @@ ROUTES.result = (wid, mid) => {
       ${an.dish ? `<div class="rounded-lg bg-rose-50 border border-rose-200 p-3 text-sm font-semibold text-rose-800">${t('dish_' + an.dish, { p: Math.round(Math.abs(an.sides.R.avg - an.sides.L.avg) / Math.max(an.sides.R.avg, an.sides.L.avg) * 100) })}<button id="dishOk" class="btn mt-2 w-full rounded-lg bg-rose-700 py-2.5 text-sm font-bold text-white">${t('nocenter')}</button></div>` : ''}
       ${sideBlock('R')}${sideBlock('L')}
       <div class="card p-3"><div class="flex items-center justify-between"><span class="font-bold">${t('wobble_title')}</span><button id="wbAdd" class="btn bg-slate-900 text-white rounded-lg px-3 py-1.5 text-sm font-bold">${t('add_wobble')}</button></div>
-        ${(m.wobbles || []).length ? `<div class="flex flex-wrap gap-1.5 mt-2">${m.wobbles.map((x, k) => `<span class="inline-flex items-center gap-1 rounded-full bg-slate-100 pl-3 pr-1 py-1 text-sm font-semibold">${t('wb_' + x.kind)} ${t('at')} ${x.pos % 2 ? 'L' : 'R'}${Math.floor(x.pos / 2) + 1}${x.size === 2 ? ' (' + t('big') + ')' : ''}<button data-wbdel="${k}" class="btn w-6 h-6 rounded-full hover:bg-slate-200 text-slate-500">✕</button></span>`).join('')}</div>` : `<div class="text-sm text-slate-500 mt-1">${t('no_wobble')}</div>`}</div></div>
-    <div class="lg:col-span-2 space-y-3 mt-3 lg:mt-0"><div class="card p-3 hidden lg:block" id="acts"></div><div class="card p-3">${radialChart(an, w, 360)}</div><div class="lg:hidden pt-1"><button data-a="all" class="btn w-full py-2 text-sm font-semibold text-slate-400">${t('all_again')}</button></div>
+        ${(m.wobbles || []).length ? `<div class="flex flex-wrap gap-1.5 mt-2">${m.wobbles.map((x, k) => `<span class="inline-flex items-center gap-1 rounded-full bg-slate-100 pl-3 pr-1 py-1 text-sm font-semibold">${t('wb_' + x.kind)} ${t('at')} ${sideAt(w, x.pos)}${Math.floor(x.pos / 2) + 1}${x.size === 2 ? ' (' + t('big') + ')' : ''}<button data-wbdel="${k}" class="btn w-6 h-6 rounded-full hover:bg-slate-200 text-slate-500">✕</button></span>`).join('')}</div>` : `<div class="text-sm text-slate-500 mt-1">${t('no_wobble')}</div>`}</div></div>
+    <div class="lg:col-span-2 space-y-3 mt-3 lg:mt-0"><div class="card p-3 hidden lg:block" id="acts"></div><div class="card p-3">${radialChart(an, w, 360)}<div class="text-xs text-slate-500 text-center mt-1">${t('chart_valve')}</div></div><div class="lg:hidden pt-1"><button data-a="all" class="btn w-full py-2 text-sm font-semibold text-slate-400">${t('all_again')}</button></div>
       <button id="del" class="hidden lg:block w-full py-2 text-sm font-semibold text-rose-600">${t('del_wheel')}</button></div></div>
     <div id="bar" class="lg:hidden fixed inset-x-0 z-20 bg-white border-t border-slate-200 p-2" style="bottom:calc(3.5rem + env(safe-area-inset-bottom))"></div>`;
   const acts = (v) => `<div class="${v ? 'space-y-2' : 'grid grid-cols-2 gap-2'}">
@@ -667,7 +680,7 @@ ROUTES.result = (wid, mid) => {
     ${v ? `<button data-a="all" class="btn w-full py-2 text-sm font-semibold text-slate-500">${t('all_again')}</button>` : ''}</div>`;
   $('#acts').innerHTML = acts(true); $('#bar').innerHTML = acts(false);
   const start = (only) => { const nm = newMeasurement(w, m, only, 'tussen'); w.measurements.push(nm); DB.meta.active = { wheelId: wid, mId: nm.id, side: nm.todo.R.length ? 'R' : 'L', idx: 0 }; upsert(DB.wheels, w); pad = ''; nav('measure/' + wid); };
-  $$('[data-a="re"]').forEach(b => b.onclick = () => { const only = { R: an.sides.R.actions.map(x => x.i), L: an.sides.L.actions.map(x => x.i) }; for (const k of an.affected) { const sd = k % 2 ? 'L' : 'R', i = Math.floor(k / 2); if (!only[sd].includes(i)) only[sd].push(i); } start(only); });
+  $$('[data-a="re"]').forEach(b => b.onclick = () => { const only = { R: an.sides.R.actions.map(x => x.i), L: an.sides.L.actions.map(x => x.i) }; for (const k of an.affected) { const sd = sideAt(w, k), i = Math.floor(k / 2); if (!only[sd].includes(i)) only[sd].push(i); } start(only); });
   $$('[data-a="all"]').forEach(b => b.onclick = async () => { if (await confirmM(t('confirm_all_again'))) start(null); });
   $$('[data-a="fin"]').forEach(b => b.onclick = async () => { if (nAct && !(await confirmM(t('confirm_final', { n: nAct })))) return; w.measurements.forEach(x => { if (x.phase === 'eind') x.phase = 'tussen'; }); m.phase = 'eind'; m.updatedAt = now(); upsert(DB.wheels, w); save(true); feedback('done'); if (S().autoSync && Drive.hasToken()) Drive.sync(true); render(); });
   $('#del').onclick = async () => { if (await confirmM(t('confirm_del_wheel'), t('del'), true)) { remove(DB.wheels, wid); nav('wheels'); } };
@@ -694,7 +707,7 @@ function wobbleForm(w, m) {
     modal(`<div class="p-4 space-y-3">
       <div class="grid grid-cols-2 gap-2">${WOBBLE_KINDS.map(k => `<button data-wk="${k}" class="btn opt py-2.5 text-sm ${st.kind === k ? 'on' : ''}">${t('wb_' + k)}</button>`).join('')}</div>
       <div class="text-xs font-bold text-slate-500">${t('at_spoke')}</div>
-      ${['R', 'L'].map(s => `<div class="grid grid-cols-8 gap-1">${[...Array(half).keys()].map(i => { const pos = s === 'R' ? 2 * i : 2 * i + 1; return `<button data-wp="${pos}" class="btn rounded-md py-1.5 text-sm font-bold border ${st.pos === pos ? 'text-white border-transparent' : 'bg-white border-slate-200'}" style="${st.pos === pos ? 'background:' + COL[s] : 'color:' + COL[s]}">${s}${i + 1}</button>`; }).join('')}</div>`).join('')}
+      ${['R', 'L'].map(s => `<div class="grid grid-cols-8 gap-1">${[...Array(half).keys()].map(i => { const pos = posOf(w, s, i); return `<button data-wp="${pos}" class="btn rounded-md py-1.5 text-sm font-bold border ${st.pos === pos ? 'text-white border-transparent' : 'bg-white border-slate-200'}" style="${st.pos === pos ? 'background:' + COL[s] : 'color:' + COL[s]}">${s}${i + 1}</button>`; }).join('')}</div>`).join('')}
       <div class="grid grid-cols-2 gap-2"><button data-ws="1" class="btn opt py-2 text-sm ${st.size === 1 ? 'on' : ''}">${t('wb_small')}</button><button data-ws="2" class="btn opt py-2 text-sm ${st.size === 2 ? 'on' : ''}">${t('wb_big')}</button></div>
       <div class="grid grid-cols-2 gap-2 pt-1"><button id="wbC" class="btn py-3 rounded-lg border border-slate-300 font-semibold">${t('cancel')}</button><button id="wbOk" class="btn py-3 rounded-lg bg-slate-900 text-white font-semibold" ${st.pos == null ? 'disabled' : ''}>${t('add')}</button></div></div>`);
     $$('[data-wk]').forEach(b => b.onclick = () => { st.kind = b.dataset.wk; paint(); });
@@ -760,7 +773,7 @@ ROUTES.report = (wid) => {
         ${anN ? `<table class="w-full text-[11px] mt-2"><thead><tr class="text-slate-500 border-b border-slate-200"><th class="text-left py-0.5 font-semibold">${r('r_measurement')}</th><th class="text-right font-semibold">${r('r_score_h')}</th><th class="text-right font-semibold">${r('r_within', { t: TOL_OK })}</th><th class="text-right font-semibold">${r('r_maxdev')}</th><th class="text-right font-semibold">${r('r_avg_kgf')}${an.cal ? '' : '*'} R / L</th></tr></thead><tbody>${cmpRow(r('r_before'), anN)}${cmpRow(r('r_after'), an)}</tbody></table>` : ''}</div></div>
     ${sec(3, r('r_s3'))}
     <div class="avoid-break flex gap-5 items-start">
-      <div class="w-[60mm] shrink-0">${radialChart(an, w, 300)}<div class="text-[8.5px] text-slate-500 mt-0.5 text-center">${r('r_chart_note', { t: TOL_WARN })}</div></div>
+      <div class="w-[60mm] shrink-0">${radialChart(an, w, 300)}<div class="text-[8.5px] text-slate-500 mt-0.5 text-center">${r('r_chart_note', { t: TOL_WARN })}<br>${r('chart_valve')}</div></div>
       <div class="flex-1 text-sm">
         <table class="w-full"><thead><tr class="text-[10px] text-slate-500 border-b border-slate-300"><th class="text-left py-1 font-semibold">${r('r_side')}</th><th class="text-right font-semibold">${r('r_avg_kgf')}${an.cal ? '' : '*'}</th><th class="text-right font-semibold">${r('r_minmax')}</th><th class="text-right font-semibold">${r('r_maxdev')}</th><th class="text-right font-semibold">${r('r_within_tol')}</th></tr></thead>
           <tbody>${['R', 'L'].map(s => { const sd = an.sides[s]; return `<tr class="border-b border-slate-100"><td class="py-1 font-semibold text-xs"><span class="inline-block w-2 h-2 rounded-full mr-1.5 align-middle" style="background:${COL[s]}"></span>${sideName(s)}</td><td class="text-right text-xs">${Math.round(sd.avg)}</td><td class="text-right text-xs">${Math.round(sd.min)}–${Math.round(sd.max)}</td><td class="text-right text-xs">±${Math.round(sd.maxDev)} %</td><td class="text-right text-xs">${sd.within}/${sd.spokes.length}</td></tr>`; }).join('')}</tbody></table>
