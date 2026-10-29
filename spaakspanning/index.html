@@ -1,0 +1,990 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0f172a">
+<meta name="description" content="Werkplaats-app voor het meten, balanceren en rapporteren van spaakspanning met de Unior 1752/2 en 1752/6.">
+<title>Spaakspanning Werkplaats</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  :root { --ease: cubic-bezier(.2,.8,.2,1); }
+  html { -webkit-tap-highlight-color: transparent; }
+  body { font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; overscroll-behavior-y: none; -webkit-font-smoothing: antialiased; }
+  a { color: inherit; text-decoration: none; }
+  .nosel { -webkit-user-select: none; user-select: none; touch-action: manipulation; }
+  .btn { transition: transform .08s var(--ease), box-shadow .15s var(--ease), background-color .15s, color .15s, border-color .15s; }
+  .btn:active { transform: scale(.97); }
+  .btn:disabled { opacity: .45; pointer-events: none; }
+  .card { background: #fff; border: 1px solid #e2e8f0; border-radius: 1rem; box-shadow: 0 1px 2px rgba(15,23,42,.04), 0 8px 24px -16px rgba(15,23,42,.15); }
+  .key { min-height: 4rem; border-radius: .9rem; background: #f1f5f9; font-size: 1.75rem; font-weight: 700; color: #0f172a; border: 1px solid #e2e8f0; }
+  .key:active { background: #e2e8f0; }
+  .ring-anim { transition: stroke-dashoffset .6s var(--ease); }
+  .fade-in { animation: fadeIn .25s var(--ease); }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  .pop { animation: pop .25s var(--ease); }
+  @keyframes pop { 0% { transform: scale(.92); } 60% { transform: scale(1.03); } 100% { transform: scale(1); } }
+  .toast { animation: toastIn .3s var(--ease); }
+  @keyframes toastIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+  .safe-b { padding-bottom: max(.75rem, env(safe-area-inset-bottom)); }
+  .scorebar { background: linear-gradient(90deg, #f43f5e 0%, #f59e0b 45%, #10b981 100%); }
+  input[type=text], input[type=tel], input[type=email], input[type=number], input[type=search], textarea {
+    width: 100%; border: 1px solid #cbd5e1; border-radius: .75rem; padding: .75rem .9rem; font-size: 1rem; background: #fff; outline: none;
+    transition: border-color .15s, box-shadow .15s;
+  }
+  input:focus, textarea:focus { border-color: #0d9488; box-shadow: 0 0 0 3px rgba(13,148,136,.18); }
+  .opt { border: 2px solid #e2e8f0; background: #fff; border-radius: 1rem; }
+  .opt.on { border-color: #0d9488; background: #f0fdfa; box-shadow: 0 0 0 3px rgba(13,148,136,.15); }
+  ::-webkit-scrollbar { width: 8px; height: 8px; } ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 8px; }
+
+  /* ---------- PRINT: alleen het A4-certificaat ---------- */
+  @page { size: A4 portrait; margin: 11mm 12mm; }
+  @media print {
+    html, body { background: #fff !important; }
+    body * { visibility: hidden; }
+    #sheet, #sheet * { visibility: visible; }
+    #sheet { position: absolute; left: 0; top: 0; width: 100%; margin: 0; padding: 0; border: 0 !important; box-shadow: none !important; border-radius: 0 !important; font-size: 10pt; }
+    .no-print { display: none !important; }
+    .avoid-break { break-inside: avoid; page-break-inside: avoid; }
+  }
+</style>
+</head>
+<body class="bg-slate-50 text-slate-900 nosel">
+
+<div id="app" class="min-h-screen lg:flex">
+  <!-- ===== SIDEBAR (desktop) ===== -->
+  <aside class="no-print hidden lg:flex lg:flex-col fixed inset-y-0 left-0 w-64 bg-slate-900 text-slate-200 z-30">
+    <div class="h-16 flex items-center gap-3 px-5 border-b border-slate-800">
+      <div class="w-9 h-9 rounded-xl bg-teal-500 flex items-center justify-center text-slate-900 font-extrabold">S</div>
+      <div><div class="font-bold text-white leading-tight">Spaakspanning</div><div class="text-[11px] text-slate-400 -mt-0.5">Werkplaats · Unior 1752</div></div>
+    </div>
+    <nav id="sideNav" class="flex-1 px-3 py-4 space-y-1"></nav>
+    <div id="sideFoot" class="px-5 py-4 border-t border-slate-800 text-xs text-slate-400"></div>
+  </aside>
+
+  <div class="flex-1 flex flex-col min-h-screen lg:pl-64">
+    <!-- ===== HEADER ===== -->
+    <header class="no-print sticky top-0 z-20 bg-white/85 backdrop-blur border-b border-slate-200">
+      <div class="h-14 lg:h-16 flex items-center gap-2 px-3 lg:px-8 max-w-6xl mx-auto w-full">
+        <button id="hdrBack" class="btn w-10 h-10 rounded-xl hover:bg-slate-100 flex items-center justify-center" aria-label="Terug"></button>
+        <div class="flex-1 min-w-0">
+          <div id="hdrTitle" class="font-bold text-lg truncate">Spaakspanning</div>
+          <div id="hdrSub" class="text-xs text-slate-500 truncate -mt-0.5"></div>
+        </div>
+        <div id="hdrRight" class="flex items-center gap-1"></div>
+      </div>
+    </header>
+
+    <main id="view" class="flex-1 w-full max-w-6xl mx-auto px-4 lg:px-8 py-4 lg:py-6 pb-28 lg:pb-10"></main>
+
+    <!-- ===== TAB BAR (mobiel) ===== -->
+    <nav id="tabBar" class="no-print lg:hidden fixed bottom-0 inset-x-0 z-20 bg-white/95 backdrop-blur border-t border-slate-200 grid grid-cols-4 safe-b"></nav>
+  </div>
+</div>
+
+<div id="toastHost" class="no-print fixed bottom-24 lg:bottom-6 inset-x-0 z-50 flex flex-col items-center gap-2 pointer-events-none px-4"></div>
+<div id="modalHost" class="no-print"></div>
+
+<script>
+/* =====================================================================
+   SPAAKSPANNING WERKPLAATS — single-file SPA
+   Architectuur:
+     CONFIG   constante tabellen (spaaktypes, toleranties)
+     STORE    localStorage-database (klanten, wielen/jobs, instellingen)
+     ENGINE   omrekening + diagnose-algoritme (balans, advies, slag-risico)
+     CHARTS   SVG radiale spaakgrafiek + mini-wiel
+     UI       router, views, componenten, toasts, modals
+     SYNC     Google Drive (Google Identity Services + Drive API)
+   ===================================================================== */
+'use strict';
+
+/* ======================= CONFIG ======================= */
+const SPOKE_TYPES = {
+  r20:  { label: '2.0 mm rond',            sub: 'Standaard of enkel verjongd',                        R100: 57, p: 1.3, perTurn: 40 },
+  r18:  { label: '1.8 mm rond',            sub: 'Ook 2.0 / 1.8 / 2.0 dubbel verjongd',                 R100: 52, p: 1.3, perTurn: 33 },
+  r15:  { label: '1.5 mm dubbel verjongd', sub: '2.0 / 1.5 / 2.0 (Sapim Laser, DT Revolution)',        R100: 45, p: 1.3, perTurn: 25 },
+  aero: { label: 'Plat / aero',            sub: 'Sapim CX-Ray, DT Aerolite, Pillar Wing',              R100: 50, p: 1.3, perTurn: 28 },
+};
+const TOL_OK = 5, TOL_WARN = 10;       // % afwijking t.o.v. gemiddelde van de zijde
+const MIN_READ = 1, MAX_READ = 90;     // Unior-schaal
+const SIDE_COLOR = { R: '#2563eb', L: '#ea580c' };
+const DRIVE_FILE = 'spaakspanning-data.json';
+const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
+const LS_KEY = 'spaakspanning_v2';
+const PHASE_LABEL = { nul: 'Nulmeting', tussen: 'Tussenmeting', eind: 'Eindmeting' };
+
+/* ======================= STORE ======================= */
+const now = () => Date.now();
+const uid = (p = 'id') => p + '_' + now().toString(36) + Math.random().toString(36).slice(2, 7);
+function defaultSettings() {
+  return { shop: '', mechanic: '', meter: '1752/6', sound: true, vibrate: true, calib: {}, driveClientId: '', autoSync: false, lastSync: null };
+}
+function emptyDB() { return { v: 2, customers: [], jobs: [], settings: defaultSettings(), meta: { active: null, draft: null, updatedAt: now() } }; }
+let DB = (() => {
+  try { const d = JSON.parse(localStorage.getItem(LS_KEY)); if (d && d.v === 2) { d.settings = Object.assign(defaultSettings(), d.settings || {}); return d; } } catch (e) {}
+  return emptyDB();
+})();
+let saveTimer = null;
+function save(immediate) {
+  DB.meta.updatedAt = now();
+  const doSave = () => { try { localStorage.setItem(LS_KEY, JSON.stringify(DB)); } catch (e) { toast('Opslaan mislukt (opslag vol?)', 'err'); } };
+  clearTimeout(saveTimer);
+  if (immediate) doSave(); else saveTimer = setTimeout(doSave, 150);
+}
+window.addEventListener('beforeunload', () => save(true));
+document.addEventListener('visibilitychange', () => { if (document.hidden) { save(true); if (DB.settings.autoSync && Drive.hasToken()) Drive.sync(true); } });
+
+const S = () => DB.settings;
+const customers = () => DB.customers.filter(c => !c.deleted);
+const jobs = () => DB.jobs.filter(j => !j.deleted);
+const getCustomer = (id) => DB.customers.find(c => c.id === id && !c.deleted) || null;
+const getJob = (id) => DB.jobs.find(j => j.id === id && !j.deleted) || null;
+function upsertCustomer(c) { c.updatedAt = now(); const i = DB.customers.findIndex(x => x.id === c.id); if (i >= 0) DB.customers[i] = c; else DB.customers.push(c); save(); return c; }
+function upsertJob(j) { j.updatedAt = now(); const i = DB.jobs.findIndex(x => x.id === j.id); if (i >= 0) DB.jobs[i] = j; else DB.jobs.push(j); save(); return j; }
+function removeRecord(arr, id) { const r = arr.find(x => x.id === id); if (r) { r.deleted = true; r.updatedAt = now(); save(); } }
+function customerName(id) { const c = getCustomer(id); return c ? c.name : 'Zonder klant'; }
+function wheelLabel(w) { return (w.type === 'rear' ? 'Achterwiel' : 'Voorwiel') + ' · ' + w.spokes + ' spaken · ' + SPOKE_TYPES[w.spokeType].label; }
+function fmtDate(ts) { return new Date(ts).toLocaleDateString('nl-NL', { day: '2-digit', month: 'short', year: 'numeric' }); }
+function fmtDateLong(ts) { return new Date(ts).toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' }); }
+function fmtTime(ts) { return new Date(ts).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' }); }
+
+/* Meting-helpers */
+function newMeasurement(wheel, prev, onlyIdx, phase) {
+  const n = wheel.spokes;
+  const m = { id: uid('m'), phase, createdAt: now(), updatedAt: now(), done: false, partial: !!onlyIdx };
+  if (onlyIdx && prev) { m.readings = prev.readings.slice(); m.todo = onlyIdx.slice().sort((a, b) => a - b); m.total = onlyIdx.length; }
+  else { m.readings = Array(n).fill(null); m.todo = Array.from({ length: n }, (_, i) => i); m.total = n; }
+  return m;
+}
+const completeMeasurements = (j) => j.measurements.filter(m => m.done && m.readings.every(v => v != null));
+function nulMeasurement(j) { return completeMeasurements(j)[0] || null; }
+function eindMeasurement(j) { const c = completeMeasurements(j); return c.find(m => m.phase === 'eind') || null; }
+function latestMeasurement(j) { return j.measurements[j.measurements.length - 1] || null; }
+function jobScore(j) { const m = eindMeasurement(j) || completeMeasurements(j).slice(-1)[0]; return m ? analyze(m.readings, j.wheel).score : null; }
+
+/* ======================= ENGINE ======================= */
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+function calibPoints(type) { return ((S().calib || {})[type] || []).filter(p => p && isFinite(p[0]) && isFinite(p[1])).slice().sort((a, b) => a[0] - b[0]); }
+const isCalibrated = (type) => calibPoints(type).length >= 2;
+function toKgf(reading, type) {
+  const pts = calibPoints(type);
+  if (pts.length >= 2) {
+    let a = pts[0], b = pts[1];
+    for (let i = 0; i < pts.length - 1; i++) if (reading >= pts[i][0]) { a = pts[i]; b = pts[i + 1]; }
+    return Math.max(0, a[1] + (reading - a[0]) * (b[1] - a[1]) / ((b[0] - a[0]) || 1));
+  }
+  const st = SPOKE_TYPES[type];
+  return 100 * Math.pow(reading / st.R100, st.p);
+}
+function sideOfIdx(i, wheel) { const f = wheel.firstSide || 'R', o = f === 'R' ? 'L' : 'R'; return i % 2 === 0 ? f : o; }
+function sideLabel(side, wheel) { if (wheel.type === 'rear') return side === 'R' ? 'Rechts (aandrijfzijde)' : 'Links'; return side === 'R' ? 'Rechts' : 'Links'; }
+const sideShort = (s) => s === 'R' ? 'Rechts' : 'Links';
+function quantTurns(t) { const q = Math.round(t * 8) / 8; return clamp(q || 0.125, 0.125, 1); } // 1/8-slag stappen
+function turnLabel(q) { return { 0.125: '1/8', 0.25: '1/4', 0.375: '3/8', 0.5: '1/2', 0.625: '5/8', 0.75: '3/4', 0.875: '7/8', 1: '1' }[q] || String(q); }
+
+function analyze(readings, wheel) {
+  const n = wheel.spokes, type = wheel.spokeType, perTurn = SPOKE_TYPES[type].perTurn;
+  const spokes = readings.map((r, i) => ({ i, no: i + 1, side: sideOfIdx(i, wheel), r, kgf: r == null ? null : toKgf(r, type) }));
+  const sides = {};
+  for (const s of ['R', 'L']) {
+    const list = spokes.filter(x => x.side === s), valid = list.filter(x => x.kgf != null);
+    const sd = { spokes: list, count: valid.length, avg: null, avgR: null, min: null, max: null, maxDev: 0, meanDev: 0, within: 0 };
+    if (valid.length) {
+      sd.avg = valid.reduce((a, x) => a + x.kgf, 0) / valid.length;
+      sd.avgR = valid.reduce((a, x) => a + x.r, 0) / valid.length;
+      sd.min = Math.min(...valid.map(x => x.kgf)); sd.max = Math.max(...valid.map(x => x.kgf));
+      for (const x of valid) { x.dev = (x.kgf - sd.avg) / sd.avg * 100; x.delta = x.kgf - sd.avg; sd.maxDev = Math.max(sd.maxDev, Math.abs(x.dev)); if (Math.abs(x.dev) <= TOL_OK) sd.within++; }
+      sd.meanDev = valid.reduce((a, x) => a + Math.abs(x.dev), 0) / valid.length;
+    }
+    sides[s] = sd;
+  }
+  const valid = spokes.filter(x => x.dev != null);
+  const maxDev = Math.max(sides.R.maxDev, sides.L.maxDev);
+  const meanDev = valid.length ? valid.reduce((a, x) => a + Math.abs(x.dev), 0) / valid.length : 0;
+  const score = valid.length ? clamp(Math.round(100 - 1.5 * maxDev - 2 * meanDev), 0, 100) : 0;
+  const within = sides.R.within + sides.L.within;
+
+  // Acties per spaak
+  const byIdx = {};
+  const actions = [], perfect = [], missing = [];
+  for (const x of spokes) {
+    if (x.kgf == null) { missing.push(x.no); continue; }
+    if (Math.abs(x.dev) <= TOL_OK) { perfect.push(x.no); continue; }
+    const tq = quantTurns(Math.abs(x.delta) / perTurn);
+    const a = { i: x.i, no: x.no, side: x.side, dev: x.dev, abs: Math.abs(x.dev), dir: x.dev < 0 ? 'tighten' : 'loosen', turns: tq, turnLabel: turnLabel(tq), urgent: Math.abs(x.dev) > TOL_WARN, notes: [] };
+    actions.push(a); byIdx[x.i] = a;
+  }
+  // Zijdelingse slag: buurspaken (andere zijde) en tegenoverliggende spaak (rondheid)
+  for (const a of actions) {
+    const nb = [(a.i - 1 + n) % n, (a.i + 1) % n].map(j => byIdx[j]).filter(Boolean);
+    const opp = nb.filter(b => b.dir !== a.dir), same = nb.filter(b => b.dir === a.dir);
+    if (opp.length) a.notes.push(`Zijdelingse slag: wissel af met spaak #${opp.map(b => b.no).join(' en #')} (andere kant), in stapjes van 1/8.`);
+    else if (same.length) a.notes.push(`Doe dit samen met spaak #${same.map(b => b.no).join(' en #')} aan de andere kant, dan blijft het wiel recht.`);
+    else if (a.turns >= 0.5) a.notes.push('Draai in twee stappen en controleer tussendoor de zijdelingse slag.');
+    const across = byIdx[(a.i + n / 2) % n];
+    if (across && across.side === a.side && across.dir !== a.dir) a.notes.push(`Tegenoverliggende spaak #${across.no} wijkt tegengesteld af: let op de rondheid (hoogteslag).`);
+  }
+  actions.sort((a, b) => b.abs - a.abs);
+  perfect.sort((a, b) => a - b);
+
+  // Absoluut niveau (indicatief) voor de strak gespannen zijde
+  let level = null;
+  const hiSide = wheel.type === 'rear' ? 'R' : ((sides.R.avg || 0) >= (sides.L.avg || 0) ? 'R' : 'L');
+  const hi = sides[hiSide];
+  if (hi.avg != null && hi.count >= 3) {
+    if (hi.avg < 75) level = { kind: 'low', text: `Het wiel staat als geheel vrij slap (≈ ${Math.round(hi.avg)} kgf ${sideShort(hiSide).toLowerCase()}). Zodra de balans goed is: alle spaken ${sideShort(hiSide).toLowerCase()} 1/4 slag vaster en opnieuw meten.` };
+    else if (hi.avg > 140) level = { kind: 'high', text: `Het wiel staat erg strak (≈ ${Math.round(hi.avg)} kgf ${sideShort(hiSide).toLowerCase()}). Zodra de balans goed is: alle spaken ${sideShort(hiSide).toLowerCase()} 1/4 slag losser en opnieuw meten.` };
+  }
+  return { spokes, sides, score, maxDev, meanDev, within, n, filled: valid.length, complete: valid.length === n, actions, perfect, missing, level, calibrated: isCalibrated(type) };
+}
+function scoreInfo(score) {
+  if (score >= 90) return { label: 'Perfecte balans', tone: 'emerald', hex: '#10b981' };
+  if (score >= 75) return { label: 'Goede balans', tone: 'emerald', hex: '#34d399' };
+  if (score >= 55) return { label: 'Matig · bijstellen aanbevolen', tone: 'amber', hex: '#f59e0b' };
+  return { label: 'Onvoldoende · bijstellen nodig', tone: 'rose', hex: '#f43f5e' };
+}
+function groupRanges(nums) { // [1,2,3,5,7,8] -> "1 t/m 3, 5, 7, 8"
+  if (!nums.length) return '';
+  const out = []; let a = nums[0], b = nums[0];
+  for (let k = 1; k <= nums.length; k++) {
+    if (k < nums.length && nums[k] === b + 1) { b = nums[k]; continue; }
+    out.push(a === b ? `${a}` : (b === a + 1 ? `${a}, ${b}` : `${a} t/m ${b}`));
+    if (k < nums.length) { a = nums[k]; b = nums[k]; }
+  }
+  return out.join(', ');
+}
+
+/* ======================= CHARTS ======================= */
+function radialChart(an, wheel, size, opts = {}) {
+  const n = wheel.spokes, c = size / 2, R0 = size * 0.33, labelR = size * 0.445;
+  const ang = (i) => (-90 + i * 360 / n) * Math.PI / 180;
+  const pt = (i, r) => [c + r * Math.cos(ang(i)), c + r * Math.sin(ang(i))];
+  let o = `<svg viewBox="0 0 ${size} ${size}" width="100%" xmlns="http://www.w3.org/2000/svg" font-family="Inter, system-ui, sans-serif">`;
+  o += `<circle cx="${c}" cy="${c}" r="${R0 * 1.1}" fill="#d1fae5"/><circle cx="${c}" cy="${c}" r="${R0 * 0.9}" fill="#fff"/>`;
+  o += `<circle cx="${c}" cy="${c}" r="${R0}" fill="none" stroke="#059669" stroke-width="1.5" stroke-dasharray="4 4"/>`;
+  for (let i = 0; i < n; i++) { const [x, y] = pt(i, R0 * 1.25); o += `<line x1="${c}" y1="${c}" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}" stroke="#e2e8f0"/>`; }
+  { const va = (-90 - 180 / n) * Math.PI / 180, vx = c + labelR * Math.cos(va), vy = c + labelR * Math.sin(va);
+    o += `<polygon points="${(vx - size * .014).toFixed(1)},${(vy - size * .012).toFixed(1)} ${(vx + size * .014).toFixed(1)},${(vy - size * .012).toFixed(1)} ${vx.toFixed(1)},${(vy + size * .014).toFixed(1)}" fill="#0f172a"/>`; }
+  for (const s of ['R', 'L']) {
+    const sd = an.sides[s]; if (!sd.avg) continue;
+    const pts = sd.spokes.filter(x => x.kgf != null).map(x => pt(x.i, R0 * clamp(x.kgf / sd.avg, 0.4, 1.6)));
+    if (pts.length >= 3) o += `<path d="M${pts.map(p => p.map(v => v.toFixed(1)).join(',')).join(' L')} Z" fill="${SIDE_COLOR[s]}" fill-opacity=".07" stroke="${SIDE_COLOR[s]}" stroke-width="2.2" stroke-linejoin="round"/>`;
+  }
+  for (const x of an.spokes) {
+    if (opts.labels !== false) { const [lx, ly] = pt(x.i, labelR); o += `<text x="${lx.toFixed(1)}" y="${(ly + size * .012).toFixed(1)}" text-anchor="middle" font-size="${size * .034}" fill="#64748b">${x.no}</text>`; }
+    const sd = an.sides[x.side]; if (x.kgf == null || !sd.avg) continue;
+    const [px, py] = pt(x.i, R0 * clamp(x.kgf / sd.avg, 0.4, 1.6));
+    const ad = Math.abs(x.dev), fill = ad <= TOL_OK ? '#10b981' : ad <= TOL_WARN ? '#f59e0b' : '#f43f5e';
+    o += `<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="${size * .014}" fill="${fill}" stroke="#fff" stroke-width="1.5"/>`;
+  }
+  return o + '</svg>';
+}
+function chartLegend(small) {
+  const t = small ? 'text-[10px]' : 'text-xs';
+  return `<div class="flex flex-wrap gap-x-4 gap-y-1 ${t} text-slate-500 mt-2">
+    <span><i class="inline-block w-3 h-1.5 rounded align-middle" style="background:${SIDE_COLOR.R}"></i> Rechts</span>
+    <span><i class="inline-block w-3 h-1.5 rounded align-middle" style="background:${SIDE_COLOR.L}"></i> Links</span>
+    <span>▲ ventiel</span><span>groene band = ±${TOL_WARN} %</span><span>stippellijn = gemiddelde van de zijde</span></div>`;
+}
+function miniWheel(readings, n, cur, todo) {
+  const c = 50; let o = `<svg viewBox="0 0 100 100" width="100%" xmlns="http://www.w3.org/2000/svg">`;
+  o += `<circle cx="${c}" cy="${c}" r="44" fill="none" stroke="rgba(255,255,255,.45)" stroke-width="3"/><circle cx="${c}" cy="${c}" r="9" fill="rgba(255,255,255,.55)"/>`;
+  for (let i = 0; i < n; i++) {
+    const a = (-90 + i * 360 / n) * Math.PI / 180;
+    const isCur = i === cur, pending = todo.includes(i);
+    const col = isCur ? '#fde047' : pending ? 'rgba(255,255,255,.3)' : '#fff';
+    o += `<line x1="${(c + 11 * Math.cos(a)).toFixed(1)}" y1="${(c + 11 * Math.sin(a)).toFixed(1)}" x2="${(c + 42 * Math.cos(a)).toFixed(1)}" y2="${(c + 42 * Math.sin(a)).toFixed(1)}" stroke="${col}" stroke-width="${isCur ? 4.5 : 2}" stroke-linecap="round"/>`;
+  }
+  return o + `<polygon points="${c - 4},2 ${c + 4},2 ${c},8" fill="#fff"/></svg>`;
+}
+function scoreRing(score, size, stroke) {
+  const r = (size - stroke) / 2, circ = 2 * Math.PI * r, info = scoreInfo(score);
+  return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" class="block">
+    <circle cx="${size / 2}" cy="${size / 2}" r="${r}" fill="none" stroke="#e2e8f0" stroke-width="${stroke}"/>
+    <circle cx="${size / 2}" cy="${size / 2}" r="${r}" fill="none" stroke="${info.hex}" stroke-width="${stroke}" stroke-linecap="round" transform="rotate(-90 ${size / 2} ${size / 2})" stroke-dasharray="${circ}" stroke-dashoffset="${circ * (1 - score / 100)}" class="ring-anim"/>
+    <text x="50%" y="50%" text-anchor="middle" dominant-baseline="central" font-size="${size * .3}" font-weight="800" fill="#0f172a">${score}</text></svg>`;
+}
+
+/* ======================= UI: basis ======================= */
+const $ = (s, el = document) => el.querySelector(s);
+const $$ = (s, el = document) => Array.from(el.querySelectorAll(s));
+const h = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const I = { // iconen (inline SVG)
+  back: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>',
+  home: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/></svg>',
+  users: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
+  wheel: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2"/><path d="M12 3v7M12 14v7M3 12h7M14 12h7M5.6 5.6l5 5M13.4 13.4l5 5M18.4 5.6l-5 5M10.6 13.4l-5 5"/></svg>',
+  settings: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>',
+  plus: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>',
+  search: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>',
+  print: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 9V3h12v6"/><rect x="6" y="14" width="12" height="8"/></svg>',
+  cloud: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></svg>',
+  check: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>',
+  up: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>',
+  down: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M19 12l-7 7-7-7"/></svg>',
+  chev: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m9 18 6-6-6-6"/></svg>',
+  x: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>',
+  edit: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>',
+  trash: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>',
+  refresh: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 1-15.5 6.2L3 16"/><path d="M3 21v-5h5"/><path d="M3 12a9 9 0 0 1 15.5-6.2L21 8"/><path d="M21 3v5h-5"/></svg>',
+  play: '<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4v16l13-8z"/></svg>',
+  phone: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.8 19.8 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg>',
+  mail: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 7L2 7"/></svg>',
+  bike: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="5.5" cy="17.5" r="3.5"/><circle cx="18.5" cy="17.5" r="3.5"/><path d="M15 6a1 1 0 1 0 0-2 1 1 0 0 0 0 2zm-3 11.5V14l-3-3 4-3 2 3h2"/></svg>',
+  download: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>',
+  upload: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>',
+};
+function toast(msg, kind = 'ok') {
+  const host = $('#toastHost');
+  const el = document.createElement('div');
+  el.className = 'toast pointer-events-auto px-4 py-3 rounded-xl shadow-lg text-sm font-semibold text-white ' + (kind === 'err' ? 'bg-rose-600' : kind === 'info' ? 'bg-slate-800' : 'bg-emerald-600');
+  el.textContent = msg; host.appendChild(el);
+  setTimeout(() => { el.style.transition = 'opacity .3s'; el.style.opacity = '0'; setTimeout(() => el.remove(), 300); }, 2600);
+}
+function modal(html, opts = {}) {
+  closeModal();
+  $('#modalHost').innerHTML = `<div id="modalBack" class="fixed inset-0 z-40 bg-slate-900/50 backdrop-blur-[2px] flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="fade-in bg-white w-full ${opts.wide ? 'sm:max-w-2xl' : 'sm:max-w-lg'} rounded-t-3xl sm:rounded-2xl shadow-2xl max-h-[92vh] overflow-y-auto safe-b">${html}</div></div>`;
+  $('#modalBack').addEventListener('click', (e) => { if (e.target.id === 'modalBack' && !opts.sticky) closeModal(); });
+}
+function closeModal() { $('#modalHost').innerHTML = ''; }
+function confirmModal(title, text, okLabel = 'Ja, doorgaan', danger = false) {
+  return new Promise((res) => {
+    modal(`<div class="p-5"><div class="text-lg font-bold mb-1">${h(title)}</div><div class="text-slate-600 mb-5">${h(text)}</div>
+      <div class="grid grid-cols-2 gap-3"><button id="cmNo" class="btn py-3 rounded-xl border border-slate-300 font-semibold">Annuleren</button>
+      <button id="cmYes" class="btn py-3 rounded-xl font-semibold text-white ${danger ? 'bg-rose-600' : 'bg-teal-600'}">${h(okLabel)}</button></div></div>`, { sticky: true });
+    $('#cmNo').onclick = () => { closeModal(); res(false); };
+    $('#cmYes').onclick = () => { closeModal(); res(true); };
+  });
+}
+let audioCtx = null;
+function feedback(kind) {
+  if (S().vibrate && navigator.vibrate) { try { navigator.vibrate(kind === 'done' ? [40, 60, 40] : 22); } catch (e) {} }
+  if (!S().sound) return;
+  try {
+    audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    const t = audioCtx.currentTime, o = audioCtx.createOscillator(), g = audioCtx.createGain();
+    o.type = 'sine'; o.frequency.setValueAtTime(kind === 'done' ? 1250 : kind === 'key' ? 680 : 960, t);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.22, t + 0.005); g.gain.exponentialRampToValueAtTime(0.0001, t + (kind === 'done' ? 0.25 : 0.06));
+    o.connect(g); g.connect(audioCtx.destination); o.start(t); o.stop(t + 0.3);
+  } catch (e) {}
+}
+const TONE = { emerald: 'bg-emerald-100 text-emerald-800', amber: 'bg-amber-100 text-amber-800', rose: 'bg-rose-100 text-rose-800', sky: 'bg-sky-100 text-sky-800', slate: 'bg-slate-100 text-slate-700' };
+const TEXT_TONE = { emerald: 'text-emerald-700', amber: 'text-amber-700', rose: 'text-rose-700' };
+const chip = (text, tone = 'slate') => `<span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${TONE[tone]}">${text}</span>`;
+function scoreChip(score) { if (score == null) return chip('nog geen meting', 'slate'); return chip(`${score}/100`, scoreInfo(score).tone); }
+const phaseChip = (p) => chip(PHASE_LABEL[p] || p, p === 'eind' ? 'emerald' : p === 'nul' ? 'sky' : 'slate');
+
+/* ======================= ROUTER ======================= */
+const ROUTES = {};
+let current = { name: 'home', params: [] };
+function navigate(path, replace) { if (replace) location.replace('#/' + path); else location.hash = '/' + path; }
+function parseHash() { const p = (location.hash || '#/home').replace(/^#\/?/, '').split('/').filter(Boolean); return { name: p[0] || 'home', params: p.slice(1) }; }
+window.addEventListener('hashchange', render);
+function render() {
+  closeModal();
+  current = parseHash();
+  const view = ROUTES[current.name] || ROUTES.home;
+  const ctx = view(...current.params);
+  if (!ctx) return; // view heeft doorgestuurd
+  $('#hdrTitle').textContent = ctx.title || 'Spaakspanning';
+  $('#hdrSub').textContent = ctx.sub || '';
+  const back = $('#hdrBack'); back.innerHTML = I.back; back.style.visibility = ctx.back ? 'visible' : 'hidden'; back.onclick = () => ctx.back && navigate(ctx.back);
+  $('#hdrRight').innerHTML = ctx.right || '';
+  $('#tabBar').style.display = ctx.focus ? 'none' : '';
+  $('#view').classList.remove('pb-28', 'pb-6', 'pb-56'); $('#view').classList.add(ctx.focus ? 'pb-6' : ctx.tallBar ? 'pb-56' : 'pb-28');
+  renderNav();
+  window.scrollTo(0, 0);
+}
+const NAV = [['home', 'Start', 'home'], ['customers', 'Klanten', 'users'], ['wheels', 'Wielen', 'wheel'], ['settings', 'Instellingen', 'settings']];
+function renderNav() {
+  const active = (n) => current.name === n || (n === 'customers' && current.name === 'customer') || (n === 'home' && ['new', 'measure', 'result', 'report'].includes(current.name));
+  $('#tabBar').innerHTML = NAV.map(([n, l, ic]) => `<a href="#/${n}" class="flex flex-col items-center justify-center h-16 gap-0.5 text-[11px] font-semibold ${active(n) ? 'text-teal-700' : 'text-slate-500'}">${I[ic]}${l}</a>`).join('');
+  $('#sideNav').innerHTML = NAV.map(([n, l, ic]) => `<a href="#/${n}" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold ${active(n) ? 'bg-teal-500/15 text-teal-300' : 'text-slate-300 hover:bg-slate-800'}">${I[ic]}${l}</a>`).join('');
+  const sync = S().lastSync ? `Laatst gesynct ${fmtDate(S().lastSync)} ${fmtTime(S().lastSync)}` : (S().driveClientId ? 'Drive: nog niet gesynct' : 'Drive-sync uit');
+  $('#sideFoot').innerHTML = `<div class="font-semibold text-slate-300">${h(S().shop || 'Werkplaats')}</div><div class="mt-1 flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full ${S().lastSync ? 'bg-emerald-400' : 'bg-slate-600'}"></span>${h(sync)}</div>`;
+}
+
+/* ======================= VIEW: HOME ======================= */
+ROUTES.home = () => {
+  const all = jobs().sort((a, b) => b.updatedAt - a.updatedAt);
+  const active = DB.meta.active && getJob(DB.meta.active.jobId);
+  const activeM = active && active.measurements.find(m => m.id === DB.meta.active.mId);
+  const monthStart = new Date(); monthStart.setDate(1); monthStart.setHours(0, 0, 0, 0);
+  const finished = all.filter(j => eindMeasurement(j));
+  const avgScore = finished.length ? Math.round(finished.reduce((a, j) => a + jobScore(j), 0) / finished.length) : null;
+  const stat = (label, val, sub) => `<div class="card p-4"><div class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">${label}</div><div class="text-2xl font-extrabold mt-1">${val}</div><div class="text-xs text-slate-500 min-h-[1rem]">${sub || ''}</div></div>`;
+  $('#view').innerHTML = `
+    <div class="fade-in grid gap-4 lg:grid-cols-3">
+      <div class="lg:col-span-2 space-y-4">
+        <div class="rounded-2xl bg-gradient-to-br from-slate-900 to-slate-800 text-white p-5 lg:p-6 shadow-lg">
+          <div class="text-sm text-slate-300">Welkom${S().mechanic ? ', ' + h(S().mechanic) : ''}</div>
+          <div class="text-2xl lg:text-3xl font-extrabold mt-1">Klaar om te richten?</div>
+          <div class="mt-4 grid gap-3 sm:grid-cols-2">
+            <a href="#/new" class="btn flex items-center justify-center gap-2 bg-teal-400 text-slate-900 rounded-xl py-4 text-lg font-bold shadow">${I.plus} Nieuwe meting</a>
+            ${activeM && !activeM.done ? `<a href="#/measure/${active.id}" class="btn flex items-center justify-center gap-2 bg-white/10 border border-white/20 rounded-xl py-4 text-lg font-bold">${I.play} Verder meten <span class="text-xs font-normal opacity-80">${h(customerName(active.customerId))} · nog ${activeM.todo.length}</span></a>`
+              : `<a href="#/customers" class="btn flex items-center justify-center gap-2 bg-white/10 border border-white/20 rounded-xl py-4 text-lg font-bold">${I.users} Klanten</a>`}
+          </div>
+        </div>
+        <div>
+          <div class="flex items-center justify-between mb-2"><h2 class="font-bold text-lg">Recente wielen</h2><a href="#/wheels" class="text-sm font-semibold text-teal-700">Alles bekijken</a></div>
+          ${all.length ? `<div class="space-y-2">${all.slice(0, 6).map(jobCard).join('')}</div>` : `<div class="card p-8 text-center text-slate-500">Nog geen metingen. Start met <b>Nieuwe meting</b>.</div>`}
+        </div>
+      </div>
+      <div class="space-y-4">
+        <div class="grid grid-cols-2 gap-3">
+          ${stat('Wielen', all.length, `${all.filter(j => j.createdAt >= monthStart.getTime()).length} deze maand`)}
+          ${stat('Klanten', customers().length)}
+          ${stat('Gem. eindscore', avgScore != null ? avgScore + '<span class="text-sm text-slate-400">/100</span>' : '–', finished.length ? `${finished.length} afgerond` : '')}
+          ${stat('Open', all.filter(j => !eindMeasurement(j)).length, 'nog niet afgerond')}
+        </div>
+        <div class="card p-4">
+          <div class="font-bold mb-2">Meetroutine</div>
+          <ol class="text-sm text-slate-600 space-y-1.5 list-decimal pl-5">
+            <li>Begin bij de spaak naast het ventiel, met de klok mee.</li>
+            <li>Meter steeds halverwege de spaak, op het dunne deel.</li>
+            <li>Tik de meterstand in; de app springt zelf verder.</li>
+            <li>Volg de actielijst en meet alleen de bijgestelde spaken na.</li>
+            <li>Rond af als eindmeting en print het certificaat.</li>
+          </ol>
+        </div>
+      </div>
+    </div>`;
+  return { title: 'Start', sub: S().shop || 'Spaakspanning werkplaats' };
+};
+function jobCard(j) {
+  const c = getCustomer(j.customerId), last = latestMeasurement(j), score = jobScore(j), nul = nulMeasurement(j), eind = eindMeasurement(j);
+  const open = last && !last.done;
+  const cmp = nul && eind && nul.id !== eind.id ? `<span class="text-xs text-slate-500">nulmeting ${analyze(nul.readings, j.wheel).score} → <b class="text-slate-700">${analyze(eind.readings, j.wheel).score}</b></span>` : '';
+  return `<a href="#/${open ? 'measure' : 'result'}/${j.id}" class="card block p-4 hover:border-teal-300 transition">
+    <div class="flex items-center gap-3">
+      <div class="w-11 h-11 rounded-xl bg-slate-100 flex items-center justify-center text-slate-500 shrink-0">${I.wheel}</div>
+      <div class="flex-1 min-w-0">
+        <div class="font-bold truncate">${h(c ? c.name : 'Zonder klant')}${c && c.bike ? ` <span class="font-normal text-slate-500">· ${h(c.bike)}</span>` : ''}</div>
+        <div class="text-sm text-slate-500 truncate">${h(wheelLabel(j.wheel))}${j.label ? ' · ' + h(j.label) : ''}</div>
+        <div class="mt-1 flex flex-wrap items-center gap-1.5">${open ? chip('meting bezig', 'amber') : eind ? phaseChip('eind') : nul ? phaseChip('nul') : ''} ${scoreChip(score)} ${cmp} <span class="text-xs text-slate-400">${fmtDate(j.updatedAt)}</span></div>
+      </div><span class="text-slate-400">${I.chev}</span></div></a>`;
+}
+
+/* ======================= VIEW: KLANTEN ======================= */
+let custQuery = '';
+function customerMatches(c, q) { q = (q || '').trim().toLowerCase(); if (!q) return true; return [c.name, c.phone, c.email, c.bike, c.frame].some(v => (v || '').toLowerCase().includes(q)); }
+function liveSearch(id, setter, rerender) {
+  const el = $(id); if (!el) return;
+  el.addEventListener('input', (e) => { setter(e.target.value); const pos = e.target.selectionStart; rerender(); const i = $(id); if (i) { i.focus(); try { i.setSelectionRange(pos, pos); } catch (err) {} } });
+}
+ROUTES.customers = () => {
+  const list = customers().filter(c => customerMatches(c, custQuery)).sort((a, b) => a.name.localeCompare(b.name));
+  $('#view').innerHTML = `
+    <div class="fade-in">
+      <div class="flex gap-2 mb-4">
+        <div class="relative flex-1"><span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">${I.search}</span><input id="custSearch" type="search" placeholder="Zoek op naam, telefoon, fiets of framenummer" value="${h(custQuery)}" style="padding-left:2.6rem"></div>
+        <button id="btnAddCust" class="btn bg-teal-600 text-white rounded-xl px-4 font-bold flex items-center gap-1 shrink-0">${I.plus}<span class="hidden sm:inline">Klant</span></button>
+      </div>
+      ${list.length ? `<div class="grid gap-2 lg:grid-cols-2">${list.map(c => {
+        const js = jobs().filter(j => j.customerId === c.id);
+        return `<a href="#/customer/${c.id}" class="card p-4 flex items-center gap-3 hover:border-teal-300 transition">
+          <div class="w-11 h-11 rounded-full bg-teal-100 text-teal-800 font-extrabold flex items-center justify-center shrink-0">${h(c.name.trim().slice(0, 1).toUpperCase() || '?')}</div>
+          <div class="flex-1 min-w-0"><div class="font-bold truncate">${h(c.name)}</div><div class="text-sm text-slate-500 truncate">${h([c.bike, c.phone].filter(Boolean).join(' · ') || 'geen gegevens')}</div></div>
+          <div class="text-right shrink-0"><div class="text-sm font-semibold">${js.length} ${js.length === 1 ? 'wiel' : 'wielen'}</div><div class="text-xs text-slate-400">${js.length ? fmtDate(Math.max(...js.map(j => j.updatedAt))) : ''}</div></div></a>`; }).join('')}</div>`
+      : `<div class="card p-10 text-center text-slate-500">${custQuery ? 'Geen klant gevonden.' : 'Nog geen klanten. Voeg je eerste klant toe.'}</div>`}
+    </div>`;
+  liveSearch('#custSearch', v => custQuery = v, ROUTES.customers);
+  $('#btnAddCust').onclick = () => customerForm(null, (c) => navigate('customer/' + c.id));
+  return { title: 'Klanten', sub: `${customers().length} klanten` };
+};
+function customerForm(c, done) {
+  const v = Object.assign({ name: '', phone: '', email: '', bike: '', frame: '', notes: '' }, c || {});
+  const f = (id, label, type = 'text', ph = '') => `<label class="block"><span class="text-xs font-semibold text-slate-600">${label}</span><input id="cf_${id}" type="${type}" value="${h(v[id])}" placeholder="${h(ph)}" class="mt-1"></label>`;
+  modal(`<div class="p-5">
+    <div class="flex items-center justify-between mb-4"><div class="text-lg font-bold">${c ? 'Klant bewerken' : 'Nieuwe klant'}</div><button id="cfClose" class="btn w-10 h-10 rounded-xl hover:bg-slate-100 flex items-center justify-center">${I.x}</button></div>
+    <div class="grid gap-3 sm:grid-cols-2">
+      <div class="sm:col-span-2">${f('name', 'Naam *', 'text', 'bijv. J. Jansen')}</div>
+      ${f('phone', 'Telefoonnummer', 'tel', '06 …')}${f('email', 'E-mail', 'email', 'naam@voorbeeld.nl')}
+      ${f('bike', 'Fietsmerk / model', 'text', 'bijv. Trek Domane')}${f('frame', 'Framenummer / ordernummer', 'text', '')}
+      <label class="block sm:col-span-2"><span class="text-xs font-semibold text-slate-600">Notitie</span><textarea id="cf_notes" rows="2" class="mt-1">${h(v.notes)}</textarea></label>
+    </div>
+    <div class="mt-5 grid grid-cols-2 gap-3">
+      <button id="cfCancel" class="btn py-3 rounded-xl border border-slate-300 font-semibold">Annuleren</button>
+      <button id="cfSave" class="btn py-3 rounded-xl bg-teal-600 text-white font-semibold">Opslaan</button></div></div>`);
+  $('#cfClose').onclick = $('#cfCancel').onclick = closeModal;
+  setTimeout(() => $('#cf_name').focus(), 50);
+  $('#cfSave').onclick = () => {
+    const name = $('#cf_name').value.trim();
+    if (!name) { $('#cf_name').focus(); toast('Vul een naam in', 'err'); return; }
+    const rec = Object.assign(c || { id: uid('c'), createdAt: now() }, { name, phone: $('#cf_phone').value.trim(), email: $('#cf_email').value.trim(), bike: $('#cf_bike').value.trim(), frame: $('#cf_frame').value.trim(), notes: $('#cf_notes').value.trim() });
+    upsertCustomer(rec); closeModal(); toast('Klant opgeslagen'); if (done) done(rec);
+  };
+}
+ROUTES.customer = (id) => {
+  const c = getCustomer(id); if (!c) { navigate('customers', true); return null; }
+  const js = jobs().filter(j => j.customerId === id).sort((a, b) => b.updatedAt - a.updatedAt);
+  const finished = js.filter(j => eindMeasurement(j));
+  const row = (ic, val, href) => val ? `<div class="flex items-center gap-2 text-sm"><span class="text-slate-400">${ic}</span>${href ? `<a class="text-teal-700 font-semibold" href="${href}">${h(val)}</a>` : h(val)}</div>` : '';
+  $('#view').innerHTML = `
+    <div class="fade-in grid gap-4 lg:grid-cols-3">
+      <div class="card p-5 lg:col-span-1 h-fit">
+        <div class="flex items-start justify-between gap-2">
+          <div><div class="text-xl font-extrabold">${h(c.name)}</div><div class="text-sm text-slate-500">Klant sinds ${fmtDate(c.createdAt)}</div></div>
+          <button id="btnEditCust" class="btn w-10 h-10 rounded-xl hover:bg-slate-100 flex items-center justify-center text-slate-600">${I.edit}</button></div>
+        <div class="mt-4 space-y-2">
+          ${row(I.phone, c.phone, c.phone ? 'tel:' + c.phone.replace(/\s/g, '') : '')}${row(I.mail, c.email, c.email ? 'mailto:' + c.email : '')}${row(I.bike, c.bike)}${c.frame ? `<div class="text-sm"><span class="text-slate-400">#</span> ${h(c.frame)}</div>` : ''}
+          ${c.notes ? `<div class="text-sm bg-amber-50 border border-amber-200 rounded-xl p-2 mt-2">${h(c.notes)}</div>` : ''}
+        </div>
+        <div class="mt-4 grid grid-cols-2 gap-2 text-center">
+          <div class="bg-slate-50 rounded-xl p-2"><div class="text-xl font-extrabold">${js.length}</div><div class="text-xs text-slate-500">wielen</div></div>
+          <div class="bg-slate-50 rounded-xl p-2"><div class="text-xl font-extrabold">${finished.length ? Math.round(finished.reduce((a, j) => a + jobScore(j), 0) / finished.length) : '–'}</div><div class="text-xs text-slate-500">gem. eindscore</div></div>
+        </div>
+        <a href="#/new/${c.id}" class="btn mt-4 flex items-center justify-center gap-2 bg-teal-600 text-white rounded-xl py-3.5 font-bold">${I.plus} Nieuw wiel meten</a>
+        <button id="btnDelCust" class="btn mt-2 w-full py-2.5 rounded-xl text-sm font-semibold text-rose-600 hover:bg-rose-50">Klant verwijderen</button>
+      </div>
+      <div class="lg:col-span-2">
+        <h2 class="font-bold text-lg mb-2">Wielhistorie</h2>
+        ${js.length ? `<div class="space-y-2">${js.map(jobCard).join('')}</div>` : `<div class="card p-8 text-center text-slate-500">Nog geen wielen gemeten voor deze klant.</div>`}
+      </div>
+    </div>`;
+  $('#btnEditCust').onclick = () => customerForm(c, () => render());
+  $('#btnDelCust').onclick = async () => { if (await confirmModal('Klant verwijderen?', `${c.name} en de bijbehorende wielmetingen worden verwijderd.`, 'Verwijderen', true)) { removeRecord(DB.customers, c.id); js.forEach(j => removeRecord(DB.jobs, j.id)); navigate('customers'); } };
+  return { title: c.name, sub: 'Klant', back: 'customers' };
+};
+
+/* ======================= VIEW: WIELEN (historie) ======================= */
+let wheelQuery = '';
+ROUTES.wheels = () => {
+  const q = wheelQuery.trim().toLowerCase();
+  const list = jobs().filter(j => { if (!q) return true; const c = getCustomer(j.customerId); return [c && c.name, c && c.bike, c && c.frame, j.label, wheelLabel(j.wheel)].some(v => (v || '').toLowerCase().includes(q)); }).sort((a, b) => b.updatedAt - a.updatedAt);
+  $('#view').innerHTML = `<div class="fade-in">
+    <div class="relative mb-4"><span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">${I.search}</span><input id="wheelSearch" type="search" placeholder="Zoek op klant, fiets, framenummer of wiel" value="${h(wheelQuery)}" style="padding-left:2.6rem"></div>
+    ${list.length ? `<div class="grid gap-2 lg:grid-cols-2">${list.map(jobCard).join('')}</div>` : `<div class="card p-10 text-center text-slate-500">Geen wielen gevonden.</div>`}</div>`;
+  liveSearch('#wheelSearch', v => wheelQuery = v, ROUTES.wheels);
+  return { title: 'Wielen', sub: `${jobs().length} metingen` };
+};
+
+/* ======================= VIEW: NIEUWE METING (wizard) ======================= */
+function draft() { if (!DB.meta.draft) DB.meta.draft = { step: 1, customerId: null, noCustomer: false, type: null, spokes: 32, firstSide: 'R', spokeType: null, label: '' }; return DB.meta.draft; }
+let newCustQuery = '';
+ROUTES.new = (customerId) => {
+  const d = draft();
+  if (customerId) { d.customerId = customerId; d.noCustomer = false; d.step = Math.max(d.step, 2); save(); navigate('new', true); return null; }
+  const steps = ['Klant', 'Wiel', 'Spaak', 'Start'];
+  const stepper = `<div class="flex items-center gap-2 mb-5">${steps.map((s, i) => `<div class="flex items-center gap-2 ${i < steps.length - 1 ? 'flex-1' : ''}"><div class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${i + 1 < d.step ? 'bg-teal-600 text-white' : i + 1 === d.step ? 'bg-slate-900 text-white' : 'bg-slate-200 text-slate-500'}">${i + 1 < d.step ? '✓' : i + 1}</div><span class="text-xs font-semibold ${i + 1 === d.step ? 'text-slate-900' : 'text-slate-400'} hidden sm:inline">${s}</span>${i < steps.length - 1 ? '<div class="flex-1 h-px bg-slate-200"></div>' : ''}</div>`).join('')}</div>`;
+  const opt = (attr, val, inner, extra = '') => `<button data-${attr}="${val}" class="btn opt ${extra} ${String(d[attr]) === String(val) ? 'on' : ''}">${inner}</button>`;
+  let body = '';
+  if (d.step === 1) {
+    const list = customers().filter(c => customerMatches(c, newCustQuery)).sort((a, b) => a.name.localeCompare(b.name)).slice(0, 8);
+    const sel = d.customerId && getCustomer(d.customerId);
+    body = `<h2 class="text-2xl font-extrabold mb-1">Voor welke klant?</h2><p class="text-slate-500 mb-4">Kies een bestaande klant, maak een nieuwe aan, of meet zonder klant.</p>
+      ${sel ? `<div class="card p-4 mb-3 flex items-center gap-3 !border-teal-400 !bg-teal-50"><div class="w-10 h-10 rounded-full bg-teal-600 text-white font-bold flex items-center justify-center">${h(sel.name.slice(0, 1).toUpperCase())}</div><div class="flex-1"><div class="font-bold">${h(sel.name)}</div><div class="text-sm text-slate-500">${h(sel.bike || '')}</div></div><button id="nwClearCust" class="btn text-sm font-semibold text-slate-600 px-3 py-2 rounded-lg hover:bg-white">Wijzig</button></div>` : `
+      <div class="relative mb-3"><span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">${I.search}</span><input id="nwSearch" type="search" placeholder="Zoek klant…" value="${h(newCustQuery)}" style="padding-left:2.6rem"></div>
+      <div class="grid gap-2 sm:grid-cols-2 mb-3">${list.map(c => `<button data-cust="${c.id}" class="btn card p-3 text-left flex items-center gap-3 hover:border-teal-300"><div class="w-9 h-9 rounded-full bg-slate-100 font-bold flex items-center justify-center shrink-0">${h(c.name.slice(0, 1).toUpperCase())}</div><div class="min-w-0"><div class="font-semibold truncate">${h(c.name)}</div><div class="text-xs text-slate-500 truncate">${h([c.bike, c.phone].filter(Boolean).join(' · '))}</div></div></button>`).join('')}</div>
+      <div class="grid grid-cols-2 gap-3"><button id="nwNewCust" class="btn py-3.5 rounded-xl border-2 border-dashed border-teal-400 text-teal-700 font-bold flex items-center justify-center gap-1">${I.plus} Nieuwe klant</button><button id="nwNoCust" class="btn py-3.5 rounded-xl border-2 ${d.noCustomer ? 'border-slate-900 bg-slate-900 text-white' : 'border-slate-300 text-slate-600'} font-bold">Zonder klant</button></div>`}
+      <button id="nwNext" class="btn mt-5 w-full bg-slate-900 text-white rounded-xl py-4 text-lg font-bold" ${sel || d.noCustomer ? '' : 'disabled'}>Volgende</button>`;
+  } else if (d.step === 2) {
+    body = `<h2 class="text-2xl font-extrabold mb-4">Welk wiel?</h2>
+      <div class="grid grid-cols-2 gap-3 mb-5" id="g-type">${opt('type', 'front', '<div class="text-4xl">🚲</div><div class="text-lg font-bold mt-1">Voorwiel</div>', 'py-5')}${opt('type', 'rear', '<div class="text-4xl">⚙️</div><div class="text-lg font-bold mt-1">Achterwiel</div>', 'py-5')}</div>
+      <div class="font-bold mb-2">Aantal spaken</div><div class="grid grid-cols-4 gap-3 mb-5" id="g-spokes">${[24, 28, 32, 36].map(n => opt('spokes', n, `<div class="text-2xl font-extrabold">${n}</div>`, 'py-4')).join('')}</div>
+      <div class="font-bold">Spaak #1 is de spaak direct naast het ventiel. Aan welke kant van de naaf zit die?</div><div class="text-sm text-slate-500 mb-2">Rechts = kant van de tandwielen. Bij twijfel: Rechts.</div>
+      <div class="grid grid-cols-2 gap-3 mb-5" id="g-firstSide">${opt('firstSide', 'R', '<div class="font-bold py-1">Rechts</div>')}${opt('firstSide', 'L', '<div class="font-bold py-1">Links</div>')}</div>
+      <label class="block mb-5"><span class="text-xs font-semibold text-slate-600">Omschrijving (optioneel)</span><input id="nwLabel" type="text" value="${h(d.label)}" placeholder="bijv. achterwiel na valpartij" class="mt-1"></label>
+      <div class="grid grid-cols-3 gap-3"><button id="nwPrev" class="btn py-4 rounded-xl border border-slate-300 font-bold">Terug</button><button id="nwNext" class="btn col-span-2 bg-slate-900 text-white rounded-xl py-4 text-lg font-bold" ${d.type ? '' : 'disabled'}>Volgende</button></div>`;
+  } else if (d.step === 3) {
+    body = `<h2 class="text-2xl font-extrabold mb-4">Welke spaak?</h2>
+      <div class="grid gap-3 sm:grid-cols-2 mb-5" id="g-spokeType">${Object.entries(SPOKE_TYPES).map(([k, t]) => opt('spokeType', k, `<div class="flex items-center gap-3 text-left"><div class="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center font-bold text-slate-500 shrink-0">${k === 'aero' ? '▬' : '●'}</div><div class="min-w-0"><div class="font-bold">${h(t.label)}</div><div class="text-xs text-slate-500">${h(t.sub)}</div></div>${isCalibrated(k) ? '<span class="ml-auto text-[10px] bg-emerald-100 text-emerald-800 rounded-full px-2 py-0.5 font-semibold shrink-0">gekalibreerd</span>' : ''}</div>`, 'p-3')).join('')}</div>
+      <div class="font-bold mb-2">Meter</div><div class="grid grid-cols-2 gap-3 mb-5" id="g-meter">${['1752/2', '1752/6'].map(m => `<button data-meter="${m}" class="btn opt py-3 font-bold ${S().meter === m ? 'on' : ''}">Unior ${m}</button>`).join('')}</div>
+      <div class="grid grid-cols-3 gap-3"><button id="nwPrev" class="btn py-4 rounded-xl border border-slate-300 font-bold">Terug</button><button id="nwNext" class="btn col-span-2 bg-slate-900 text-white rounded-xl py-4 text-lg font-bold" ${d.spokeType ? '' : 'disabled'}>Volgende</button></div>`;
+  } else {
+    const c = d.customerId && getCustomer(d.customerId);
+    body = `<h2 class="text-2xl font-extrabold mb-4">Klaar om te meten</h2>
+      <div class="card p-4 mb-4 divide-y divide-slate-100 text-sm">
+        <div class="flex justify-between py-2"><span class="text-slate-500">Klant</span><b>${h(c ? c.name : 'Zonder klant')}</b></div>
+        <div class="flex justify-between py-2"><span class="text-slate-500">Wiel</span><b>${d.type === 'rear' ? 'Achterwiel' : 'Voorwiel'}, ${d.spokes} spaken</b></div>
+        <div class="flex justify-between py-2"><span class="text-slate-500">Spaak</span><b>${h(SPOKE_TYPES[d.spokeType].label)}</b></div>
+        <div class="flex justify-between py-2"><span class="text-slate-500">Spaak #1</span><b>${d.firstSide === 'R' ? 'Rechts' : 'Links'}</b></div>
+        <div class="flex justify-between py-2"><span class="text-slate-500">Meter</span><b>Unior ${h(S().meter)}</b></div></div>
+      <div class="rounded-2xl bg-amber-50 border border-amber-200 p-4 mb-5 text-sm space-y-1.5">
+        <div class="font-bold">Zo meet je goed</div>
+        <div>1. Begin bij de spaak <b>direct naast het ventiel</b> en werk <b>met de klok mee</b>.</div>
+        <div>2. Zet de meter steeds <b>halverwege</b> de spaak, bij verjongde spaken op het dunne deel.</div>
+        <div>3. Tik de meterstand in. De app springt zelf naar de volgende spaak.</div></div>
+      <div class="grid grid-cols-3 gap-3"><button id="nwPrev" class="btn py-4 rounded-xl border border-slate-300 font-bold">Terug</button><button id="nwStart" class="btn col-span-2 bg-teal-600 text-white rounded-xl py-4 text-lg font-bold flex items-center justify-center gap-2">${I.play} Start nulmeting</button></div>`;
+  }
+  $('#view').innerHTML = `<div class="fade-in max-w-2xl mx-auto">${stepper}${body}</div>`;
+
+  const bind = (id, fn) => { const el = $(id); if (el) el.onclick = fn; };
+  $$('[data-cust]').forEach(b => b.onclick = () => { d.customerId = b.dataset.cust; d.noCustomer = false; save(); render(); });
+  liveSearch('#nwSearch', v => newCustQuery = v, ROUTES.new);
+  bind('#nwClearCust', () => { d.customerId = null; save(); render(); });
+  bind('#nwNewCust', () => customerForm(null, (c) => { d.customerId = c.id; d.noCustomer = false; save(); render(); }));
+  bind('#nwNoCust', () => { d.noCustomer = true; d.customerId = null; save(); render(); });
+  for (const attr of ['type', 'spokes', 'firstSide', 'spokeType']) $$(`#g-${attr} [data-${attr}]`).forEach(b => b.onclick = () => { const val = b.getAttribute('data-' + attr); d[attr] = attr === 'spokes' ? +val : val; feedback('key'); save(); render(); });
+  $$('#g-meter [data-meter]').forEach(b => b.onclick = () => { S().meter = b.dataset.meter; save(); render(); });
+  const lbl = $('#nwLabel'); if (lbl) lbl.addEventListener('input', (e) => { d.label = e.target.value; save(); });
+  bind('#nwNext', () => { d.step++; save(); render(); });
+  bind('#nwPrev', () => { d.step--; save(); render(); });
+  bind('#nwStart', () => {
+    const wheel = { type: d.type, spokes: d.spokes, spokeType: d.spokeType, firstSide: d.firstSide };
+    const job = { id: uid('j'), customerId: d.customerId, wheel, label: (d.label || '').trim(), mechanic: S().mechanic, createdAt: now(), measurements: [] };
+    job.measurements.push(newMeasurement(wheel, null, null, 'nul'));
+    upsertJob(job);
+    DB.meta.active = { jobId: job.id, mId: job.measurements[0].id, cur: 0 };
+    DB.meta.draft = null; save(true); feedback('key');
+    navigate('measure/' + job.id, true);
+  });
+  return { title: 'Nieuwe meting', sub: `Stap ${d.step} van 4`, back: d.step === 1 ? 'home' : null };
+};
+
+/* ======================= VIEW: METEN ======================= */
+let pad = '';
+let measureKeyHandler = null;
+function activeFor(jobId) {
+  const j = getJob(jobId); if (!j) return null;
+  let m = DB.meta.active && DB.meta.active.jobId === jobId ? j.measurements.find(x => x.id === DB.meta.active.mId) : null;
+  if (!m) { m = latestMeasurement(j); if (!m) return null; DB.meta.active = { jobId, mId: m.id, cur: 0 }; }
+  return { j, m };
+}
+function nextOpen(m, from) { const n = m.readings.length; for (let k = 1; k <= n; k++) { const i = (from + k) % n; if (m.todo.includes(i)) return i; } return -1; }
+ROUTES.measure = (jobId) => {
+  const a = activeFor(jobId); if (!a) { navigate('home', true); return null; }
+  const { j, m } = a; const w = j.wheel, n = w.spokes;
+  if (!m.todo.length) { m.done = true; upsertJob(j); navigate('result/' + j.id, true); return null; }
+  if (!m.todo.includes(DB.meta.active.cur)) DB.meta.active.cur = nextOpen(m, -1);
+  const c = getCustomer(j.customerId);
+  $('#view').innerHTML = `<div class="fade-in lg:grid lg:grid-cols-5 lg:gap-6"><div class="lg:col-span-3" id="measurePane"></div><div class="hidden lg:block lg:col-span-2" id="livePane"></div></div>`;
+  const paint = () => {
+    const i = DB.meta.active.cur, side = sideOfIdx(i, w), measured = m.total - m.todo.length;
+    let ref = null;
+    for (let k = 1; k <= n; k++) { const q = ((i - k) % n + n) % n; if (sideOfIdx(q, w) === side && m.readings[q] != null) { ref = m.readings[q]; break; } }
+    if (ref == null) for (let k = 1; k <= n; k++) { const q = ((i - k) % n + n) % n; if (m.readings[q] != null) { ref = m.readings[q]; break; } }
+    const vals = ref == null ? [] : [ref - 2, ref - 1, ref, ref + 1, ref + 2].filter(v => v >= MIN_READ && v <= MAX_READ);
+    const an = analyze(m.readings, w), sd = an.sides[side], curVal = m.readings[i];
+    let hint = '';
+    if (curVal != null && sd.avg && sd.count >= 4) { const dv = (toKgf(curVal, w.spokeType) - sd.avg) / sd.avg * 100; if (Math.abs(dv) > 15) hint = `<span class="ml-2 text-[11px] bg-white/25 rounded-full px-2 py-0.5">wijkt ${Math.round(dv)} % af, controleer</span>`; }
+    $('#measurePane').innerHTML = `
+      <div class="flex items-center justify-between text-xs font-semibold text-slate-500 mb-1.5"><span>${m.partial ? `Alleen bijgestelde spaken · nog ${m.todo.length}` : `Spaak ${i + 1} van ${n}`}</span><span>${measured} van ${m.total} gemeten</span></div>
+      <div class="h-2 bg-slate-200 rounded-full overflow-hidden mb-3"><div class="h-full bg-teal-500 transition-all" style="width:${measured / m.total * 100}%"></div></div>
+      <div class="pop rounded-3xl p-4 sm:p-5 text-white shadow-lg mb-3 flex items-center gap-4" style="background:${side === 'R' ? 'linear-gradient(135deg,#1d4ed8,#2563eb)' : 'linear-gradient(135deg,#c2410c,#ea580c)'}">
+        <div class="flex-1 min-w-0"><div class="text-sm opacity-90">Meet nu</div><div class="text-4xl sm:text-5xl font-extrabold leading-none mt-1">Spaak #${i + 1}</div>
+          <div class="mt-2 inline-flex items-center bg-white/20 rounded-full px-3 py-1 text-base font-bold">${sideLabel(side, w)}</div>
+          <div class="text-xs opacity-90 mt-2 min-h-[1rem]">${curVal != null ? `Huidige waarde: <b>${curVal}</b>${hint}` : ''}</div></div>
+        <div class="w-24 h-24 sm:w-28 sm:h-28 shrink-0">${miniWheel(m.readings, n, i, m.todo)}</div></div>
+      ${vals.length ? `<div class="text-[11px] font-bold text-slate-500 mb-1 px-1 tracking-wide">SNELKEUZE · 1 TIK</div><div class="grid grid-cols-5 gap-2 mb-3">${vals.map(v => `<button data-v="${v}" class="btn quick rounded-2xl py-4 text-2xl font-extrabold shadow-sm border ${v === ref ? 'bg-slate-900 text-white border-slate-900' : 'bg-white border-slate-200'}">${v}</button>`).join('')}</div>` : `<div class="text-center text-sm text-slate-500 mb-3">Tik de meterstand in (bijv. 5 en 6 voor 56)</div>`}
+      <div class="card p-3 mb-3"><div class="flex items-center justify-between px-1 mb-2"><span class="text-[11px] font-bold text-slate-500 tracking-wide">METERSTAND</span><span id="padDisp" class="text-4xl font-extrabold tabular-nums tracking-widest min-w-[3ch] text-right">${pad || '–'}</span></div>
+        <div class="grid grid-cols-3 gap-2">${['1', '2', '3', '4', '5', '6', '7', '8', '9'].map(k => `<button data-k="${k}" class="btn key">${k}</button>`).join('')}<button data-k="del" class="btn key !bg-slate-200">⌫</button><button data-k="0" class="btn key">0</button><button data-k="ok" class="btn key !bg-emerald-600 !text-white">OK</button></div></div>
+      <div class="grid grid-cols-3 gap-2"><button id="mPrev" class="btn bg-white border border-slate-200 rounded-2xl py-3.5 font-bold">‹ Vorige</button><button id="mSkip" class="btn bg-white border border-slate-200 rounded-2xl py-3.5 font-bold">Overslaan ›</button><button id="mDone" class="btn bg-slate-900 text-white rounded-2xl py-3.5 font-bold">Resultaat</button></div>`;
+    $('#livePane').innerHTML = `<div class="card p-4 sticky top-20">
+      <div class="font-bold mb-0.5">Live overzicht</div><div class="text-xs text-slate-500 mb-2">${h(customerName(j.customerId))} · ${h(wheelLabel(w))}</div>
+      ${radialChart(an, w, 320)}${chartLegend(true)}
+      <div class="grid grid-cols-2 gap-2 mt-3 text-sm">${['R', 'L'].map(s => `<div class="rounded-xl p-2 text-white" style="background:${SIDE_COLOR[s]}"><div class="text-[11px] opacity-90">${sideLabel(s, w)}</div><div class="font-bold">${an.sides[s].avgR != null ? 'gem. stand ' + an.sides[s].avgR.toFixed(1) : '–'}</div></div>`).join('')}</div>
+      <div class="mt-3 grid grid-cols-8 gap-1">${m.readings.map((v, k) => `<div class="rounded-md text-center text-[11px] py-1 ${k === i ? 'ring-2 ring-slate-900' : ''} ${v == null ? 'bg-slate-100 text-slate-400' : 'bg-slate-50'}"><div class="text-[9px] text-slate-400">${k + 1}</div><b>${v ?? '·'}</b></div>`).join('')}</div>
+      <div class="text-[11px] text-slate-400 mt-3">Toetsenbord: cijfers, Enter, Backspace, ← → voor vorige/volgende.</div></div>`;
+    $$('.quick').forEach(b => b.onclick = () => commit(+b.dataset.v));
+    $$('#measurePane [data-k]').forEach(b => b.onclick = () => key(b.dataset.k));
+    $('#mPrev').onclick = () => { DB.meta.active.cur = (i - 1 + n) % n; pad = ''; feedback('key'); save(); paint(); };
+    $('#mSkip').onclick = () => { const nx = nextOpen(m, i); DB.meta.active.cur = nx >= 0 ? nx : (i + 1) % n; pad = ''; feedback('key'); save(); paint(); };
+    $('#mDone').onclick = async () => { if (m.todo.length && !(await confirmModal('Nog niet alles gemeten', `Nog ${m.todo.length} spaken niet gemeten. Toch het resultaat bekijken?`, 'Resultaat bekijken'))) return; m.updatedAt = now(); upsertJob(j); navigate('result/' + j.id); };
+  };
+  const commit = (v) => {
+    if (!(v >= MIN_READ && v <= MAX_READ)) { pad = ''; paint(); return; }
+    const i = DB.meta.active.cur;
+    m.readings[i] = v; m.todo = m.todo.filter(x => x !== i); m.updatedAt = now(); pad = '';
+    const nx = nextOpen(m, i);
+    if (nx === -1) { m.done = true; upsertJob(j); save(true); feedback('done'); if (S().autoSync && Drive.hasToken()) Drive.sync(true); setTimeout(() => navigate('result/' + j.id, true), 220); return; }
+    DB.meta.active.cur = nx; upsertJob(j); feedback('ok');
+    $('#padDisp').textContent = v; setTimeout(paint, 110);
+  };
+  const key = (k) => {
+    if (k === 'del') { pad = pad.slice(0, -1); feedback('key'); $('#padDisp').textContent = pad || '–'; return; }
+    if (k === 'ok') { if (pad) commit(+pad); else feedback('key'); return; }
+    if (pad.length >= 2) pad = '';
+    pad += k; $('#padDisp').textContent = pad;
+    if (pad.length === 2) { const v = +pad; if (v >= MIN_READ) setTimeout(() => commit(v), 110); else { pad = ''; $('#padDisp').textContent = '–'; } } else feedback('key');
+  };
+  measureKeyHandler = (e) => {
+    if (e.target && /input|textarea/i.test(e.target.tagName)) return;
+    if (/^[0-9]$/.test(e.key)) key(e.key); else if (e.key === 'Enter') key('ok'); else if (e.key === 'Backspace') key('del');
+    else if (e.key === 'ArrowLeft') $('#mPrev').click(); else if (e.key === 'ArrowRight') $('#mSkip').click(); else return;
+    e.preventDefault();
+  };
+  paint();
+  return { title: `${PHASE_LABEL[m.phase]}${m.partial ? ' · nameten' : ''}`, sub: `${c ? c.name : 'Zonder klant'} · ${wheelLabel(w)}`, back: 'home', focus: true, right: `<a href="#/result/${j.id}" class="btn text-sm font-semibold px-3 py-2 rounded-lg hover:bg-slate-100">Stop</a>` };
+};
+document.addEventListener('keydown', (e) => { if (current.name === 'measure' && measureKeyHandler) measureKeyHandler(e); });
+
+/* ======================= VIEW: RESULTAAT ======================= */
+ROUTES.result = (jobId, mId) => {
+  const j = getJob(jobId); if (!j) { navigate('home', true); return null; }
+  const m = (mId && j.measurements.find(x => x.id === mId)) || latestMeasurement(j); if (!m) { navigate('home', true); return null; }
+  const w = j.wheel, an = analyze(m.readings, w), info = scoreInfo(an.score), c = getCustomer(j.customerId);
+  const nul = nulMeasurement(j);
+  const nulScore = nul && nul.id !== m.id ? analyze(nul.readings, w).score : null;
+  const ready = an.complete && an.score >= 90 && !an.actions.some(a => a.urgent);
+  const nAct = an.actions.length;
+  const actionRow = (a) => `<button data-no="${a.no}" class="btn edit-spoke w-full text-left rounded-2xl p-3 flex items-start gap-3 border ${a.urgent ? 'bg-rose-50 border-rose-200' : 'bg-amber-50 border-amber-200'}">
+      <span class="w-11 h-11 rounded-xl flex items-center justify-center text-white shrink-0 ${a.urgent ? 'bg-rose-500' : 'bg-amber-500'}">${a.dir === 'tighten' ? I.up : I.down}</span>
+      <span class="flex-1 min-w-0"><span class="flex items-baseline justify-between gap-2"><span class="font-bold text-lg">Spaak #${a.no} <span class="text-sm font-semibold text-slate-500">(${sideShort(a.side)})</span></span><span class="text-xs text-slate-500">${a.dev > 0 ? '+' : ''}${Math.round(a.dev)} %</span></span>
+        <span class="block text-base">Draai <b>${a.turnLabel} slag ${a.dir === 'tighten' ? 'VASTER' : 'LOSSER'}</b></span>
+        ${a.notes.length ? `<span class="block text-xs text-slate-600 mt-1">${a.notes.map(h).join(' ')}</span>` : ''}</span></button>`;
+  const sideCard = (s) => { const sd = an.sides[s]; return `<div class="rounded-2xl p-3 text-white" style="background:${SIDE_COLOR[s]}"><div class="text-xs opacity-90">${sideLabel(s, w)}</div>${sd.avg != null ? `<div class="text-2xl font-extrabold">${Math.round(sd.avg)} <span class="text-sm font-normal">kgf</span></div><div class="text-xs opacity-90">${an.calibrated ? '' : 'indicatief · '}gem. stand ${sd.avgR.toFixed(1)} · max ±${Math.round(sd.maxDev)} %</div>` : '<div class="text-lg">geen meting</div>'}</div>`; };
+  const measList = j.measurements.filter(x => x.done).map((x, k) => `<a href="#/result/${j.id}/${x.id}" class="shrink-0 rounded-xl px-3 py-2 text-xs font-semibold border ${x.id === m.id ? 'bg-slate-900 text-white border-slate-900' : 'bg-white border-slate-200 text-slate-600'}">${k + 1}. ${PHASE_LABEL[x.phase]} · ${analyze(x.readings, w).score}</a>`).join('');
+  $('#view').innerHTML = `<div class="fade-in lg:grid lg:grid-cols-5 lg:gap-6">
+    <div class="lg:col-span-3 space-y-3">
+      ${j.measurements.filter(x => x.done).length > 1 ? `<div class="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">${measList}</div>` : ''}
+      <div class="card p-4 sm:p-5 flex items-center gap-4">
+        <div class="shrink-0">${scoreRing(an.score, 104, 10)}</div>
+        <div class="flex-1 min-w-0">
+          <div class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">${PHASE_LABEL[m.phase]} · ${fmtDate(m.updatedAt)}</div>
+          <div class="text-xl font-extrabold ${TEXT_TONE[info.tone]}">${info.label}</div>
+          <div class="text-sm text-slate-600 mt-1">${an.within} van ${an.n} spaken binnen ±${TOL_OK} %${nulScore != null ? ` · nulmeting <b>${nulScore}</b> → nu <b>${an.score}</b>` : ''}</div>
+          <div class="mt-2 h-2.5 rounded-full bg-slate-200 overflow-hidden"><div class="scorebar h-full rounded-full transition-all" style="width:${an.score}%"></div></div>
+          <div class="flex justify-between text-[10px] text-slate-400 mt-0.5"><span>ongelijk</span><span>ideaal (&lt;${TOL_OK} %)</span></div></div></div>
+      ${!an.complete ? `<div class="rounded-2xl bg-amber-100 border border-amber-300 p-3 text-sm font-semibold">Nog niet alle spaken gemeten (${an.missing.length} ontbreken). <a class="underline" href="#/measure/${j.id}">Verder meten</a></div>` : ''}
+      ${ready ? `<div class="rounded-2xl bg-emerald-600 text-white p-4 flex items-center gap-3 shadow"><span class="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center shrink-0">${I.check}</span><div><div class="text-lg font-extrabold">Spanning gereed</div><div class="text-sm opacity-90">Alle spaken binnen de tolerantie. Rond af als eindmeting.</div></div></div>` : ''}
+      <div><h3 class="font-extrabold text-lg mb-1">Wat moet je doen?</h3>
+        ${nAct ? `<p class="text-sm text-slate-600 mb-2">Werk van boven naar beneden, in kleine stapjes. Daarna <b>Nameten</b>: je meet dan alleen deze ${nAct} spaken opnieuw.</p><div class="space-y-2">${an.actions.map(actionRow).join('')}</div>` : an.filled ? `<div class="rounded-2xl bg-emerald-50 border border-emerald-200 p-3 text-base">Geen enkele spaak hoeft bijgesteld te worden.</div>` : ''}
+        ${an.perfect.length ? `<div class="mt-2 rounded-2xl bg-emerald-50 border border-emerald-200 p-3 flex gap-3"><span class="w-11 h-11 rounded-xl bg-emerald-500 text-white flex items-center justify-center shrink-0">${I.check}</span><div><div class="font-bold">Binnen tolerantie, niet aanraken</div><div class="text-sm text-slate-700">Spaken ${groupRanges(an.perfect)}</div></div></div>` : ''}
+        <div class="text-xs text-slate-500 mt-2">Kijk je vanaf de band naar de nippel, dan is <b>met de klok mee = vaster</b>. Tik op een spaak om een waarde te corrigeren.</div></div>
+      ${an.level ? `<div class="rounded-2xl bg-slate-900 text-white p-3 text-sm">${h(an.level.text)}</div>` : ''}
+      <div class="grid grid-cols-2 gap-3">${sideCard('R')}${sideCard('L')}</div>
+    </div>
+    <div class="lg:col-span-2 space-y-3 mt-3 lg:mt-0">
+      <div class="card p-4 hidden lg:block" id="resultActions"></div>
+      <div class="card p-4"><div class="font-bold">Spaakgrafiek</div><div class="text-xs text-slate-500 mb-1">Hoe ronder de lijn, hoe gelijkmatiger de spanning.</div>${radialChart(an, w, 360)}${chartLegend()}</div>
+      <div class="card p-4"><div class="font-bold mb-2">Alle metingen <span class="text-xs font-normal text-slate-500">(meterstand, tik om te wijzigen)</span></div>
+        <div class="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-4 gap-2">${m.readings.map((v, i) => { const x = an.spokes[i], ad = x.dev != null ? Math.abs(x.dev) : null; const cls = ad == null ? 'bg-slate-100' : ad <= TOL_OK ? 'bg-emerald-100' : ad <= TOL_WARN ? 'bg-amber-100' : 'bg-rose-100'; return `<button data-no="${i + 1}" class="btn edit-spoke ${cls} rounded-xl py-2"><div class="text-[10px] text-slate-500">#${i + 1} ${sideOfIdx(i, w)}</div><div class="text-lg font-extrabold">${v ?? '–'}</div></button>`; }).join('')}</div></div>
+      <div class="hidden lg:block"><button id="btnDelJob" class="btn w-full py-2.5 rounded-xl text-sm font-semibold text-rose-600 hover:bg-rose-50">Wiel verwijderen</button></div>
+    </div></div>
+    <div id="mobileBar" class="lg:hidden fixed inset-x-0 z-20 bg-white border-t border-slate-200 p-3" style="bottom:calc(4rem + env(safe-area-inset-bottom))"></div>`;
+
+  const actionsHtml = (vertical) => `
+    <div class="${vertical ? 'space-y-2' : 'grid grid-cols-2 gap-2'}">
+      ${nAct ? `<button data-act="remeasure" class="btn w-full bg-teal-600 text-white rounded-xl py-3.5 font-bold leading-tight">Nameten<div class="text-[11px] font-normal opacity-90">alleen de ${nAct} bijgestelde</div></button>` : ''}
+      ${an.complete && m.phase !== 'eind' ? `<button data-act="final" class="btn w-full ${nAct ? 'bg-white border border-slate-300 text-slate-800' : 'bg-emerald-600 text-white'} rounded-xl py-3.5 font-bold leading-tight">Afronden als eindmeting${nAct ? '<div class="text-[11px] font-normal opacity-70">met huidige afwijkingen</div>' : ''}</button>` : ''}
+      <a href="#/report/${j.id}" class="btn w-full flex items-center justify-center gap-2 bg-slate-900 text-white rounded-xl py-3.5 font-bold ${!nAct && m.phase === 'eind' ? 'col-span-2' : ''}">${I.print} Certificaat</a>
+      ${vertical ? `<button data-act="all" class="btn w-full bg-white border border-slate-300 rounded-xl py-2.5 text-sm font-semibold">Alle ${w.spokes} spaken opnieuw meten</button>` : ''}
+    </div>`;
+  $('#resultActions').innerHTML = `<div class="font-bold mb-2">Acties</div>` + actionsHtml(true) + `<div class="text-xs text-slate-500 mt-3">${c ? `<b>${h(c.name)}</b>${c.bike ? ' · ' + h(c.bike) : ''}` : 'Zonder klant'}<br>${h(wheelLabel(w))}</div>`;
+  $('#mobileBar').innerHTML = actionsHtml(false) + `<button data-act="all" class="mt-2 w-full text-xs font-semibold text-slate-500 py-1">Alle ${w.spokes} spaken opnieuw meten</button>`;
+  const startRound = (onlyIdx) => { const nm = newMeasurement(w, m, onlyIdx, 'tussen'); j.measurements.push(nm); DB.meta.active = { jobId: j.id, mId: nm.id, cur: 0 }; upsertJob(j); pad = ''; feedback('key'); navigate('measure/' + j.id); };
+  $$('[data-act="remeasure"]').forEach(b => b.onclick = () => startRound(an.actions.map(a => a.i).sort((x, y) => x - y)));
+  $$('[data-act="all"]').forEach(b => b.onclick = () => startRound(null));
+  $$('[data-act="final"]').forEach(b => b.onclick = async () => {
+    if (nAct && !(await confirmModal('Afronden met afwijkingen?', `${nAct} spaken zitten nog buiten de tolerantie. Toch afronden als eindmeting?`, 'Afronden'))) return;
+    j.measurements.forEach(x => { if (x.phase === 'eind') x.phase = 'tussen'; });
+    m.phase = 'eind'; m.updatedAt = now(); upsertJob(j); save(true); toast('Afgerond als eindmeting'); feedback('done');
+    if (S().autoSync && Drive.hasToken()) Drive.sync(true);
+    render();
+  });
+  const dj = $('#btnDelJob'); if (dj) dj.onclick = async () => { if (await confirmModal('Wiel verwijderen?', 'Alle metingen van dit wiel worden verwijderd.', 'Verwijderen', true)) { removeRecord(DB.jobs, j.id); navigate('home'); } };
+  $$('.edit-spoke').forEach(b => b.onclick = () => editSpoke(j, m, +b.dataset.no - 1));
+  return { title: 'Resultaat', tallBar: true, sub: `${c ? c.name : 'Zonder klant'} · ${wheelLabel(w)}`, back: c ? 'customer/' + c.id : 'home', right: `<a href="#/report/${j.id}" class="btn w-10 h-10 rounded-xl hover:bg-slate-100 flex items-center justify-center text-slate-700" title="Certificaat">${I.print}</a>` };
+};
+function editSpoke(j, m, i) {
+  let p = '';
+  modal(`<div class="p-4"><div class="flex items-center justify-between mb-2"><div class="text-lg font-extrabold">Spaak #${i + 1} <span class="text-sm font-semibold text-slate-500">(${sideShort(sideOfIdx(i, j.wheel))}) · nu ${m.readings[i] ?? '–'}</span></div><button id="esClose" class="btn w-10 h-10 rounded-xl hover:bg-slate-100 flex items-center justify-center">${I.x}</button></div>
+    <div class="flex items-center justify-between px-1 mb-2"><span class="text-[11px] font-bold text-slate-500 tracking-wide">NIEUWE METERSTAND</span><span id="esDisp" class="text-4xl font-extrabold tabular-nums tracking-widest">–</span></div>
+    <div class="grid grid-cols-3 gap-2">${['1', '2', '3', '4', '5', '6', '7', '8', '9'].map(k => `<button data-k="${k}" class="btn key">${k}</button>`).join('')}<button data-k="del" class="btn key !bg-slate-200">⌫</button><button data-k="0" class="btn key">0</button><button data-k="ok" class="btn key !bg-emerald-600 !text-white">OK</button></div></div>`);
+  $('#esClose').onclick = closeModal;
+  const commit = (v) => { if (!(v >= MIN_READ && v <= MAX_READ)) { p = ''; $('#esDisp').textContent = '–'; return; } m.readings[i] = v; m.todo = m.todo.filter(x => x !== i); if (!m.todo.length) m.done = true; m.updatedAt = now(); upsertJob(j); feedback('ok'); closeModal(); render(); };
+  $$('#modalHost [data-k]').forEach(b => b.onclick = () => { const k = b.dataset.k; if (k === 'del') p = p.slice(0, -1); else if (k === 'ok') { if (p) commit(+p); return; } else { if (p.length >= 2) p = ''; p += k; if (p.length === 2) setTimeout(() => commit(+p), 100); } $('#esDisp').textContent = p || '–'; });
+}
+
+/* ======================= VIEW: CERTIFICAAT (A4) ======================= */
+ROUTES.report = (jobId) => {
+  const j = getJob(jobId); if (!j) { navigate('home', true); return null; }
+  const c = getCustomer(j.customerId), w = j.wheel;
+  const nul = nulMeasurement(j), eind = eindMeasurement(j), m = eind || completeMeasurements(j).slice(-1)[0] || latestMeasurement(j);
+  if (!m) { navigate('result/' + j.id, true); return null; }
+  const an = analyze(m.readings, w), info = scoreInfo(an.score), anNul = nul && nul.id !== m.id ? analyze(nul.readings, w) : null;
+  const unit = an.calibrated ? 'kgf' : 'kgf*';
+  const verdict = an.score >= 90 ? 'Uw wiel is kaarsrecht afgesteld en alle spaken staan gelijkmatig op spanning.' : an.score >= 75 ? 'Uw wiel is netjes afgesteld; de spaakspanning is goed verdeeld.' : 'De spaakspanning van dit wiel is gemeten; de afwijkingen staan in dit rapport.';
+  const sheet = `
+    <div class="flex items-start justify-between border-b-2 border-slate-900 pb-2 mb-3">
+      <div><div class="text-2xl font-extrabold tracking-tight">Certificaat spaakspanning</div><div class="text-sm text-slate-600">${h(S().shop || 'Wielservice')}</div></div>
+      <div class="text-right text-sm"><div><b>Datum</b> ${fmtDateLong(m.updatedAt)}</div><div><b>Tijd</b> ${fmtTime(m.updatedAt)}</div></div></div>
+    <div class="grid grid-cols-2 gap-4 text-sm mb-3">
+      <div><div class="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">Klant</div>
+        <div class="font-semibold">${h(c ? c.name : '–')}</div>${c && c.phone ? `<div>${h(c.phone)}</div>` : ''}${c && c.email ? `<div>${h(c.email)}</div>` : ''}</div>
+      <div><div class="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">Fiets &amp; wiel</div>
+        ${c && c.bike ? `<div class="font-semibold">${h(c.bike)}</div>` : ''}${c && c.frame ? `<div>Frame/order: ${h(c.frame)}</div>` : ''}
+        <div>${w.type === 'rear' ? 'Achterwiel' : 'Voorwiel'}, ${w.spokes} spaken, ${h(SPOKE_TYPES[w.spokeType].label)}</div>${j.label ? `<div class="text-slate-600">${h(j.label)}</div>` : ''}
+        <div class="text-slate-600">Gemeten met Unior spaakspanningsmeter ${h(S().meter)}</div></div></div>
+    <div class="avoid-break border-2 border-slate-900 rounded-xl p-3 mb-3 flex items-center gap-4">
+      <div class="shrink-0">${scoreRing(an.score, 84, 9)}</div>
+      <div class="flex-1"><div class="text-lg font-extrabold">Wielscore ${an.score}/100 · ${info.label}</div>
+        <div class="h-2.5 rounded-full bg-slate-200 overflow-hidden mt-1"><div class="scorebar h-full" style="width:${an.score}%"></div></div>
+        <div class="text-sm mt-1">${verdict}</div>
+        ${anNul ? `<div class="text-sm mt-1"><b>Nulmeting (vóór richten):</b> ${anNul.score}/100, grootste afwijking ±${Math.round(anNul.maxDev)} % &nbsp;→&nbsp; <b>Eindmeting (na richten):</b> ${an.score}/100, grootste afwijking ±${Math.round(an.maxDev)} %</div>` : ''}</div></div>
+    <div class="avoid-break flex gap-4 mb-3 items-start">
+      <div class="w-1/2 max-w-[78mm] shrink-0">${radialChart(an, w, 300)}${chartLegend(true)}</div>
+      <div class="flex-1 text-sm">
+        <div class="font-bold mb-1">Spanning per zijde</div>
+        <table class="w-full border-t border-b border-slate-300"><thead><tr class="text-slate-600 text-[11px]"><th class="text-left py-1">Zijde</th><th class="text-right py-1 px-1">Spaken</th><th class="text-right py-1 px-1">Gem. (${unit})</th><th class="text-right py-1 px-1">Laagste – hoogste</th><th class="text-right py-1">Max. afw.</th></tr></thead>
+          <tbody>${['R', 'L'].map(s => { const sd = an.sides[s]; return `<tr><td class="py-1 font-semibold">${sideLabel(s, w)}</td><td class="text-right px-1">${sd.count}</td><td class="text-right px-1">${sd.avg != null ? Math.round(sd.avg) : '–'}</td><td class="text-right px-1">${sd.min != null ? Math.round(sd.min) + ' – ' + Math.round(sd.max) : '–'}</td><td class="text-right">${sd.avg != null ? '±' + Math.round(sd.maxDev) + ' %' : '–'}</td></tr>`; }).join('')}</tbody></table>
+        <div class="mt-2 text-xs text-slate-600"><div><i class="inline-block w-2.5 h-2.5 rounded-full bg-emerald-500 align-middle"></i> binnen ±${TOL_OK} % van het gemiddelde (ideaal)</div><div><i class="inline-block w-2.5 h-2.5 rounded-full bg-amber-500 align-middle"></i> ${TOL_OK}–${TOL_WARN} % afwijking</div><div><i class="inline-block w-2.5 h-2.5 rounded-full bg-rose-500 align-middle"></i> meer dan ${TOL_WARN} % afwijking</div></div>
+        <div class="mt-2 text-xs">${an.within} van ${an.n} spaken binnen de ideale tolerantie.</div></div></div>
+    <div class="avoid-break mb-3"><div class="font-bold text-sm mb-1">Alle gemeten spaken (meterstand${anNul ? ', eindmeting' : ''})</div>
+      <div class="grid gap-1 text-[10px] text-center" style="grid-template-columns:repeat(${w.spokes <= 24 ? 12 : 16},minmax(0,1fr))">${m.readings.map((v, i) => { const x = an.spokes[i], ad = x.dev != null ? Math.abs(x.dev) : null; const cl = ad == null ? 'bg-slate-100' : ad <= TOL_OK ? 'bg-emerald-100' : ad <= TOL_WARN ? 'bg-amber-100' : 'bg-rose-100'; return `<div class="${cl} rounded py-0.5"><div class="text-slate-500">#${i + 1}</div><div class="font-bold">${v ?? '–'}</div></div>`; }).join('')}</div></div>
+    <div class="avoid-break bg-slate-50 border border-slate-300 rounded-xl p-3 text-sm mb-2">
+      <div class="font-bold mb-0.5">Waarom gelijke spaakspanning belangrijk is</div>
+      <p>Gelijke spaakspanning voorkomt spaakbreuk en verlengt de levensduur van uw wiel. Spaken die allemaal even strak staan, verdelen de krachten gelijkmatig: het wiel blijft langer recht, rolt soepeler en kan beter tegen klappen van gaten en stoepranden. De ronde grafiek laat zien hoe gelijkmatig uw wiel op spanning staat: hoe ronder de lijn, hoe beter.</p></div>
+    <div class="avoid-break grid grid-cols-3 gap-6 text-xs mt-3">
+      <div><div class="border-b border-slate-400 h-9"></div><div class="mt-1 text-slate-600">Monteur${S().mechanic || j.mechanic ? ': <b>' + h(S().mechanic || j.mechanic) + '</b>' : ''}</div></div>
+      <div><div class="border-b border-slate-400 h-9"></div><div class="mt-1 text-slate-600">Paraaf</div></div>
+      <div><div class="border-b border-slate-400 h-9 flex items-end pb-0.5 text-slate-800">${fmtDateLong(m.updatedAt)}</div><div class="mt-1 text-slate-600">Datum</div></div></div>
+    <div class="text-[9px] text-slate-500 mt-3">${an.calibrated ? 'Spanningswaarden in kgf volgens de omrekentabel van de gebruikte meter.' : '* Spanningswaarden in kgf zijn indicatief (omgerekend uit de meterstand); de gelijkmatigheid is bepaald uit de onderlinge verhouding van de metingen.'} Tolerantie: ±${TOL_OK} % ideaal, ±${TOL_WARN} % acceptabel.</div>`;
+  $('#view').innerHTML = `<div class="fade-in max-w-4xl mx-auto">
+    <div class="no-print card p-4 mb-4 flex flex-col sm:flex-row sm:items-center gap-3">
+      <div class="flex-1 text-sm text-slate-600">Certificaat op basis van de <b>${PHASE_LABEL[m.phase]}</b> van ${fmtDate(m.updatedAt)}${anNul ? ', vergeleken met de nulmeting' : ''}. Past op 1 A4. Kies in het printvenster "Opslaan als PDF" voor een PDF.</div>
+      <button id="btnPrint" class="btn bg-slate-900 text-white rounded-xl px-5 py-3.5 font-bold flex items-center justify-center gap-2 shrink-0">${I.print} Print certificaat</button></div>
+    <div id="sheet" class="bg-white border border-slate-200 rounded-2xl shadow p-5 sm:p-7">${sheet}</div></div>`;
+  $('#btnPrint').onclick = () => { feedback('key'); window.print(); };
+  return { title: 'Certificaat', sub: `${c ? c.name : 'Zonder klant'} · ${wheelLabel(w)}`, back: 'result/' + j.id };
+};
+
+/* ======================= VIEW: INSTELLINGEN ======================= */
+let calibType = 'r20';
+ROUTES.settings = () => {
+  const s = S();
+  const toggle = (key, label, sub) => `<button data-tgl="${key}" class="btn w-full flex items-center justify-between py-3 text-left"><span><span class="block font-semibold">${label}</span><span class="block text-xs text-slate-500">${sub}</span></span><span class="w-12 h-7 rounded-full relative shrink-0 transition ${s[key] ? 'bg-emerald-500' : 'bg-slate-300'}"><span class="absolute top-0.5 ${s[key] ? 'right-0.5' : 'left-0.5'} w-6 h-6 bg-white rounded-full shadow transition"></span></span></button>`;
+  const pts = calibPoints(calibType);
+  const driveStatus = !s.driveClientId ? chip('niet ingesteld', 'slate') : Drive.hasToken() ? chip('verbonden', 'emerald') : chip('ingesteld, niet verbonden', 'amber');
+  $('#view').innerHTML = `<div class="fade-in grid gap-4 lg:grid-cols-2">
+    <div class="card p-5 space-y-3">
+      <div class="font-bold text-lg">Werkplaats</div>
+      <label class="block"><span class="text-xs font-semibold text-slate-600">Naam werkplaats (op het certificaat)</span><input id="setShop" type="text" value="${h(s.shop)}" placeholder="bijv. Fietsenmaker De Vries" class="mt-1"></label>
+      <label class="block"><span class="text-xs font-semibold text-slate-600">Naam monteur</span><input id="setMech" type="text" value="${h(s.mechanic)}" placeholder="bijv. Jan" class="mt-1"></label>
+      <div><div class="text-xs font-semibold text-slate-600 mb-1">Meter</div><div class="grid grid-cols-2 gap-2">${['1752/2', '1752/6'].map(m => `<button data-meter="${m}" class="btn opt py-2.5 font-bold ${s.meter === m ? 'on' : ''}">Unior ${m}</button>`).join('')}</div></div>
+      <div class="divide-y divide-slate-100">${toggle('sound', 'Geluid', 'Klik bij elke invoer')}${toggle('vibrate', 'Trillen', 'Haptische klik, indien ondersteund')}</div></div>
+
+    <div class="card p-5">
+      <div class="font-bold text-lg">Google Drive synchronisatie</div>
+      <div class="text-sm text-slate-600 mt-1 mb-3">Optioneel. Je gegevens staan altijd eerst op dit apparaat. Met Drive-sync bewaar je één back-upbestand (<code>${DRIVE_FILE}</code>) in je eigen Google Drive en synchroniseer je tussen telefoon, tablet en pc. De app krijgt alleen toegang tot bestanden die hij zelf aanmaakt (scope <code>drive.file</code>).</div>
+      <div class="flex flex-wrap items-center gap-2 mb-3 text-sm"><span class="font-semibold">Status:</span> ${driveStatus} ${s.lastSync ? `<span class="text-xs text-slate-500">laatst ${fmtDate(s.lastSync)} ${fmtTime(s.lastSync)}</span>` : ''}</div>
+      <label class="block mb-3"><span class="text-xs font-semibold text-slate-600">Google OAuth Client ID</span><input id="setClientId" type="text" value="${h(s.driveClientId)}" placeholder="xxxxxxxx.apps.googleusercontent.com" class="mt-1 !font-mono !text-sm"></label>
+      <div class="grid grid-cols-2 gap-2 mb-3">
+        <button id="btnDriveConnect" class="btn bg-slate-900 text-white rounded-xl py-3 font-bold flex items-center justify-center gap-2" ${s.driveClientId ? '' : 'disabled'}>${I.cloud} ${Drive.hasToken() ? 'Opnieuw verbinden' : 'Verbinden'}</button>
+        <button id="btnDriveSync" class="btn bg-teal-600 text-white rounded-xl py-3 font-bold flex items-center justify-center gap-2" ${s.driveClientId ? '' : 'disabled'}>${I.refresh} Nu synchroniseren</button></div>
+      <div class="divide-y divide-slate-100">${toggle('autoSync', 'Automatisch synchroniseren', 'Na elke afgeronde meting en bij verlaten van de app')}</div>
+      <details class="mt-3 text-sm"><summary class="font-semibold cursor-pointer text-teal-700">Hoe stel ik dit in? (eenmalig, ±5 minuten)</summary>
+        <ol class="list-decimal pl-5 mt-2 space-y-1 text-slate-600">
+          <li>Ga naar <b>console.cloud.google.com</b> en maak een project (bijv. "Spaakspanning").</li>
+          <li>APIs &amp; Services → Library → zet <b>Google Drive API</b> aan.</li>
+          <li>APIs &amp; Services → OAuth consent screen → type <b>External</b>, vul naam en e-mail in en voeg jezelf toe als testgebruiker.</li>
+          <li>Credentials → Create credentials → <b>OAuth client ID</b> → type <b>Web application</b>. Bij "Authorized JavaScript origins" vul je het adres van deze app in: <code>${h(location.origin)}</code>.</li>
+          <li>Plak de Client ID hierboven en tik op <b>Verbinden</b>. Er is geen client secret nodig: de app gebruikt Google Identity Services (OAuth 2.0 token flow) volledig in de browser.</li></ol></details>
+      <div class="mt-4 pt-4 border-t border-slate-100"><div class="font-semibold text-sm mb-2">Back-up zonder Google</div>
+        <div class="grid grid-cols-2 gap-2"><button id="btnExport" class="btn bg-white border border-slate-300 rounded-xl py-2.5 text-sm font-semibold flex items-center justify-center gap-2">${I.download} Exporteer JSON</button><button id="btnImport" class="btn bg-white border border-slate-300 rounded-xl py-2.5 text-sm font-semibold flex items-center justify-center gap-2">${I.upload} Importeer JSON</button><input id="importFile" type="file" accept="application/json,.json" class="hidden"></div>
+        <div class="text-xs text-slate-500 mt-2">Het JSON-bestand kun je zelf in Drive, OneDrive of op een USB-stick bewaren en op een ander apparaat importeren. Importeren voegt samen; niets gaat verloren.</div></div></div>
+
+    <div class="card p-5">
+      <div class="font-bold text-lg">Kalibratie omrekentabel</div>
+      <div class="text-sm text-slate-600 mt-1 mb-3">Zonder kalibratie zijn kgf-waarden indicatief; het bijstel-advies werkt ook dan, op basis van de onderlinge verhouding. Voor exacte kgf: neem per spaaktype 2 of meer regels over uit de <b>tabel die bij je meter zit</b> (meterstand → kgf).</div>
+      <div class="grid grid-cols-2 gap-2 mb-3">${Object.entries(SPOKE_TYPES).map(([k, t]) => `<button data-ct="${k}" class="btn opt py-2 text-sm font-bold ${calibType === k ? 'on' : ''}">${h(t.label)}${isCalibrated(k) ? ' ✓' : ''}</button>`).join('')}</div>
+      <div class="space-y-1.5 mb-3">${pts.length ? pts.map((p, i) => `<div class="flex items-center gap-2 bg-slate-50 rounded-xl px-3 py-2 text-sm"><span class="flex-1">meterstand <b>${p[0]}</b> → <b>${p[1]} kgf</b></span><button data-cdel="${i}" class="btn w-8 h-8 rounded-lg hover:bg-rose-50 text-rose-600 flex items-center justify-center">${I.trash}</button></div>`).join('') : '<div class="text-sm text-slate-500">Nog geen punten voor dit spaaktype.</div>'}</div>
+      <div class="grid grid-cols-5 gap-2 items-end"><label class="col-span-2 text-xs font-semibold text-slate-600">Meterstand<input id="calR" type="number" inputmode="numeric" min="1" max="90" class="mt-1"></label><label class="col-span-2 text-xs font-semibold text-slate-600">kgf<input id="calK" type="number" inputmode="numeric" min="1" max="300" class="mt-1"></label><button id="calAdd" class="btn bg-teal-600 text-white rounded-xl py-3 font-bold">＋</button></div></div>
+
+    <div class="card p-5">
+      <div class="font-bold text-lg">Over deze app</div>
+      <div class="text-sm text-slate-600 mt-1 space-y-1">
+        <p>Werkt volledig in de browser; zonder Drive-sync verlaat niets dit apparaat. Tolerantie: ideaal binnen ±${TOL_OK} %, bijstellen vanaf ±${TOL_OK} %, dringend boven ±${TOL_WARN} %. De wielscore (0–100) weegt de grootste en de gemiddelde afwijking per zijde.</p>
+        <p>Spaakvolgorde: spaak #1 naast het ventiel, met de klok mee; spaken wisselen om en om van zijde.</p></div>
+      <button id="btnWipe" class="btn mt-4 w-full py-3 rounded-xl border border-rose-300 text-rose-700 font-bold">Alle gegevens op dit apparaat wissen</button></div></div>`;
+
+  $('#setShop').addEventListener('input', e => { s.shop = e.target.value; save(); });
+  $('#setMech').addEventListener('input', e => { s.mechanic = e.target.value; save(); });
+  $('#setClientId').addEventListener('input', e => { s.driveClientId = e.target.value.trim(); save(); $('#btnDriveConnect').disabled = $('#btnDriveSync').disabled = !s.driveClientId; });
+  $$('[data-meter]').forEach(b => b.onclick = () => { s.meter = b.dataset.meter; save(); render(); });
+  $$('[data-tgl]').forEach(b => b.onclick = () => { s[b.dataset.tgl] = !s[b.dataset.tgl]; save(); feedback('key'); render(); });
+  $$('[data-ct]').forEach(b => b.onclick = () => { calibType = b.dataset.ct; render(); });
+  $$('[data-cdel]').forEach(b => b.onclick = () => { const p = calibPoints(calibType); p.splice(+b.dataset.cdel, 1); s.calib[calibType] = p; save(); render(); });
+  $('#calAdd').onclick = () => { const r = +$('#calR').value, k = +$('#calK').value; if (!(r >= 1 && r <= 90) || !(k > 0)) { toast('Vul meterstand (1–90) en kgf in', 'err'); return; } const p = calibPoints(calibType).filter(q => q[0] !== r); p.push([r, k]); s.calib[calibType] = p.sort((a, b) => a[0] - b[0]); save(); feedback('ok'); render(); };
+  $('#btnDriveConnect').onclick = async () => { try { await Drive.connect(); toast('Verbonden met Google Drive'); render(); } catch (e) { toast('Verbinden mislukt: ' + e.message, 'err'); } };
+  $('#btnDriveSync').onclick = async () => { try { const r = await Drive.sync(); toast(`Gesynchroniseerd (${r.customers} klanten, ${r.jobs} wielen bijgewerkt)`); render(); } catch (e) { toast('Sync mislukt: ' + e.message, 'err'); } };
+  $('#btnExport').onclick = () => { const blob = new Blob([JSON.stringify(exportData(), null, 1)], { type: 'application/json' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `spaakspanning-backup-${new Date().toISOString().slice(0, 10)}.json`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); };
+  $('#btnImport').onclick = () => $('#importFile').click();
+  $('#importFile').addEventListener('change', async (e) => { const f = e.target.files[0]; if (!f) return; try { const d = JSON.parse(await f.text()); const r = mergeInto(d); save(true); toast(`Geïmporteerd: ${r.customers} klanten, ${r.jobs} wielen`); render(); } catch (err) { toast('Bestand niet geldig', 'err'); } });
+  $('#btnWipe').onclick = async () => { if (await confirmModal('Alles wissen?', 'Klanten, wielen, metingen en instellingen op dit apparaat worden verwijderd. Google Drive wordt niet gewist.', 'Alles wissen', true)) { DB = emptyDB(); save(true); navigate('home'); } };
+  return { title: 'Instellingen', sub: 'Werkplaats, synchronisatie en kalibratie' };
+};
+
+/* ======================= SYNC: export / merge ======================= */
+function exportData() { return { v: 2, exportedAt: now(), customers: DB.customers, jobs: DB.jobs }; }
+function mergeInto(remote) { // nieuwste record (updatedAt) wint; verwijderingen zijn tombstones
+  let nc = 0, nj = 0;
+  const mergeList = (local, incoming, cb) => { for (const r of incoming || []) { if (!r || !r.id) continue; const i = local.findIndex(x => x.id === r.id); if (i < 0) { local.push(r); cb(); } else if ((r.updatedAt || 0) > (local[i].updatedAt || 0)) { local[i] = r; cb(); } } };
+  mergeList(DB.customers, remote.customers, () => nc++);
+  mergeList(DB.jobs, remote.jobs, () => nj++);
+  return { customers: nc, jobs: nj };
+}
+
+/* ======================= SYNC: Google Drive ======================= */
+const Drive = {
+  token: null, exp: 0, fileId: null, syncing: false,
+  hasToken() { return !!this.token && now() < this.exp; },
+  loadGis() {
+    return new Promise((res, rej) => {
+      if (window.google && google.accounts && google.accounts.oauth2) return res();
+      if (!document.getElementById('gis')) { const sc = document.createElement('script'); sc.id = 'gis'; sc.src = 'https://accounts.google.com/gsi/client'; sc.async = true; document.head.appendChild(sc); }
+      const t0 = now(); const iv = setInterval(() => { if (window.google && google.accounts && google.accounts.oauth2) { clearInterval(iv); res(); } else if (now() - t0 > 10000) { clearInterval(iv); rej(new Error('Google-script niet geladen (internet?)')); } }, 100);
+    });
+  },
+  async getToken(interactive) {
+    if (this.hasToken()) return this.token;
+    if (!S().driveClientId) throw new Error('geen Client ID ingesteld');
+    await this.loadGis();
+    return new Promise((res, rej) => {
+      const client = google.accounts.oauth2.initTokenClient({
+        client_id: S().driveClientId, scope: DRIVE_SCOPE,
+        callback: (r) => { if (r.error) rej(new Error(r.error_description || r.error)); else { this.token = r.access_token; this.exp = now() + ((r.expires_in || 3600) - 60) * 1000; res(this.token); } },
+        error_callback: (e) => rej(new Error(e && e.type ? e.type : 'geannuleerd')),
+      });
+      client.requestAccessToken({ prompt: interactive ? 'consent' : '' });
+    });
+  },
+  async connect() { this.token = null; return this.getToken(true); },
+  async api(url, opts = {}) {
+    const t = await this.getToken(false);
+    const r = await fetch(url, Object.assign({}, opts, { headers: Object.assign({ Authorization: 'Bearer ' + t }, opts.headers || {}) }));
+    if (r.status === 401) { this.token = null; throw new Error('sessie verlopen, verbind opnieuw'); }
+    if (!r.ok) throw new Error('Drive antwoordde ' + r.status);
+    return r;
+  },
+  async find() {
+    if (this.fileId) return this.fileId;
+    const r = await this.api(`https://www.googleapis.com/drive/v3/files?spaces=drive&q=${encodeURIComponent(`name='${DRIVE_FILE}' and trashed=false`)}&fields=files(id,modifiedTime)`);
+    const d = await r.json(); this.fileId = d.files && d.files[0] ? d.files[0].id : null; return this.fileId;
+  },
+  async pull() { const id = await this.find(); if (!id) return null; const r = await this.api(`https://www.googleapis.com/drive/v3/files/${id}?alt=media`); return r.json(); },
+  async push(data) {
+    const id = await this.find(), body = JSON.stringify(data);
+    if (id) { await this.api(`https://www.googleapis.com/upload/drive/v3/files/${id}?uploadType=media`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body }); return; }
+    const boundary = 'spk' + now().toString(36);
+    const multipart = `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify({ name: DRIVE_FILE, mimeType: 'application/json' })}\r\n--${boundary}\r\nContent-Type: application/json\r\n\r\n${body}\r\n--${boundary}--`;
+    const r = await this.api('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', { method: 'POST', headers: { 'Content-Type': `multipart/related; boundary=${boundary}` }, body: multipart });
+    this.fileId = (await r.json()).id;
+  },
+  async sync(silent) {
+    if (this.syncing) return { customers: 0, jobs: 0 };
+    this.syncing = true;
+    try {
+      const remote = await this.pull();
+      const r = remote ? mergeInto(remote) : { customers: 0, jobs: 0 };
+      await this.push(exportData());
+      S().lastSync = now(); save(true); renderNav();
+      return r;
+    } catch (e) { if (!silent) throw e; return { customers: 0, jobs: 0, error: e.message }; }
+    finally { this.syncing = false; }
+  },
+};
+
+/* ======================= INIT ======================= */
+if (!location.hash) navigate('home', true);
+render();
+if (S().autoSync && S().driveClientId) Drive.sync(true).then(r => { if (!r.error && (r.customers || r.jobs)) toast(`Drive: ${r.customers} klanten, ${r.jobs} wielen bijgewerkt`, 'info'); });
+</script>
+</body>
+</html>
