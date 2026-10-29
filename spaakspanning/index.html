@@ -59,7 +59,7 @@
       </div>
     </header>
     <main id="view" class="flex-1 w-full max-w-5xl mx-auto px-3 lg:px-6 py-3 lg:py-5 pb-24 lg:pb-8"></main>
-    <nav id="tabBar" class="no-print lg:hidden fixed bottom-0 inset-x-0 z-20 bg-white border-t border-slate-200 grid grid-cols-3 safe-b"></nav>
+    <nav id="tabBar" class="no-print lg:hidden fixed bottom-0 inset-x-0 z-20 bg-white border-t border-slate-200 grid grid-cols-4 safe-b"></nav>
   </div>
 </div>
 <div id="toastHost" class="no-print fixed bottom-20 lg:bottom-5 inset-x-0 z-50 flex flex-col items-center gap-2 pointer-events-none px-4"></div>
@@ -146,7 +146,7 @@ const calLabel = (c) => UNIOR[c].label;
 const TOL_OK = 5, TOL_WARN = 10, MIN_READ = 1, MAX_READ = 90;
 const COL = { R: '#2563eb', L: '#ea580c' };
 const LS_KEY = 'spaakspanning_v3', DRIVE_FILE = 'spaakspanning-data.json', DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
-const APP_VERSION = '2026-10-29.21';
+const APP_VERSION = '2026-10-29.22';
 /* ================= TALEN =================
    Nieuwe taal toevoegen: kopieer het blok 'nl', vertaal de waarden en voeg de code toe aan LANGS. Ontbrekende sleutels vallen terug op 'nl'. */
 const LANGS = { nl: 'Nederlands', en: 'English', uk: 'Українська', ru: 'Русский' };
@@ -154,7 +154,7 @@ const LOCALES = { nl: 'nl-NL', en: 'en-GB', uk: 'uk-UA', ru: 'ru-RU' };
 const I18N = {
 nl: {
   nav_wheels: 'Wielen', nav_customers: 'Klanten', nav_settings: 'Instellingen',
-  search: 'Zoek', cancel: 'Annuleer', save: 'Opslaan', yes: 'Ja', no: 'Nee', first_spoke: 'Eerste spaak na ventiel', chart_valve: 'V = ventiel · tellen met de klok mee, gezien van rechts', ref: 'Ref.', r_ref: 'Referentie', nocenter: 'Velg bewust uit het midden', edit_title: 'Gegevens wijzigen', wheel_lbl: 'Wiel', dish_L_right_high: 'Rechts staat hoger dan links. Bij dit wiel hoort links strakker: kanten verwisseld of velg niet gecentreerd?', dish_L_right_low: 'Rechts staat erg slap ten opzichte van links ({p} %). Controleer de centrering van de velg.', dish_mid_diff: 'De kanten verschillen {p} % in spanning. Bij een symmetrisch wiel hoort dat gelijk te zijn: velg mogelijk niet gecentreerd.', r_expl_d_L: 'Het verschil tussen links en rechts hoort bij dit wiel: de velg staat uit het midden van de naaf, bijvoorbeeld door een remschijf, en de linkerzijde moet hoger gespannen staan om het wiel gecentreerd te houden.', r_expl_d_free: 'Bij dit wiel staat de velg bewust uit het midden van de naaf; daardoor verschilt de spanning tussen links en rechts. Elke zijde is afzonderlijk gelijkmatig afgesteld.', saved: 'Opgeslagen', customer_ph2: 'Naam (leeg = datum en referentie)', update_avail: 'Nieuwe versie {v} beschikbaar · tik om te vernieuwen', del: 'Verwijder', add: 'Toevoegen', stop: 'Stop',
+  search: 'Zoek', cancel: 'Annuleer', save: 'Opslaan', yes: 'Ja', no: 'Nee', nav_calc: 'Spaaklengte', c_rim: 'Velg', c_erd: 'ERD · effectieve velgdiameter', c_hub: 'Naaf', c_hub_front: 'Voor', c_hub_frontdisc: 'Voor schijf', c_hub_rear: 'Achter', c_hub_reardisc: 'Achter schijf', c_fd: 'Flensdiameter', c_ctf: 'Flens tot midden', c_cross: 'Kruisingen', c_radial: 'Radiaal', c_guide: 'richtwaarde', c_guide_warn: 'Bevat richtwaarden. Meet velg en naaf voor de exacte lengte.', c_need: 'Benodigde lengte', c_exact: 'berekend {v} mm', c_down: 'afgerond omlaag · rek {s} mm', c_up: 'afgerond omhoog · rek {s} mm', c_ratio: 'Spanning links ≈ {p} % van rechts', c_toomany: 'Te veel kruisingen voor {n} spaken', c_take: 'Overnemen naar wiel / klant', c_calc_btn: 'Spaaklengte berekenen', c_fill: 'Vul alle maten in', c_taken: 'Overgenomen', c_mm: 'mm', c_remove: 'Verwijder', first_spoke: 'Eerste spaak na ventiel', chart_valve: 'V = ventiel · tellen met de klok mee, gezien van rechts', ref: 'Ref.', r_ref: 'Referentie', nocenter: 'Velg bewust uit het midden', edit_title: 'Gegevens wijzigen', wheel_lbl: 'Wiel', dish_L_right_high: 'Rechts staat hoger dan links. Bij dit wiel hoort links strakker: kanten verwisseld of velg niet gecentreerd?', dish_L_right_low: 'Rechts staat erg slap ten opzichte van links ({p} %). Controleer de centrering van de velg.', dish_mid_diff: 'De kanten verschillen {p} % in spanning. Bij een symmetrisch wiel hoort dat gelijk te zijn: velg mogelijk niet gecentreerd.', r_expl_d_L: 'Het verschil tussen links en rechts hoort bij dit wiel: de velg staat uit het midden van de naaf, bijvoorbeeld door een remschijf, en de linkerzijde moet hoger gespannen staan om het wiel gecentreerd te houden.', r_expl_d_free: 'Bij dit wiel staat de velg bewust uit het midden van de naaf; daardoor verschilt de spanning tussen links en rechts. Elke zijde is afzonderlijk gelijkmatig afgesteld.', saved: 'Opgeslagen', customer_ph2: 'Naam (leeg = datum en referentie)', update_avail: 'Nieuwe versie {v} beschikbaar · tik om te vernieuwen', del: 'Verwijder', add: 'Toevoegen', stop: 'Stop',
   no_customer: 'Zonder klant', busy: 'bezig', final_chip: 'eind', zero_chip: 'nul', no_wheels: 'Geen wielen', new_wheel: '+ Wiel',
   front: 'Voor', rear: 'Achter', front_wheel: 'Voorwiel', rear_wheel: 'Achterwiel', spokes_word: 'spaken',
   new_title: 'Nieuw wiel', customer: 'KLANT', customer_ph: 'Naam (leeg = zonder klant)', wheel: 'WIEL', spokes: 'SPAKEN', spoke: 'SPAAK', desc_ph: 'Omschrijving (optioneel)', start: 'Start meting',
@@ -185,7 +185,7 @@ nl: {
 },
 en: {
   nav_wheels: 'Wheels', nav_customers: 'Customers', nav_settings: 'Settings',
-  search: 'Search', cancel: 'Cancel', save: 'Save', yes: 'Yes', no: 'No', first_spoke: 'First spoke after valve', chart_valve: 'V = valve · count clockwise, seen from the right', ref: 'Ref.', r_ref: 'Reference', nocenter: 'Rim intentionally off-centre', edit_title: 'Edit details', wheel_lbl: 'Wheel', dish_L_right_high: 'Right side is tighter than left. On this wheel the left side should be tighter: sides swapped or rim not centred?', dish_L_right_low: 'Right side is very slack compared with left ({p} %). Check the rim centring.', dish_mid_diff: 'The sides differ {p} % in tension. On a symmetrical wheel they should be equal: rim may not be centred.', r_expl_d_L: 'The difference between left and right is inherent to this wheel: the rim sits off-centre on the hub, for example because of a brake disc, and the left side must carry higher tension to keep the wheel centred.', r_expl_d_free: 'On this wheel the rim is intentionally off-centre on the hub, so the tension differs between left and right. Each side has been evened out separately.', saved: 'Saved', customer_ph2: 'Name (blank = date and reference)', update_avail: 'New version {v} available · tap to refresh', del: 'Delete', add: 'Add', stop: 'Stop',
+  search: 'Search', cancel: 'Cancel', save: 'Save', yes: 'Yes', no: 'No', nav_calc: 'Spoke length', c_rim: 'Rim', c_erd: 'ERD · effective rim diameter', c_hub: 'Hub', c_hub_front: 'Front', c_hub_frontdisc: 'Front disc', c_hub_rear: 'Rear', c_hub_reardisc: 'Rear disc', c_fd: 'Flange diameter', c_ctf: 'Centre to flange', c_cross: 'Crosses', c_radial: 'Radial', c_guide: 'guide value', c_guide_warn: 'Contains guide values. Measure rim and hub for the exact length.', c_need: 'Required length', c_exact: 'calculated {v} mm', c_down: 'rounded down · stretch {s} mm', c_up: 'rounded up · stretch {s} mm', c_ratio: 'Left tension ≈ {p} % of right', c_toomany: 'Too many crosses for {n} spokes', c_take: 'Use for wheel / customer', c_calc_btn: 'Calculate spoke length', c_fill: 'Fill in all measurements', c_taken: 'Applied', c_mm: 'mm', c_remove: 'Remove', first_spoke: 'First spoke after valve', chart_valve: 'V = valve · count clockwise, seen from the right', ref: 'Ref.', r_ref: 'Reference', nocenter: 'Rim intentionally off-centre', edit_title: 'Edit details', wheel_lbl: 'Wheel', dish_L_right_high: 'Right side is tighter than left. On this wheel the left side should be tighter: sides swapped or rim not centred?', dish_L_right_low: 'Right side is very slack compared with left ({p} %). Check the rim centring.', dish_mid_diff: 'The sides differ {p} % in tension. On a symmetrical wheel they should be equal: rim may not be centred.', r_expl_d_L: 'The difference between left and right is inherent to this wheel: the rim sits off-centre on the hub, for example because of a brake disc, and the left side must carry higher tension to keep the wheel centred.', r_expl_d_free: 'On this wheel the rim is intentionally off-centre on the hub, so the tension differs between left and right. Each side has been evened out separately.', saved: 'Saved', customer_ph2: 'Name (blank = date and reference)', update_avail: 'New version {v} available · tap to refresh', del: 'Delete', add: 'Add', stop: 'Stop',
   no_customer: 'No customer', busy: 'in progress', final_chip: 'final', zero_chip: 'initial', no_wheels: 'No wheels', new_wheel: '+ Wheel',
   front: 'Front', rear: 'Rear', front_wheel: 'Front wheel', rear_wheel: 'Rear wheel', spokes_word: 'spokes',
   new_title: 'New wheel', customer: 'CUSTOMER', customer_ph: 'Name (blank = no customer)', wheel: 'WHEEL', spokes: 'SPOKES', spoke: 'SPOKE', desc_ph: 'Description (optional)', start: 'Start measuring',
@@ -216,7 +216,7 @@ en: {
 },
 uk: {
   nav_wheels: 'Колеса', nav_customers: 'Клієнти', nav_settings: 'Налаштування',
-  search: 'Пошук', cancel: 'Скасувати', save: 'Зберегти', yes: 'Так', no: 'Ні', first_spoke: 'Перша спиця після вентиля', chart_valve: 'V = вентиль · рахувати за годинниковою стрілкою, якщо дивитися справа', ref: '№', r_ref: 'Номер', nocenter: 'Обід навмисно не по центру', edit_title: 'Змінити дані', wheel_lbl: 'Колесо', dish_L_right_high: 'Права сторона натягнута сильніше за ліву. На цьому колесі ліва має бути тугішою: сторони переплутано або обід не відцентровано?', dish_L_right_low: 'Права сторона дуже слабка порівняно з лівою ({p} %). Перевірте центрування обода.', dish_mid_diff: 'Сторони відрізняються на {p} %. На симетричному колесі натяг має бути однаковим: обід може бути не відцентрований.', r_expl_d_L: 'Різниця між сторонами властива цьому колесу: обід зміщений від середини втулки, наприклад через гальмівний диск, тому ліва сторона має вищий натяг для центрування колеса.', r_expl_d_free: 'У цього колеса обід навмисно зміщений від середини втулки, тому натяг лівої і правої сторін різний. Кожну сторону окремо відрегульовано рівномірно.', saved: 'Збережено', customer_ph2: 'Ім’я (порожньо = дата й номер)', update_avail: 'Доступна нова версія {v} · торкніться, щоб оновити', del: 'Видалити', add: 'Додати', stop: 'Стоп',
+  search: 'Пошук', cancel: 'Скасувати', save: 'Зберегти', yes: 'Так', no: 'Ні', nav_calc: 'Довжина спиць', c_rim: 'Обід', c_erd: 'ERD · ефективний діаметр обода', c_hub: 'Втулка', c_hub_front: 'Переднє', c_hub_frontdisc: 'Переднє диск', c_hub_rear: 'Заднє', c_hub_reardisc: 'Заднє диск', c_fd: 'Діаметр фланця', c_ctf: 'Від центру до фланця', c_cross: 'Схрещування', c_radial: 'Радіально', c_guide: 'орієнтир', c_guide_warn: 'Містить орієнтовні значення. Виміряйте обід і втулку для точної довжини.', c_need: 'Потрібна довжина', c_exact: 'розраховано {v} мм', c_down: 'округлено вниз · розтяг {s} мм', c_up: 'округлено вгору · розтяг {s} мм', c_ratio: 'Натяг ліворуч ≈ {p} % від правого', c_toomany: 'Забагато схрещувань для {n} спиць', c_take: 'Перенести в колесо / клієнта', c_calc_btn: 'Розрахувати довжину спиць', c_fill: 'Заповніть усі розміри', c_taken: 'Перенесено', c_mm: 'мм', c_remove: 'Видалити', first_spoke: 'Перша спиця після вентиля', chart_valve: 'V = вентиль · рахувати за годинниковою стрілкою, якщо дивитися справа', ref: '№', r_ref: 'Номер', nocenter: 'Обід навмисно не по центру', edit_title: 'Змінити дані', wheel_lbl: 'Колесо', dish_L_right_high: 'Права сторона натягнута сильніше за ліву. На цьому колесі ліва має бути тугішою: сторони переплутано або обід не відцентровано?', dish_L_right_low: 'Права сторона дуже слабка порівняно з лівою ({p} %). Перевірте центрування обода.', dish_mid_diff: 'Сторони відрізняються на {p} %. На симетричному колесі натяг має бути однаковим: обід може бути не відцентрований.', r_expl_d_L: 'Різниця між сторонами властива цьому колесу: обід зміщений від середини втулки, наприклад через гальмівний диск, тому ліва сторона має вищий натяг для центрування колеса.', r_expl_d_free: 'У цього колеса обід навмисно зміщений від середини втулки, тому натяг лівої і правої сторін різний. Кожну сторону окремо відрегульовано рівномірно.', saved: 'Збережено', customer_ph2: 'Ім’я (порожньо = дата й номер)', update_avail: 'Доступна нова версія {v} · торкніться, щоб оновити', del: 'Видалити', add: 'Додати', stop: 'Стоп',
   no_customer: 'Без клієнта', busy: 'триває', final_chip: 'фінал', zero_chip: 'початк.', no_wheels: 'Немає коліс', new_wheel: '+ Колесо',
   front: 'Переднє', rear: 'Заднє', front_wheel: 'Переднє колесо', rear_wheel: 'Заднє колесо', spokes_word: 'спиць',
   new_title: 'Нове колесо', customer: 'КЛІЄНТ', customer_ph: 'Ім’я (порожньо = без клієнта)', wheel: 'КОЛЕСО', spokes: 'СПИЦІ', spoke: 'СПИЦЯ', desc_ph: 'Опис (необов’язково)', start: 'Почати вимірювання',
@@ -247,7 +247,7 @@ uk: {
 },
 ru: {
   nav_wheels: 'Колёса', nav_customers: 'Клиенты', nav_settings: 'Настройки',
-  search: 'Поиск', cancel: 'Отмена', save: 'Сохранить', yes: 'Да', no: 'Нет', first_spoke: 'Первая спица после вентиля', chart_valve: 'V = вентиль · считать по часовой стрелке, если смотреть справа', ref: '№', r_ref: 'Номер', nocenter: 'Обод намеренно не по центру', edit_title: 'Изменить данные', wheel_lbl: 'Колесо', dish_L_right_high: 'Правая сторона натянута сильнее левой. На этом колесе левая должна быть туже: стороны перепутаны или обод не отцентрован?', dish_L_right_low: 'Правая сторона очень слабая по сравнению с левой ({p} %). Проверьте центровку обода.', dish_mid_diff: 'Стороны отличаются на {p} %. На симметричном колесе натяжение должно быть одинаковым: обод может быть не отцентрован.', r_expl_d_L: 'Разница между сторонами свойственна этому колесу: обод смещён от середины втулки, например из-за тормозного диска, поэтому левая сторона имеет более высокое натяжение для центровки колеса.', r_expl_d_free: 'У этого колеса обод намеренно смещён от середины втулки, поэтому натяжение левой и правой сторон различается. Каждая сторона отдельно отрегулирована равномерно.', saved: 'Сохранено', customer_ph2: 'Имя (пусто = дата и номер)', update_avail: 'Доступна новая версия {v} · нажмите, чтобы обновить', del: 'Удалить', add: 'Добавить', stop: 'Стоп',
+  search: 'Поиск', cancel: 'Отмена', save: 'Сохранить', yes: 'Да', no: 'Нет', nav_calc: 'Длина спиц', c_rim: 'Обод', c_erd: 'ERD · эффективный диаметр обода', c_hub: 'Втулка', c_hub_front: 'Переднее', c_hub_frontdisc: 'Переднее диск', c_hub_rear: 'Заднее', c_hub_reardisc: 'Заднее диск', c_fd: 'Диаметр фланца', c_ctf: 'От центра до фланца', c_cross: 'Скрещивание', c_radial: 'Радиально', c_guide: 'ориентир', c_guide_warn: 'Содержит ориентировочные значения. Измерьте обод и втулку для точной длины.', c_need: 'Нужная длина', c_exact: 'рассчитано {v} мм', c_down: 'округлено вниз · растяжение {s} мм', c_up: 'округлено вверх · растяжение {s} мм', c_ratio: 'Натяжение слева ≈ {p} % от правого', c_toomany: 'Слишком много скрещиваний для {n} спиц', c_take: 'Перенести в колесо / клиента', c_calc_btn: 'Рассчитать длину спиц', c_fill: 'Заполните все размеры', c_taken: 'Перенесено', c_mm: 'мм', c_remove: 'Удалить', first_spoke: 'Первая спица после вентиля', chart_valve: 'V = вентиль · считать по часовой стрелке, если смотреть справа', ref: '№', r_ref: 'Номер', nocenter: 'Обод намеренно не по центру', edit_title: 'Изменить данные', wheel_lbl: 'Колесо', dish_L_right_high: 'Правая сторона натянута сильнее левой. На этом колесе левая должна быть туже: стороны перепутаны или обод не отцентрован?', dish_L_right_low: 'Правая сторона очень слабая по сравнению с левой ({p} %). Проверьте центровку обода.', dish_mid_diff: 'Стороны отличаются на {p} %. На симметричном колесе натяжение должно быть одинаковым: обод может быть не отцентрован.', r_expl_d_L: 'Разница между сторонами свойственна этому колесу: обод смещён от середины втулки, например из-за тормозного диска, поэтому левая сторона имеет более высокое натяжение для центровки колеса.', r_expl_d_free: 'У этого колеса обод намеренно смещён от середины втулки, поэтому натяжение левой и правой сторон различается. Каждая сторона отдельно отрегулирована равномерно.', saved: 'Сохранено', customer_ph2: 'Имя (пусто = дата и номер)', update_avail: 'Доступна новая версия {v} · нажмите, чтобы обновить', del: 'Удалить', add: 'Добавить', stop: 'Стоп',
   no_customer: 'Без клиента', busy: 'в работе', final_chip: 'финал', zero_chip: 'нач.', no_wheels: 'Нет колёс', new_wheel: '+ Колесо',
   front: 'Переднее', rear: 'Заднее', front_wheel: 'Переднее колесо', rear_wheel: 'Заднее колесо', spokes_word: 'спиц',
   new_title: 'Новое колесо', customer: 'КЛИЕНТ', customer_ph: 'Имя (пусто = без клиента)', wheel: 'КОЛЕСО', spokes: 'СПИЦЫ', spoke: 'СПИЦА', desc_ph: 'Описание (необязательно)', start: 'Начать измерение',
@@ -477,9 +477,9 @@ function render() {
   $('#hdrRight').innerHTML = ctx.right || '';
   $('#tabBar').style.display = ctx.focus ? 'none' : '';
   $('#view').classList.remove('pb-24', 'pb-4', 'pb-52'); $('#view').classList.add(ctx.focus ? 'pb-4' : ctx.tall ? 'pb-52' : 'pb-24');
-  const NAV = [['wheels', t('nav_wheels')], ['customers', t('nav_customers')], ['settings', t('nav_settings')]];
+  const NAV = [['wheels', t('nav_wheels')], ['customers', t('nav_customers')], ['calc', t('nav_calc')], ['settings', t('nav_settings')]];
   const act = (n) => cur.name === n || (n === 'wheels' && ['new', 'measure', 'result', 'report'].includes(cur.name)) || (n === 'customers' && cur.name === 'customer');
-  $('#tabBar').innerHTML = NAV.map(([n, l]) => `<a href="#/${n}" class="h-14 flex items-center justify-center text-sm font-semibold ${act(n) ? 'text-slate-900' : 'text-slate-400'}">${l}</a>`).join('');
+  $('#tabBar').innerHTML = NAV.map(([n, l]) => `<a href="#/${n}" class="h-14 flex items-center justify-center text-center leading-tight px-0.5 text-[12px] font-semibold ${act(n) ? 'text-slate-900' : 'text-slate-400'}">${l}</a>`).join('');
   $('#sideNav').innerHTML = NAV.map(([n, l]) => `<a href="#/${n}" class="block px-3 py-2 rounded-lg text-sm font-semibold ${act(n) ? 'bg-slate-800 text-white' : 'text-slate-300'}">${l}</a>`).join('');
   $('#sideFoot').innerHTML = h(S().shop || '') + (S().lastSync ? `<div>Drive ${fmtDate(S().lastSync)} ${fmtTime(S().lastSync)}</div>` : '');
   window.scrollTo(0, 0);
@@ -491,7 +491,7 @@ function wheelRow(w) {
   const c = getCustomer(w.customerId), m = lastM(w), open = m && !m.done, nul = nulM(w), eind = eindM(w);
   return `<a href="#/${open ? 'measure' : 'result'}/${w.id}" class="card p-3 flex items-center gap-3">
     <div class="flex-1 min-w-0"><div class="font-bold truncate">${h(wName(w))}${c && c.bike ? ` <span class="font-normal text-slate-500">· ${h(c.bike)}</span>` : ''}</div>
-      <div class="text-sm text-slate-500">${h(wheelLabel(w))}${w.label ? ' · ' + h(w.label) : ''} · ${c ? fmtDate(w.updatedAt) + ' · ' + t('ref') + ' ' + wheelRef(w) : fmtDate(w.updatedAt)}</div></div>
+      <div class="text-sm text-slate-500">${h(wheelLabel(w))}${w.label ? ' · ' + h(w.label) : ''} · ${c ? fmtDate(w.updatedAt) + ' · ' + t('ref') + ' ' + wheelRef(w) : fmtDate(w.updatedAt)}${w.lengths ? ' · ' + lenTxt(w) : ''}</div></div>
     ${open ? chip(t('busy'), 'bg-amber-100 text-amber-800') : eind ? chip(t('final_chip'), 'bg-emerald-100 text-emerald-800') : nul ? chip(t('zero_chip'), 'bg-sky-100 text-sky-800') : ''}
     ${nul && eind && nul.id !== eind.id ? `<span class="text-xs text-slate-500">${analyze(nul, w).score}→</span>` : ''}${scoreChip(wheelScore(w))}<span class="text-slate-300">›</span></a>`;
 }
@@ -516,21 +516,26 @@ ROUTES.new = (cid) => {
     <div><div class="text-xs font-bold text-slate-500 mb-1">${t('spokes')}</div><div class="grid grid-cols-4 gap-2">${[24, 28, 32, 36].map(n => opt('spokes', n, n)).join('')}</div></div>
     <div><div class="text-xs font-bold text-slate-500 mb-1">${t('spoke')}</div><button id="nSpoke" class="btn w-full card px-4 py-3 flex items-center justify-between text-left"><span><span class="font-bold">${h(SPOKE_TYPES[draft.spokeType].label)}</span><span class="block text-sm text-slate-500">${h(SPOKE_TYPES[draft.spokeType].sub)} mm</span></span><span class="text-slate-400 text-xl">▾</span></button></div>
     <div><div class="text-xs font-bold text-slate-500 mb-1">${t('first_spoke')}</div><div class="grid grid-cols-2 gap-2">${opt('first', 'R', t('right'))}${opt('first', 'L', t('left'))}</div></div>
+    ${draft.lengths ? `<div class="card p-3 flex items-center gap-3"><div class="flex-1"><div class="text-xs font-bold text-slate-500">${t('nav_calc')}</div><div class="font-extrabold text-lg"><span style="color:${COL.L}">L ${draft.lengths.L}</span> · <span style="color:${COL.R}">R ${draft.lengths.R}</span> mm</div></div><button id="nLenDel" class="btn text-sm font-semibold text-slate-500 px-2 py-2">${t('c_remove')}</button></div>` : `<a href="#/calc" class="btn block w-full text-center rounded-lg border border-slate-300 bg-white py-3 font-semibold">${t('c_calc_btn')}</a>`}
     <input id="nLabel" type="text" placeholder="${t('desc_ph')}" value="${h(draft.label)}">
-    <button id="nStart" class="btn w-full bg-slate-900 text-white rounded-lg py-4 text-lg font-bold">${t('start')}</button></div>`;
+    <div class="${draft.lengths ? 'grid grid-cols-2 gap-2' : ''}">${draft.lengths ? `<button id="nSave" class="btn w-full rounded-lg border border-slate-300 bg-white py-4 text-lg font-bold">${t('save')}</button>` : ''}<button id="nStart" class="btn w-full bg-slate-900 text-white rounded-lg py-4 text-lg font-bold">${t('start')}</button></div></div>`;
   $$('[data-k]').forEach(b => b.onclick = () => { draft[b.dataset.k] = b.dataset.k === 'spokes' ? +b.dataset.v : b.dataset.v; feedback('key'); render(); });
   $('#nSpoke').onclick = () => spokePicker(draft.spokeType, id => { draft.spokeType = id; render(); });
   $('#nCust').addEventListener('input', e => draft.customer = e.target.value);
   $('#nLabel').addEventListener('input', e => draft.label = e.target.value);
-  $('#nStart').onclick = () => {
+  if ($('#nLenDel')) $('#nLenDel').onclick = () => { delete draft.lengths; render(); };
+  const create = (measure) => {
     const name = draft.customer.trim(); let cid = null;
     if (name) { let c = customers().find(c => c.name.toLowerCase() === name.toLowerCase()); if (!c) c = upsert(DB.customers, { id: uid('c'), name, phone: '', email: '', bike: '', frame: '', createdAt: now() }); cid = c.id; }
     const w = { id: uid('w'), customerId: cid, type: draft.type, spokes: draft.spokes, spokeType: draft.spokeType, label: draft.label.trim(), createdAt: now(), measurements: [] };
     if (draft.first === 'L') w.first = 'L';
+    if (draft.lengths) w.lengths = draft.lengths;
     w.measurements.push(newMeasurement(w, null, null, 'nul')); upsert(DB.wheels, w);
-    DB.meta.active = { wheelId: w.id, mId: w.measurements[0].id, side: 'R', idx: 0 }; draft.customer = ''; draft.label = ''; save(true);
-    nav('measure/' + w.id, true);
+    DB.meta.active = measure ? { wheelId: w.id, mId: w.measurements[0].id, side: 'R', idx: 0 } : null; draft.customer = ''; draft.label = ''; delete draft.lengths; save(true);
+    if (measure) nav('measure/' + w.id, true); else { toast(t('saved')); nav(cid ? 'customer/' + cid : 'wheels', true); }
   };
+  $('#nStart').onclick = () => create(true);
+  if ($('#nSave')) $('#nSave').onclick = () => create(false);
   return { title: t('new_title'), back: 'wheels' };
 };
 
@@ -550,11 +555,13 @@ function wheelForm(w, done) {
       ${lbl(t('wheel_lbl') + ' · ' + t('ref') + ' ' + wheelRef(w))}<div class="grid grid-cols-2 gap-2">${['front', 'rear'].map(x => `<button data-wt="${x}" class="btn opt py-2.5 ${v.type === x ? 'on' : ''}">${t(x)}</button>`).join('')}</div>
       <button id="wf_spoke" class="btn w-full card px-4 py-3 flex items-center justify-between text-left"><span><span class="font-bold">${h(SPOKE_TYPES[v.spokeType].label)}</span><span class="block text-sm text-slate-500">${h(SPOKE_TYPES[v.spokeType].sub)} mm</span></span><span class="text-slate-400 text-xl">▾</span></button>
       ${lbl(t('first_spoke'))}<div class="grid grid-cols-2 gap-2">${['R', 'L'].map(x => `<button data-wfs="${x}" class="btn opt py-2.5 ${v.first === x ? 'on' : ''}">${t(x === 'R' ? 'right' : 'left')}</button>`).join('')}</div>
+      <button id="wf_calc" class="btn w-full rounded-lg border border-slate-300 bg-white py-2.5 font-semibold">${t('c_calc_btn')}${w.lengths ? ' · ' + lenTxt(w) : ''}</button>
       <button id="wf_free" class="btn w-full flex items-center justify-between py-2.5"><span class="font-semibold">${t('nocenter')}</span><span class="w-11 h-6 rounded-full relative ${v.dish === 'free' ? 'bg-emerald-500' : 'bg-slate-300'}"><span class="absolute top-0.5 ${v.dish === 'free' ? 'right-0.5' : 'left-0.5'} w-5 h-5 bg-white rounded-full"></span></span></button>
       ${f('label', t('desc_ph'))}
       <div class="grid grid-cols-2 gap-2 pt-2"><button id="wf_c" class="btn py-3 rounded-lg border border-slate-300 font-semibold">${t('cancel')}</button><button id="wf_s" class="btn py-3 rounded-lg bg-slate-900 text-white font-semibold">${t('save')}</button></div></div>`);
     $$('[data-wt]').forEach(b => b.onclick = () => { read(); if (v.dish === dmDefault(v.type)) v.dish = dmDefault(b.dataset.wt); v.type = b.dataset.wt; draw(); });
     $$('[data-wfs]').forEach(b => b.onclick = () => { read(); v.first = b.dataset.wfs; draw(); });
+    $('#wf_calc').onclick = () => { closeModal(); nav('calc/' + w.id); };
     $('#wf_free').onclick = () => { read(); v.dish = v.dish === 'free' ? dmDefault(v.type) : 'free'; draw(); };
     $('#wf_spoke').onclick = () => { read(); spokePicker(v.spokeType, id => { v.spokeType = id; draw(); }); };
     $('#wf_c').onclick = closeModal;
@@ -663,7 +670,7 @@ ROUTES.result = (wid, mid) => {
   const hist = w.measurements.filter(x => x.done);
   $('#view').innerHTML = `<div class="lg:grid lg:grid-cols-5 lg:gap-5"><div class="lg:col-span-3 space-y-3">
       ${hist.length > 1 ? `<div class="flex gap-2 overflow-x-auto">${hist.map((x, k) => `<a href="#/result/${wid}/${x.id}" class="shrink-0 rounded-lg px-3 py-1.5 text-xs font-semibold border ${x.id === m.id ? 'bg-slate-900 text-white border-slate-900' : 'bg-white border-slate-200'}">${k + 1}. ${phaseLbl(x.phase)} ${analyze(x, w).score}</a>`).join('')}</div>` : ''}
-      <div class="card p-3 flex items-center gap-3"><div class="flex-1 min-w-0"><div class="font-bold truncate">${h(wName(w))}</div>${(() => { const sub = [c && c.bike, c ? t('ref') + ' ' + wheelRef(w) : '', dishMode(w) === 'free' ? t('nocenter') : ''].filter(Boolean).join(' · '); return sub ? `<div class="text-sm text-slate-500 truncate">${h(sub)}</div>` : ''; })()}</div><button id="wEdit" class="btn shrink-0 rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold">${t('edit')}</button></div>
+      <div class="card p-3 flex items-center gap-3"><div class="flex-1 min-w-0"><div class="font-bold truncate">${h(wName(w))}</div>${(() => { const sub = [c && c.bike, c ? t('ref') + ' ' + wheelRef(w) : '', lenTxt(w), dishMode(w) === 'free' ? t('nocenter') : ''].filter(Boolean).join(' · '); return sub ? `<div class="text-sm text-slate-500 truncate">${h(sub)}</div>` : ''; })()}</div><button id="wEdit" class="btn shrink-0 rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold">${t('edit')}</button></div>
       <div class="card p-3 flex items-center gap-4">${ring(an.score, 84, 9)}<div class="flex-1"><div class="text-xs font-bold text-slate-500">${phaseLbl(m.phase).toUpperCase()} · ${fmtDate(m.updatedAt)}</div><div class="text-xl font-extrabold ${inf.cls}">${inf.label}</div><div class="text-sm text-slate-600">${t('within', { a: an.within, n: an.n, t: TOL_OK })}${nulScore != null ? ' · ' + t('zero_to', { a: nulScore, b: an.score }) : ''}</div><div class="mt-1.5 h-2 rounded-full bg-slate-200 overflow-hidden"><div class="scorebar h-full" style="width:${an.score}%"></div></div></div></div>
       ${!an.complete ? `<a href="#/measure/${wid}" class="block rounded-lg bg-amber-100 p-3 text-sm font-semibold">${t('not_all')}</a>` : ''}
       ${an.dish ? `<div class="rounded-lg bg-rose-50 border border-rose-200 p-3 text-sm font-semibold text-rose-800">${t('dish_' + an.dish, { p: Math.round(Math.abs(an.sides.R.avg - an.sides.L.avg) / Math.max(an.sides.R.avg, an.sides.L.avg) * 100) })}<button id="dishOk" class="btn mt-2 w-full rounded-lg bg-rose-700 py-2.5 text-sm font-bold text-white">${t('nocenter')}</button></div>` : ''}
@@ -761,7 +768,7 @@ ROUTES.report = (wid) => {
       <div class="text-right"><div class="text-[10px] font-bold tracking-[.2em] text-slate-500">${r('r_title')}</div><div class="text-sm font-semibold">${r('r_no')} ${repNo}</div><div class="text-[11px] text-slate-500">${fmtDateLong(m.updatedAt, rl)}</div></div></div>
     ${sec(1, r('r_s1'))}
     <div class="grid grid-cols-2 gap-6 text-sm">
-      <table class="w-full self-start"><tbody>${row(r('r_customer'), h(c && c.name))}${row(r('r_ref'), wheelRef(w))}${row(r('r_phone'), h(c && c.phone))}${row(r('r_email'), h(c && c.email))}</tbody></table>
+      <table class="w-full self-start"><tbody>${row(r('r_customer'), h(c && c.name))}${row(r('r_ref'), wheelRef(w))}${row(r('nav_calc'), lenTxt(w))}${row(r('r_phone'), h(c && c.phone))}${row(r('r_email'), h(c && c.email))}</tbody></table>
       <table class="w-full self-start"><tbody>${row(r('r_bike'), h(c && c.bike))}${row(r('r_frame'), h(c && c.frame))}${row(r('r_wheel'), r(w.type === 'rear' ? 'rear_wheel' : 'front_wheel') + ', ' + w.spokes + ' ' + r('spokes_word') + (w.label ? ', ' + h(w.label) : ''))}${row(r('r_spokes'), h(SPOKE_TYPES[w.spokeType].label) + ' (' + h(SPOKE_TYPES[w.spokeType].sub.replace(/ recht$/, '')) + ' mm)')}${row(r('r_instrument'), r('r_meter') + ' ' + h(S().meter))}</tbody></table></div>
     ${sec(2, r('r_s2'))}
     <div class="avoid-break flex items-center gap-4">
@@ -795,6 +802,97 @@ ROUTES.report = (wid) => {
   $('#rlSel').onchange = (e) => { S().reportLang = e.target.value; save(); render(); };
   return { title: t('cert'), sub: wName(w) + ' · ' + wheelLabel(w), back: 'result/' + wid };
 };
+
+
+/* ================= SPAAKLENGTE ================= */
+/* L = √(R² + r² + W² − 2·R·r·cos α) − gat/2,  R = ERD/2, r = flensdiameter/2, W = flens tot midden, α = 720°·kruisingen/spaken
+   (driehoeksmethode zoals Spocalc / Park Tool / Musson). Daarna: rek onder spanning eraf en afronden op hele mm. */
+const HOLE_D = 2.6, E_STEEL = 193000, T_TARGET = 110; // mm, N/mm² (RVS), kgf aan de strakste kant
+const RIM_PRESETS = [['700', '28" / 700c', 602], ['29', '29er', 600], ['650', '27.5" / 650b', 562], ['26', '26"', 540]];
+const HUB_PRESETS = { front: { L: [44, 35], R: [44, 35] }, frontdisc: { L: [52, 23], R: [52, 33] }, rear: { L: [45, 36], R: [45, 20] }, reardisc: { L: [52, 33], R: [52, 21] } }; // [flensdiameter, flens tot midden]
+const spokeLenExact = (erd, fd, w, x, n) => { const R = erd / 2, r = fd / 2, a = 4 * Math.PI * x / n; return Math.sqrt(R * R + r * r + w * w - 2 * R * r * Math.cos(a)) - HOLE_D / 2; };
+const midArea = (t) => { const m = (SPOKE_TYPES[t] || {}).mid; if (typeof m === 'number') return Math.PI * m * m / 4; if (typeof m === 'string') { const [a, b] = m.slice(1).split('x').map(Number); return a * b; } return Math.PI * 0.9; };
+function calcSpokes(c) {
+  const num = (v) => { const x = parseFloat(String(v ?? '').replace(',', '.')); return isFinite(x) && x > 0 ? x : null; };
+  const erd = num(c.erd), out = { ok: false, sides: {}, toomany: false };
+  for (const s of ['L', 'R']) { const fd = num(c[s].fd), w = num(c[s].w), x = +c[s].x; out.sides[s] = { fd, w, x, ok: erd && fd && w && fd < erd }; if (x * 720 / c.spokes > 90) out.toomany = true; }
+  if (!erd || !out.sides.L.ok || !out.sides.R.ok) return out;
+  for (const s of ['L', 'R']) { const d = out.sides[s]; d.exact = spokeLenExact(erd, d.fd, d.w, d.x, c.spokes); }
+  // spanningsverhouding uit het zijdelingse evenwicht: T_L·W_L/L_L = T_R·W_R/L_R
+  const ratio = (out.sides.R.w / out.sides.R.exact) / (out.sides.L.w / out.sides.L.exact); out.ratio = ratio;
+  const T = { R: ratio <= 1 ? T_TARGET : T_TARGET / ratio, L: ratio <= 1 ? T_TARGET * ratio : T_TARGET };
+  for (const s of ['L', 'R']) { const d = out.sides[s]; d.stretch = T[s] * 9.81 * d.exact / (E_STEEL * midArea(c.spokeType)); d.len = Math.round(d.exact - d.stretch); }
+  out.ok = true; return out;
+}
+const defCalc = () => ({ rim: '700', erd: '602', spokes: 32, hub: 'rear', spokeType: 'x_20rond', L: { fd: '45', w: '36', x: 3 }, R: { fd: '45', w: '20', x: 3 }, pre: { erd: 1, fdL: 1, wL: 1, fdR: 1, wR: 1 } });
+const CALC_SVG_ARROW = (id, col) => `<marker id="${id}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0,0L10,5L0,10z" fill="${col}"/></marker>`;
+const svgERD = () => `<svg viewBox="0 0 120 120" class="w-24 h-24 shrink-0" xmlns="http://www.w3.org/2000/svg" font-family="Inter,sans-serif"><defs>${CALC_SVG_ARROW('mErd', '#e11d48')}</defs>
+  ${[30, 90, 150, 210, 270, 330].map(a => { const r = a * Math.PI / 180; return `<line x1="${60 + 8 * Math.cos(r)}" y1="${60 + 8 * Math.sin(r)}" x2="${60 + 40 * Math.cos(r)}" y2="${60 + 40 * Math.sin(r)}" stroke="#cbd5e1" stroke-width="1.5"/>`; }).join('')}
+  <circle cx="60" cy="60" r="50" fill="none" stroke="#94a3b8" stroke-width="9"/><circle cx="60" cy="60" r="8" fill="#cbd5e1"/>
+  <rect x="56.5" y="8" width="7" height="14" rx="1.5" fill="#475569"/><rect x="56.5" y="98" width="7" height="14" rx="1.5" fill="#475569"/>
+  <line x1="60" y1="11" x2="60" y2="109" stroke="#e11d48" stroke-width="2.4" marker-start="url(#mErd)" marker-end="url(#mErd)"/>
+  <rect x="66" y="52" width="30" height="16" rx="3" fill="#fff"/><text x="81" y="64" text-anchor="middle" font-size="12" font-weight="800" fill="#e11d48">ERD</text></svg>`;
+const svgFD = () => `<svg viewBox="0 0 120 120" class="w-28 h-28 shrink-0" xmlns="http://www.w3.org/2000/svg" font-family="Inter,sans-serif"><defs>${CALC_SVG_ARROW('mFd', '#e11d48')}</defs>
+  <circle cx="60" cy="60" r="46" fill="#e2e8f0" stroke="#94a3b8" stroke-width="2"/><circle cx="60" cy="60" r="15" fill="#cbd5e1"/>
+  ${[...Array(12).keys()].map(k => { const r = k * Math.PI / 6; return `<circle cx="${(60 + 35 * Math.cos(r)).toFixed(1)}" cy="${(60 + 35 * Math.sin(r)).toFixed(1)}" r="3.6" fill="#fff" stroke="#64748b" stroke-width="1.2"/>`; }).join('')}
+  <line x1="25" y1="60" x2="95" y2="60" stroke="#e11d48" stroke-width="2.4" marker-start="url(#mFd)" marker-end="url(#mFd)"/>
+  <circle cx="25" cy="60" r="1.8" fill="#e11d48"/><circle cx="95" cy="60" r="1.8" fill="#e11d48"/>
+  <text x="60" y="78" text-anchor="middle" font-size="13" font-weight="800" fill="#e11d48">Ø</text></svg>`;
+const svgCTF = (hub) => { const disc = /disc/.test(hub), rear = /rear/.test(hub), xl = rear ? 50 : 46, xr = rear ? 100 : 114;
+  return `<svg viewBox="0 0 160 96" class="w-full max-w-[16rem] h-auto" xmlns="http://www.w3.org/2000/svg" font-family="Inter,sans-serif"><defs>${CALC_SVG_ARROW('mCl', COL.L)}${CALC_SVG_ARROW('mCr', COL.R)}</defs>
+  <line x1="6" y1="58" x2="154" y2="58" stroke="#94a3b8" stroke-width="3"/><rect x="${xl}" y="51" width="${xr - xl}" height="14" rx="3" fill="#cbd5e1"/>
+  <rect x="${xl - 2}" y="30" width="5" height="56" rx="1.5" fill="#475569"/><rect x="${xr - 3}" y="30" width="5" height="56" rx="1.5" fill="#475569"/>
+  ${disc ? `<rect x="${xl - 14}" y="26" width="3" height="64" rx="1" fill="#64748b"/>` : ''}
+  ${rear ? [0, 1, 2, 3, 4].map(k => `<rect x="${xr + 5 + k * 6}" y="${36 + k * 3}" width="4" height="${44 - k * 6}" rx="1" fill="#94a3b8"/>`).join('') : ''}
+  <line x1="80" y1="6" x2="80" y2="92" stroke="#0f172a" stroke-width="1.2" stroke-dasharray="4 3"/>
+  <line x1="80" y1="18" x2="${xl + 1}" y2="18" stroke="${COL.L}" stroke-width="2.4" marker-end="url(#mCl)"/><line x1="80" y1="18" x2="${xr - 1}" y2="18" stroke="${COL.R}" stroke-width="2.4" marker-end="url(#mCr)"/>
+  <text x="${(80 + xl) / 2}" y="13" text-anchor="middle" font-size="11" font-weight="800" fill="${COL.L}">L</text><text x="${(80 + xr) / 2}" y="13" text-anchor="middle" font-size="11" font-weight="800" fill="${COL.R}">R</text></svg>`; };
+ROUTES.calc = (wid) => {
+  const w = wid ? getWheel(wid) : null; if (wid && !w) { nav('calc', true); return null; }
+  let c = DB.meta.calc = Object.assign(defCalc(), DB.meta.calc || {});
+  if (w && c.wheelId !== wid) { c = DB.meta.calc = Object.assign(defCalc(), (w.lengths && w.lengths.input) || DB.meta.calc || {}, { wheelId: wid }); c.spokes = w.spokes; c.spokeType = w.spokeType; if (!(w.lengths && w.lengths.input)) { c.hub = w.type === 'rear' ? 'rear' : 'front'; applyHub(c); } }
+  if (!w) c.wheelId = null;
+  const fld = (key, val, pre) => `<div class="relative"><input id="c_${key}" type="text" inputmode="decimal" autocomplete="off" value="${h(val)}" class="pr-12 font-bold text-lg"><span class="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-slate-400">${t('c_mm')}</span></div><div id="g_${key}" class="text-[11px] font-semibold text-amber-700 mt-0.5 ${pre ? '' : 'hidden'}">${t('c_guide')}</div>`;
+  const side = (sd) => `<div class="card overflow-hidden"><div class="px-3 py-2 text-white font-bold" style="background:${COL[sd]}">${t(sd === 'R' ? 'right' : 'left')}</div><div class="p-3 space-y-3">
+      <div class="grid grid-cols-2 gap-2"><div><div class="text-xs font-bold text-slate-500 mb-1">${t('c_fd')}</div>${fld('fd' + sd, c[sd].fd, c.pre['fd' + sd])}</div><div><div class="text-xs font-bold text-slate-500 mb-1">${t('c_ctf')}</div>${fld('w' + sd, c[sd].w, c.pre['w' + sd])}</div></div>
+      <div><div class="text-xs font-bold text-slate-500 mb-1">${t('c_cross')}</div><div class="grid grid-cols-5 gap-1.5">${[0, 1, 2, 3, 4].map(x => `<button data-cx="${sd}${x}" class="btn opt py-3 text-lg ${+c[sd].x === x ? 'on' : ''}">${x === 0 ? '0' : x + '×'}</button>`).join('')}</div><div class="text-[11px] text-slate-500 mt-0.5">0 = ${t('c_radial')}</div></div></div></div>`;
+  $('#view').innerHTML = `<div class="lg:grid lg:grid-cols-5 lg:gap-5"><div class="lg:col-span-3 space-y-3">
+    <div class="card p-3 space-y-3"><div class="font-bold">${t('c_rim')}</div>
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">${RIM_PRESETS.map(([k, l]) => `<button data-rim="${k}" class="btn opt py-3 text-sm ${c.rim === k ? 'on' : ''}">${l}</button>`).join('')}</div>
+      <div class="flex items-center gap-3">${svgERD()}<div class="flex-1"><div class="text-xs font-bold text-slate-500 mb-1">${t('c_erd')}</div>${fld('erd', c.erd, c.pre.erd)}</div></div></div>
+    <div class="card p-3 space-y-3"><div class="font-bold">${t('c_hub')}</div>
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">${Object.keys(HUB_PRESETS).map(k => `<button data-hub="${k}" class="btn opt py-3 text-sm ${c.hub === k ? 'on' : ''}">${t('c_hub_' + k)}</button>`).join('')}</div>
+      ${w ? '' : `<div class="grid grid-cols-4 gap-2">${[24, 28, 32, 36].map(n => `<button data-cn="${n}" class="btn opt py-2.5 ${c.spokes === n ? 'on' : ''}">${n}</button>`).join('')}</div>`}
+      <button id="cSpoke" class="btn w-full card px-4 py-3 flex items-center justify-between text-left"><span><span class="font-bold">${h(SPOKE_TYPES[c.spokeType].label)}</span><span class="block text-sm text-slate-500">${h(SPOKE_TYPES[c.spokeType].sub)} mm</span></span><span class="text-slate-400 text-xl">▾</span></button>
+      <div class="flex items-center justify-center gap-6 py-1">${svgFD()}${svgCTF(c.hub)}</div></div>
+    ${side('L')}${side('R')}</div>
+    <div class="lg:col-span-2 mt-3 lg:mt-0"><div id="cRes" class="card p-4 hidden lg:block lg:sticky lg:top-16"></div></div></div>
+    <div id="cBar" class="lg:hidden fixed inset-x-0 z-20 bg-white border-t border-slate-200 p-2" style="bottom:calc(3.5rem + env(safe-area-inset-bottom))"></div>`;
+  const big = (r, full) => {
+    if (!r.ok) return `<div class="text-sm font-semibold text-slate-500 ${full ? '' : 'py-3 text-center'}">${t('c_fill')}</div>`;
+    const sideBox = (sd) => { const d = r.sides[sd]; return `<div class="rounded-xl ${full ? 'p-3' : 'px-3 py-1.5'} text-white" style="background:${COL[sd]}"><div class="text-[11px] font-bold uppercase tracking-wide opacity-90">${full ? t('c_need') + ' ' : ''}${t(sd === 'R' ? 'right' : 'left')}</div><div class="${full ? 'text-4xl' : 'text-2xl'} font-extrabold leading-tight">${d.len} <span class="text-lg">${t('c_mm')}</span></div>${full ? `<div class="text-xs opacity-90">${t('c_exact', { v: d.exact.toFixed(1).replace('.', ',') })}</div><div class="text-xs opacity-90">${t(d.len <= d.exact ? 'c_down' : 'c_up', { s: d.stretch.toFixed(1).replace('.', ',') })}</div>` : ''}</div>`; };
+    const guide = Object.values(c.pre).some(Boolean);
+    return `<div class="grid grid-cols-2 gap-2">${sideBox('L')}${sideBox('R')}</div>
+      ${full ? `${Math.abs(r.ratio - 1) > 0.03 ? `<div class="text-sm font-semibold text-slate-700 mt-2">${t('c_ratio', { p: Math.round(r.ratio * 100) })}</div>` : ''}${r.toomany ? `<div class="text-sm font-semibold text-rose-700 mt-2">${t('c_toomany', { n: c.spokes })}</div>` : ''}${guide ? `<div class="text-xs font-semibold text-amber-700 mt-2">${t('c_guide_warn')}</div>` : ''}` : (r.toomany ? `<div class="text-xs font-semibold text-rose-700 mt-1">${t('c_toomany', { n: c.spokes })}</div>` : guide ? `<div class="text-[11px] font-semibold text-amber-700 mt-1">${t('c_guide_warn')}</div>` : '')}
+      <button data-take class="btn w-full mt-2 bg-slate-900 text-white rounded-lg ${full ? 'py-3' : 'py-2.5'} font-bold">${t('c_take')}</button>`;
+  };
+  const upd = () => { const r = calcSpokes(c); $('#cRes').innerHTML = big(r, true); $('#cBar').innerHTML = big(r, false); $$('[data-take]').forEach(b => b.onclick = () => take(r)); };
+  const take = (r) => {
+    const lengths = { L: r.sides.L.len, R: r.sides.R.len, exactL: +r.sides.L.exact.toFixed(1), exactR: +r.sides.R.exact.toFixed(1), xL: +c.L.x, xR: +c.R.x, ratio: +r.ratio.toFixed(3), input: JSON.parse(JSON.stringify(Object.assign({}, c, { wheelId: undefined }))) };
+    if (w) { w.lengths = lengths; w.spokeType = c.spokeType; upsert(DB.wheels, w); save(true); toast(t('c_taken')); nav('result/' + wid); return; }
+    Object.assign(draft, { spokes: c.spokes, type: /rear/.test(c.hub) ? 'rear' : 'front', spokeType: c.spokeType, lengths }); save(true); toast(t('c_taken')); nav('new');
+  };
+  for (const key of ['erd', 'fdL', 'wL', 'fdR', 'wR']) $('#c_' + key).addEventListener('input', e => { const v = e.target.value; if (key === 'erd') c.erd = v; else c[key.slice(-1)][key.slice(0, -1)] = v; c.pre[key] = 0; $('#g_' + key).classList.add('hidden'); save(); upd(); });
+  $$('[data-rim]').forEach(b => b.onclick = () => { const p = RIM_PRESETS.find(x => x[0] === b.dataset.rim); c.rim = p[0]; c.erd = String(p[2]); c.pre.erd = 1; save(); render(); });
+  $$('[data-hub]').forEach(b => b.onclick = () => { c.hub = b.dataset.hub; applyHub(c); save(); render(); });
+  $$('[data-cn]').forEach(b => b.onclick = () => { c.spokes = +b.dataset.cn; save(); render(); });
+  $$('[data-cx]').forEach(b => b.onclick = () => { c[b.dataset.cx[0]].x = +b.dataset.cx.slice(1); feedback('key'); save(); render(); });
+  $('#cSpoke').onclick = () => spokePicker(c.spokeType, id => { c.spokeType = id; save(); render(); });
+  upd();
+  return { title: t('nav_calc'), sub: w ? wName(w) + ' · ' + wheelLabel(w) : '', back: w ? 'result/' + wid : null, tall: true };
+};
+function applyHub(c) { const p = HUB_PRESETS[c.hub]; for (const sd of ['L', 'R']) { c[sd].fd = String(p[sd][0]); c[sd].w = String(p[sd][1]); c.pre['fd' + sd] = 1; c.pre['w' + sd] = 1; } }
+const lenTxt = (w) => w.lengths ? `L ${w.lengths.L} / R ${w.lengths.R} mm` : '';
 
 /* ================= KLANTEN ================= */
 let q2 = '';
