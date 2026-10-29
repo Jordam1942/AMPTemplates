@@ -143,7 +143,7 @@ const calLabel = (c) => UNIOR[c].label;
 const TOL_OK = 5, TOL_WARN = 10, MIN_READ = 1, MAX_READ = 90;
 const COL = { R: '#2563eb', L: '#ea580c' };
 const LS_KEY = 'spaakspanning_v3', DRIVE_FILE = 'spaakspanning-data.json', DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
-const APP_VERSION = '2026-10-29.15';
+const APP_VERSION = '2026-10-29.16';
 /* ================= TALEN =================
    Nieuwe taal toevoegen: kopieer het blok 'nl', vertaal de waarden en voeg de code toe aan LANGS. Ontbrekende sleutels vallen terug op 'nl'. */
 const LANGS = { nl: 'Nederlands', en: 'English', uk: 'Українська', ru: 'Русский' };
@@ -151,7 +151,7 @@ const LOCALES = { nl: 'nl-NL', en: 'en-GB', uk: 'uk-UA', ru: 'ru-RU' };
 const I18N = {
 nl: {
   nav_wheels: 'Wielen', nav_customers: 'Klanten', nav_settings: 'Instellingen',
-  search: 'Zoek', cancel: 'Annuleer', save: 'Opslaan', yes: 'Ja', no: 'Nee', del: 'Verwijder', add: 'Toevoegen', stop: 'Stop',
+  search: 'Zoek', cancel: 'Annuleer', save: 'Opslaan', yes: 'Ja', no: 'Nee', update_avail: 'Nieuwe versie {v} beschikbaar · tik om te vernieuwen', del: 'Verwijder', add: 'Toevoegen', stop: 'Stop',
   no_customer: 'Zonder klant', busy: 'bezig', final_chip: 'eind', zero_chip: 'nul', no_wheels: 'Geen wielen', new_wheel: '+ Wiel',
   front: 'Voor', rear: 'Achter', front_wheel: 'Voorwiel', rear_wheel: 'Achterwiel', spokes_word: 'spaken',
   new_title: 'Nieuw wiel', customer: 'KLANT', customer_ph: 'Naam (leeg = zonder klant)', wheel: 'WIEL', spokes: 'SPAKEN', spoke: 'SPAAK', desc_ph: 'Omschrijving (optioneel)', start: 'Start meting',
@@ -182,7 +182,7 @@ nl: {
 },
 en: {
   nav_wheels: 'Wheels', nav_customers: 'Customers', nav_settings: 'Settings',
-  search: 'Search', cancel: 'Cancel', save: 'Save', yes: 'Yes', no: 'No', del: 'Delete', add: 'Add', stop: 'Stop',
+  search: 'Search', cancel: 'Cancel', save: 'Save', yes: 'Yes', no: 'No', update_avail: 'New version {v} available · tap to refresh', del: 'Delete', add: 'Add', stop: 'Stop',
   no_customer: 'No customer', busy: 'in progress', final_chip: 'final', zero_chip: 'initial', no_wheels: 'No wheels', new_wheel: '+ Wheel',
   front: 'Front', rear: 'Rear', front_wheel: 'Front wheel', rear_wheel: 'Rear wheel', spokes_word: 'spokes',
   new_title: 'New wheel', customer: 'CUSTOMER', customer_ph: 'Name (blank = no customer)', wheel: 'WHEEL', spokes: 'SPOKES', spoke: 'SPOKE', desc_ph: 'Description (optional)', start: 'Start measuring',
@@ -213,7 +213,7 @@ en: {
 },
 uk: {
   nav_wheels: 'Колеса', nav_customers: 'Клієнти', nav_settings: 'Налаштування',
-  search: 'Пошук', cancel: 'Скасувати', save: 'Зберегти', yes: 'Так', no: 'Ні', del: 'Видалити', add: 'Додати', stop: 'Стоп',
+  search: 'Пошук', cancel: 'Скасувати', save: 'Зберегти', yes: 'Так', no: 'Ні', update_avail: 'Доступна нова версія {v} · торкніться, щоб оновити', del: 'Видалити', add: 'Додати', stop: 'Стоп',
   no_customer: 'Без клієнта', busy: 'триває', final_chip: 'фінал', zero_chip: 'початк.', no_wheels: 'Немає коліс', new_wheel: '+ Колесо',
   front: 'Переднє', rear: 'Заднє', front_wheel: 'Переднє колесо', rear_wheel: 'Заднє колесо', spokes_word: 'спиць',
   new_title: 'Нове колесо', customer: 'КЛІЄНТ', customer_ph: 'Ім’я (порожньо = без клієнта)', wheel: 'КОЛЕСО', spokes: 'СПИЦІ', spoke: 'СПИЦЯ', desc_ph: 'Опис (необов’язково)', start: 'Почати вимірювання',
@@ -244,7 +244,7 @@ uk: {
 },
 ru: {
   nav_wheels: 'Колёса', nav_customers: 'Клиенты', nav_settings: 'Настройки',
-  search: 'Поиск', cancel: 'Отмена', save: 'Сохранить', yes: 'Да', no: 'Нет', del: 'Удалить', add: 'Добавить', stop: 'Стоп',
+  search: 'Поиск', cancel: 'Отмена', save: 'Сохранить', yes: 'Да', no: 'Нет', update_avail: 'Доступна новая версия {v} · нажмите, чтобы обновить', del: 'Удалить', add: 'Добавить', stop: 'Стоп',
   no_customer: 'Без клиента', busy: 'в работе', final_chip: 'финал', zero_chip: 'нач.', no_wheels: 'Нет колёс', new_wheel: '+ Колесо',
   front: 'Переднее', rear: 'Заднее', front_wheel: 'Переднее колесо', rear_wheel: 'Заднее колесо', spokes_word: 'спиц',
   new_title: 'Новое колесо', customer: 'КЛИЕНТ', customer_ph: 'Имя (пусто = без клиента)', wheel: 'КОЛЕСО', spokes: 'СПИЦЫ', spoke: 'СПИЦА', desc_ph: 'Описание (необязательно)', start: 'Начать измерение',
@@ -431,6 +431,9 @@ const h = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': 
 function toast(msg, err) { const el = document.createElement('div'); el.className = 'toast pointer-events-auto px-4 py-2.5 rounded-lg text-sm font-semibold text-white ' + (err ? 'bg-rose-600' : 'bg-slate-900'); el.textContent = msg; $('#toastHost').appendChild(el); setTimeout(() => el.remove(), 2500); }
 function modal(html, sticky) { closeModal(); $('#modalHost').innerHTML = `<div id="mb" class="fixed inset-0 z-40 bg-slate-900/50 flex items-end sm:items-center justify-center sm:p-4"><div class="bg-white w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl max-h-[92vh] overflow-y-auto safe-b">${html}</div></div>`; $('#mb').onclick = (e) => { if (e.target.id === 'mb' && !sticky) closeModal(); }; }
 const closeModal = () => { $('#modalHost').innerHTML = ''; };
+/* Nieuwe versie online? Dan een tikbare melding tonen (cache van browser/CDN omzeilen) */
+const checkUpdate = async () => { try { const r = await fetch(location.pathname, { cache: 'no-store' }); const m = (await r.text()).match(/APP_VERSION = '([^']+)'/); if (m && m[1] !== APP_VERSION && !$('#updToast')) { const el = document.createElement('div'); el.id = 'updToast'; el.className = 'toast pointer-events-auto px-4 py-2.5 rounded-lg text-sm font-semibold text-white bg-emerald-600 cursor-pointer'; el.textContent = t('update_avail', { v: m[1] }); el.onclick = () => location.reload(); $('#toastHost').appendChild(el); } } catch (e) { } };
+if (location.protocol.startsWith('http')) { setTimeout(checkUpdate, 1500); document.addEventListener('visibilitychange', () => { if (!document.hidden) checkUpdate(); }); }
 const confirmM = (text, ok, danger) => new Promise(res => { ok = ok || t('yes'); modal(`<div class="p-5"><div class="font-semibold mb-4">${h(text)}</div><div class="grid grid-cols-2 gap-2"><button id="cN" class="btn py-3 rounded-lg border border-slate-300 font-semibold">${t('no')}</button><button id="cY" class="btn py-3 rounded-lg text-white font-semibold ${danger ? 'bg-rose-600' : 'bg-slate-900'}">${h(ok)}</button></div></div>`, true); $('#cN').onclick = () => { closeModal(); res(false); }; $('#cY').onclick = () => { closeModal(); res(true); }; });
 let ac = null;
 function feedback(kind) {
