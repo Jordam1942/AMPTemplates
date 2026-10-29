@@ -146,7 +146,7 @@ const calLabel = (c) => UNIOR[c].label;
 const TOL_OK = 5, TOL_WARN = 10, MIN_READ = 1, MAX_READ = 90;
 const COL = { R: '#2563eb', L: '#ea580c' };
 const LS_KEY = 'spaakspanning_v3', DRIVE_FILE = 'spaakspanning-data.json', DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
-const APP_VERSION = '2026-10-29.17';
+const APP_VERSION = '2026-10-29.18';
 /* ================= TALEN =================
    Nieuwe taal toevoegen: kopieer het blok 'nl', vertaal de waarden en voeg de code toe aan LANGS. Ontbrekende sleutels vallen terug op 'nl'. */
 const LANGS = { nl: 'Nederlands', en: 'English', uk: 'Українська', ru: 'Русский' };
@@ -154,7 +154,7 @@ const LOCALES = { nl: 'nl-NL', en: 'en-GB', uk: 'uk-UA', ru: 'ru-RU' };
 const I18N = {
 nl: {
   nav_wheels: 'Wielen', nav_customers: 'Klanten', nav_settings: 'Instellingen',
-  search: 'Zoek', cancel: 'Annuleer', save: 'Opslaan', yes: 'Ja', no: 'Nee', update_avail: 'Nieuwe versie {v} beschikbaar · tik om te vernieuwen', del: 'Verwijder', add: 'Toevoegen', stop: 'Stop',
+  search: 'Zoek', cancel: 'Annuleer', save: 'Opslaan', yes: 'Ja', no: 'Nee', ref: 'Ref.', r_ref: 'Referentie', centring: 'Centrering', dm_mid: 'Midden', dm_R: 'Rechts hoger', dm_L: 'Links hoger', dm_free: 'Vrij', edit_title: 'Gegevens wijzigen', wheel_lbl: 'Wiel', dish_ok_btn: 'Klopt, velg staat bewust uit het midden', dish_L_right_high: 'Rechts staat hoger dan links. Bij dit wiel hoort links strakker: kanten verwisseld of velg niet gecentreerd?', dish_L_right_low: 'Rechts staat erg slap ten opzichte van links ({p} %). Controleer de centrering van de velg.', dish_mid_diff: 'De kanten verschillen {p} % in spanning. Bij een symmetrisch wiel hoort dat gelijk te zijn: velg mogelijk niet gecentreerd.', r_expl_d_L: 'Het verschil tussen links en rechts hoort bij dit wiel: de velg staat uit het midden van de naaf, bijvoorbeeld door een remschijf, en de linkerzijde moet hoger gespannen staan om het wiel gecentreerd te houden.', r_expl_d_free: 'Bij dit wiel staat de velg bewust uit het midden van de naaf; daardoor verschilt de spanning tussen links en rechts. Elke zijde is afzonderlijk gelijkmatig afgesteld.', saved: 'Opgeslagen', customer_ph2: 'Naam (leeg = datum en referentie)', update_avail: 'Nieuwe versie {v} beschikbaar · tik om te vernieuwen', del: 'Verwijder', add: 'Toevoegen', stop: 'Stop',
   no_customer: 'Zonder klant', busy: 'bezig', final_chip: 'eind', zero_chip: 'nul', no_wheels: 'Geen wielen', new_wheel: '+ Wiel',
   front: 'Voor', rear: 'Achter', front_wheel: 'Voorwiel', rear_wheel: 'Achterwiel', spokes_word: 'spaken',
   new_title: 'Nieuw wiel', customer: 'KLANT', customer_ph: 'Naam (leeg = zonder klant)', wheel: 'WIEL', spokes: 'SPAKEN', spoke: 'SPAAK', desc_ph: 'Omschrijving (optioneel)', start: 'Start meting',
@@ -185,7 +185,7 @@ nl: {
 },
 en: {
   nav_wheels: 'Wheels', nav_customers: 'Customers', nav_settings: 'Settings',
-  search: 'Search', cancel: 'Cancel', save: 'Save', yes: 'Yes', no: 'No', update_avail: 'New version {v} available · tap to refresh', del: 'Delete', add: 'Add', stop: 'Stop',
+  search: 'Search', cancel: 'Cancel', save: 'Save', yes: 'Yes', no: 'No', ref: 'Ref.', r_ref: 'Reference', centring: 'Centring', dm_mid: 'Centred', dm_R: 'Right higher', dm_L: 'Left higher', dm_free: 'Free', edit_title: 'Edit details', wheel_lbl: 'Wheel', dish_ok_btn: 'Correct, rim is intentionally off-centre', dish_L_right_high: 'Right side is tighter than left. On this wheel the left side should be tighter: sides swapped or rim not centred?', dish_L_right_low: 'Right side is very slack compared with left ({p} %). Check the rim centring.', dish_mid_diff: 'The sides differ {p} % in tension. On a symmetrical wheel they should be equal: rim may not be centred.', r_expl_d_L: 'The difference between left and right is inherent to this wheel: the rim sits off-centre on the hub, for example because of a brake disc, and the left side must carry higher tension to keep the wheel centred.', r_expl_d_free: 'On this wheel the rim is intentionally off-centre on the hub, so the tension differs between left and right. Each side has been evened out separately.', saved: 'Saved', customer_ph2: 'Name (blank = date and reference)', update_avail: 'New version {v} available · tap to refresh', del: 'Delete', add: 'Add', stop: 'Stop',
   no_customer: 'No customer', busy: 'in progress', final_chip: 'final', zero_chip: 'initial', no_wheels: 'No wheels', new_wheel: '+ Wheel',
   front: 'Front', rear: 'Rear', front_wheel: 'Front wheel', rear_wheel: 'Rear wheel', spokes_word: 'spokes',
   new_title: 'New wheel', customer: 'CUSTOMER', customer_ph: 'Name (blank = no customer)', wheel: 'WHEEL', spokes: 'SPOKES', spoke: 'SPOKE', desc_ph: 'Description (optional)', start: 'Start measuring',
@@ -216,7 +216,7 @@ en: {
 },
 uk: {
   nav_wheels: 'Колеса', nav_customers: 'Клієнти', nav_settings: 'Налаштування',
-  search: 'Пошук', cancel: 'Скасувати', save: 'Зберегти', yes: 'Так', no: 'Ні', update_avail: 'Доступна нова версія {v} · торкніться, щоб оновити', del: 'Видалити', add: 'Додати', stop: 'Стоп',
+  search: 'Пошук', cancel: 'Скасувати', save: 'Зберегти', yes: 'Так', no: 'Ні', ref: '№', r_ref: 'Номер', centring: 'Центрування', dm_mid: 'По центру', dm_R: 'Права вище', dm_L: 'Ліва вище', dm_free: 'Вільно', edit_title: 'Змінити дані', wheel_lbl: 'Колесо', dish_ok_btn: 'Так, обід навмисно не по центру', dish_L_right_high: 'Права сторона натягнута сильніше за ліву. На цьому колесі ліва має бути тугішою: сторони переплутано або обід не відцентровано?', dish_L_right_low: 'Права сторона дуже слабка порівняно з лівою ({p} %). Перевірте центрування обода.', dish_mid_diff: 'Сторони відрізняються на {p} %. На симетричному колесі натяг має бути однаковим: обід може бути не відцентрований.', r_expl_d_L: 'Різниця між сторонами властива цьому колесу: обід зміщений від середини втулки, наприклад через гальмівний диск, тому ліва сторона має вищий натяг для центрування колеса.', r_expl_d_free: 'У цього колеса обід навмисно зміщений від середини втулки, тому натяг лівої і правої сторін різний. Кожну сторону окремо відрегульовано рівномірно.', saved: 'Збережено', customer_ph2: 'Ім’я (порожньо = дата й номер)', update_avail: 'Доступна нова версія {v} · торкніться, щоб оновити', del: 'Видалити', add: 'Додати', stop: 'Стоп',
   no_customer: 'Без клієнта', busy: 'триває', final_chip: 'фінал', zero_chip: 'початк.', no_wheels: 'Немає коліс', new_wheel: '+ Колесо',
   front: 'Переднє', rear: 'Заднє', front_wheel: 'Переднє колесо', rear_wheel: 'Заднє колесо', spokes_word: 'спиць',
   new_title: 'Нове колесо', customer: 'КЛІЄНТ', customer_ph: 'Ім’я (порожньо = без клієнта)', wheel: 'КОЛЕСО', spokes: 'СПИЦІ', spoke: 'СПИЦЯ', desc_ph: 'Опис (необов’язково)', start: 'Почати вимірювання',
@@ -247,7 +247,7 @@ uk: {
 },
 ru: {
   nav_wheels: 'Колёса', nav_customers: 'Клиенты', nav_settings: 'Настройки',
-  search: 'Поиск', cancel: 'Отмена', save: 'Сохранить', yes: 'Да', no: 'Нет', update_avail: 'Доступна новая версия {v} · нажмите, чтобы обновить', del: 'Удалить', add: 'Добавить', stop: 'Стоп',
+  search: 'Поиск', cancel: 'Отмена', save: 'Сохранить', yes: 'Да', no: 'Нет', ref: '№', r_ref: 'Номер', centring: 'Центровка', dm_mid: 'По центру', dm_R: 'Правая выше', dm_L: 'Левая выше', dm_free: 'Свободно', edit_title: 'Изменить данные', wheel_lbl: 'Колесо', dish_ok_btn: 'Да, обод намеренно не по центру', dish_L_right_high: 'Правая сторона натянута сильнее левой. На этом колесе левая должна быть туже: стороны перепутаны или обод не отцентрован?', dish_L_right_low: 'Правая сторона очень слабая по сравнению с левой ({p} %). Проверьте центровку обода.', dish_mid_diff: 'Стороны отличаются на {p} %. На симметричном колесе натяжение должно быть одинаковым: обод может быть не отцентрован.', r_expl_d_L: 'Разница между сторонами свойственна этому колесу: обод смещён от середины втулки, например из-за тормозного диска, поэтому левая сторона имеет более высокое натяжение для центровки колеса.', r_expl_d_free: 'У этого колеса обод намеренно смещён от середины втулки, поэтому натяжение левой и правой сторон различается. Каждая сторона отдельно отрегулирована равномерно.', saved: 'Сохранено', customer_ph2: 'Имя (пусто = дата и номер)', update_avail: 'Доступна новая версия {v} · нажмите, чтобы обновить', del: 'Удалить', add: 'Добавить', stop: 'Стоп',
   no_customer: 'Без клиента', busy: 'в работе', final_chip: 'финал', zero_chip: 'нач.', no_wheels: 'Нет колёс', new_wheel: '+ Колесо',
   front: 'Переднее', rear: 'Заднее', front_wheel: 'Переднее колесо', rear_wheel: 'Заднее колесо', spokes_word: 'спиц',
   new_title: 'Новое колесо', customer: 'КЛИЕНТ', customer_ph: 'Имя (пусто = без клиента)', wheel: 'КОЛЕСО', spokes: 'СПИЦЫ', spoke: 'СПИЦА', desc_ph: 'Описание (необязательно)', start: 'Начать измерение',
@@ -300,6 +300,12 @@ const getWheel = (id) => DB.wheels.find(w => w.id === id && !w.deleted) || null;
 function upsert(arr, r) { r.updatedAt = now(); const i = arr.findIndex(x => x.id === r.id); if (i >= 0) arr[i] = r; else arr.push(r); save(); return r; }
 function remove(arr, id) { const r = arr.find(x => x.id === id); if (r) { r.deleted = true; r.updatedAt = now(); save(); } }
 const custName = (id) => { const c = getCustomer(id); return c ? c.name : ''; };
+const DM = ['mid', 'R', 'L', 'free'];
+const dmDefault = (type) => type === 'rear' ? 'R' : 'mid';
+const dishMode = (w) => DM.includes(w.dish) ? w.dish : dmDefault(w.type);
+const wheelRef = (w) => (w.ref || w.id.slice(2, 8)).toUpperCase();
+const autoName = (w, l) => fmtDate(w.createdAt || w.updatedAt, l) + ' ' + fmtTime(w.createdAt || w.updatedAt, l) + ' · ' + wheelRef(w);
+const wName = (w, l) => { const c = getCustomer(w.customerId); return c ? c.name : autoName(w, l); };
 const wheelLabel = (w) => t(w.type === 'rear' ? 'rear' : 'front') + ' · ' + w.spokes + ' · ' + SPOKE_TYPES[w.spokeType].label;
 const loc = (l) => LOCALES[l || lang()] || 'nl-NL';
 const fmtDate = (ts, l) => new Date(ts).toLocaleDateString(loc(l), { day: '2-digit', month: '2-digit', year: 'numeric' });
@@ -327,7 +333,7 @@ const calibPts = (t) => ((S().calib || {})[calCol(t)] || []).filter(p => p && is
 const calSource = (t) => calibPts(t).length >= 2 ? 'eigen' : UNIOR[calCol(t)] ? 'tabel' : 'schatting'; // eigen punten > Unior-tabel > schatting
 const isCal = (t) => calSource(t) !== 'schatting';
 function interp(pts, r) { // lineair tussen tabelpunten, buiten de tabel doorgetrokken
-  if (r <= pts[0][0]) { const [a, b] = pts; return Math.max(0, a[1] + (r - a[0]) * (b[1] - a[1]) / (b[0] - a[0])); }
+  if (r <= pts[0][0]) { const [a, b] = pts; if (r <= 0 || a[0] <= 0 || a[1] <= 0) return 0; const k = Math.max(1, (b[1] - a[1]) / ((b[0] - a[0]) || 1) * a[0] / a[1]); return a[1] * Math.pow(r / a[0], k); } // onder de tabel: machtsfunctie, sluit aan op de helling en blijft positief
   for (let i = 0; i < pts.length - 1; i++) if (r <= pts[i + 1][0]) { const a = pts[i], b = pts[i + 1]; return a[1] + (r - a[0]) * (b[1] - a[1]) / ((b[0] - a[0]) || 1); }
   const a = pts[pts.length - 2], b = pts[pts.length - 1]; return b[1] + (r - b[0]) * (b[1] - a[1]) / ((b[0] - a[0]) || 1);
 }
@@ -353,7 +359,7 @@ function analyze(m, w) {
       sd.avg = valid.reduce((a, x) => a + x.kgf, 0) / valid.length; sd.avgR = valid.reduce((a, x) => a + x.r, 0) / valid.length;
       sd.min = Math.min(...valid.map(x => x.kgf)); sd.max = Math.max(...valid.map(x => x.kgf));
       for (const x of valid) {
-        x.dev = (x.kgf - sd.avg) / sd.avg * 100; const ad = Math.abs(x.dev);
+        x.dev = sd.avg > 0 ? (x.kgf - sd.avg) / sd.avg * 100 : 0; const ad = Math.abs(x.dev);
         sd.maxDev = Math.max(sd.maxDev, ad); maxDev = Math.max(maxDev, ad); sumDev += ad; out.filled++;
         if (ad <= TOL_OK) sd.within++; else { target[g(s, x.i)] = sd.avg - x.kgf; has[g(s, x.i)] = true; }
       }
@@ -395,8 +401,10 @@ function analyze(m, w) {
   out.dish = null;
   const R = out.sides.R.avg, Lv = out.sides.L.avg;
   if (R && Lv && out.sides.R.count >= 4 && out.sides.L.count >= 4) {
-    if (w.type === 'rear') { if (Lv > R * 1.05) out.dish = 'rear_left_high'; else if (Lv < R * 0.45) out.dish = 'rear_left_low'; }
-    else if (Math.abs(R - Lv) / Math.max(R, Lv) > 0.15 && !w.disc) out.dish = 'front_diff';
+    const dm = dishMode(w);
+    if (dm === 'R') { if (Lv > R * 1.05) out.dish = 'rear_left_high'; else if (Lv < R * 0.45) out.dish = 'rear_left_low'; }
+    else if (dm === 'L') { if (R > Lv * 1.05) out.dish = 'L_right_high'; else if (R < Lv * 0.45) out.dish = 'L_right_low'; }
+    else if (dm === 'mid' && Math.abs(R - Lv) / Math.max(R, Lv) > 0.15 && !w.disc) out.dish = w.type === 'rear' ? 'mid_diff' : 'front_diff';
   }
   return out;
 }
@@ -473,14 +481,14 @@ let q1 = '';
 function wheelRow(w) {
   const c = getCustomer(w.customerId), m = lastM(w), open = m && !m.done, nul = nulM(w), eind = eindM(w);
   return `<a href="#/${open ? 'measure' : 'result'}/${w.id}" class="card p-3 flex items-center gap-3">
-    <div class="flex-1 min-w-0"><div class="font-bold truncate">${h(c ? c.name : t('no_customer'))}${c && c.bike ? ` <span class="font-normal text-slate-500">· ${h(c.bike)}</span>` : ''}</div>
-      <div class="text-sm text-slate-500">${h(wheelLabel(w))}${w.label ? ' · ' + h(w.label) : ''} · ${fmtDate(w.updatedAt)}</div></div>
+    <div class="flex-1 min-w-0"><div class="font-bold truncate">${h(wName(w))}${c && c.bike ? ` <span class="font-normal text-slate-500">· ${h(c.bike)}</span>` : ''}</div>
+      <div class="text-sm text-slate-500">${h(wheelLabel(w))}${w.label ? ' · ' + h(w.label) : ''} · ${c ? fmtDate(w.updatedAt) + ' · ' + t('ref') + ' ' + wheelRef(w) : fmtDate(w.updatedAt)}</div></div>
     ${open ? chip(t('busy'), 'bg-amber-100 text-amber-800') : eind ? chip(t('final_chip'), 'bg-emerald-100 text-emerald-800') : nul ? chip(t('zero_chip'), 'bg-sky-100 text-sky-800') : ''}
     ${nul && eind && nul.id !== eind.id ? `<span class="text-xs text-slate-500">${analyze(nul, w).score}→</span>` : ''}${scoreChip(wheelScore(w))}<span class="text-slate-300">›</span></a>`;
 }
 ROUTES.wheels = () => {
   const q = q1.trim().toLowerCase();
-  const list = wheels().filter(w => !q || [custName(w.customerId), (getCustomer(w.customerId) || {}).bike, (getCustomer(w.customerId) || {}).frame, w.label].some(v => (v || '').toLowerCase().includes(q))).sort((a, b) => b.updatedAt - a.updatedAt);
+  const list = wheels().filter(w => !q || [wName(w), (getCustomer(w.customerId) || {}).bike, (getCustomer(w.customerId) || {}).frame, w.label, wheelRef(w)].some(v => (v || '').toLowerCase().includes(q))).sort((a, b) => b.updatedAt - a.updatedAt);
   $('#view').innerHTML = `<div class="flex gap-2 mb-3"><input id="q1" type="search" placeholder="${t('search')}" value="${h(q1)}"><a href="#/new" class="btn bg-slate-900 text-white rounded-lg px-5 flex items-center font-bold shrink-0">${t('new_wheel')}</a></div>
     ${list.length ? `<div class="grid gap-2 lg:grid-cols-2">${list.map(wheelRow).join('')}</div>` : `<div class="card p-8 text-center text-slate-400">${t('no_wheels')}</div>`}`;
   live('#q1', v => q1 = v, ROUTES.wheels);
@@ -489,18 +497,20 @@ ROUTES.wheels = () => {
 function live(id, set, re) { const el = $(id); if (!el) return; el.addEventListener('input', e => { set(e.target.value); const p = e.target.selectionStart; re(); const i = $(id); if (i) { i.focus(); try { i.setSelectionRange(p, p); } catch (x) {} } }); }
 
 /* ================= NIEUW WIEL ================= */
-let draft = { customer: '', type: 'rear', spokes: 32, spokeType: 'x_20rond', label: '' };
+let draft = { customer: '', type: 'rear', spokes: 32, spokeType: 'x_20rond', label: '', dish: '' };
 ROUTES.new = (cid) => {
   if (cid) { const c = getCustomer(cid); if (c) draft.customer = c.name; nav('new', true); return null; }
   const opt = (k, v, l) => `<button data-k="${k}" data-v="${v}" class="btn opt py-3 ${String(draft[k]) === String(v) ? 'on' : ''}">${l}</button>`;
   $('#view').innerHTML = `<div class="max-w-xl mx-auto space-y-4">
-    <div><div class="text-xs font-bold text-slate-500 mb-1">${t('customer')}</div><input id="nCust" type="text" list="custList" placeholder="${t('customer_ph')}" value="${h(draft.customer)}"><datalist id="custList">${customers().map(c => `<option value="${h(c.name)}">`).join('')}</datalist></div>
+    <div><div class="text-xs font-bold text-slate-500 mb-1">${t('customer')}</div><input id="nCust" type="text" list="custList" placeholder="${t('customer_ph2')}" value="${h(draft.customer)}"><datalist id="custList">${customers().map(c => `<option value="${h(c.name)}">`).join('')}</datalist></div>
     <div><div class="text-xs font-bold text-slate-500 mb-1">${t('wheel')}</div><div class="grid grid-cols-2 gap-2">${opt('type', 'front', t('front'))}${opt('type', 'rear', t('rear'))}</div></div>
     <div><div class="text-xs font-bold text-slate-500 mb-1">${t('spokes')}</div><div class="grid grid-cols-4 gap-2">${[24, 28, 32, 36].map(n => opt('spokes', n, n)).join('')}</div></div>
     <div><div class="text-xs font-bold text-slate-500 mb-1">${t('spoke')}</div><button id="nSpoke" class="btn w-full card px-4 py-3 flex items-center justify-between text-left"><span><span class="font-bold">${h(SPOKE_TYPES[draft.spokeType].label)}</span><span class="block text-sm text-slate-500">${h(SPOKE_TYPES[draft.spokeType].sub)} mm</span></span><span class="text-slate-400 text-xl">▾</span></button></div>
+    <div><div class="text-xs font-bold text-slate-500 mb-1">${t('centring')}</div><div class="grid grid-cols-2 sm:grid-cols-4 gap-2">${DM.map(d => `<button data-dm="${d}" class="btn opt py-2.5 text-sm ${(draft.dish || dmDefault(draft.type)) === d ? 'on' : ''}">${t('dm_' + d)}</button>`).join('')}</div></div>
     <input id="nLabel" type="text" placeholder="${t('desc_ph')}" value="${h(draft.label)}">
     <button id="nStart" class="btn w-full bg-slate-900 text-white rounded-lg py-4 text-lg font-bold">${t('start')}</button></div>`;
   $$('[data-k]').forEach(b => b.onclick = () => { draft[b.dataset.k] = b.dataset.k === 'spokes' ? +b.dataset.v : b.dataset.v; feedback('key'); render(); });
+  $$('[data-dm]').forEach(b => b.onclick = () => { draft.dish = b.dataset.dm === dmDefault(draft.type) ? '' : b.dataset.dm; feedback('key'); render(); });
   $('#nSpoke').onclick = () => spokePicker(draft.spokeType, id => { draft.spokeType = id; render(); });
   $('#nCust').addEventListener('input', e => draft.customer = e.target.value);
   $('#nLabel').addEventListener('input', e => draft.label = e.target.value);
@@ -508,13 +518,55 @@ ROUTES.new = (cid) => {
     const name = draft.customer.trim(); let cid = null;
     if (name) { let c = customers().find(c => c.name.toLowerCase() === name.toLowerCase()); if (!c) c = upsert(DB.customers, { id: uid('c'), name, phone: '', email: '', bike: '', frame: '', createdAt: now() }); cid = c.id; }
     const w = { id: uid('w'), customerId: cid, type: draft.type, spokes: draft.spokes, spokeType: draft.spokeType, label: draft.label.trim(), createdAt: now(), measurements: [] };
+    if (draft.dish && draft.dish !== dmDefault(w.type)) w.dish = draft.dish;
     w.measurements.push(newMeasurement(w, null, null, 'nul')); upsert(DB.wheels, w);
-    DB.meta.active = { wheelId: w.id, mId: w.measurements[0].id, side: 'R', idx: 0 }; draft.customer = ''; draft.label = ''; save(true);
+    DB.meta.active = { wheelId: w.id, mId: w.measurements[0].id, side: 'R', idx: 0 }; draft.customer = ''; draft.label = ''; draft.dish = ''; save(true);
     nav('measure/' + w.id, true);
   };
   return { title: t('new_title'), back: 'wheels' };
 };
 
+/* Gegevens wijzigen: klant en wiel */
+function wheelForm(w, done) {
+  const c0 = getCustomer(w.customerId);
+  const v0 = { name: c0 ? c0.name : '', phone: (c0 && c0.phone) || '', email: (c0 && c0.email) || '', bike: (c0 && c0.bike) || '', frame: (c0 && c0.frame) || '' };
+  const v = Object.assign({}, v0, { type: w.type, spokeType: w.spokeType, label: w.label || '', dish: dishMode(w) });
+  const F = ['name', 'phone', 'email', 'bike', 'frame', 'label'];
+  const read = () => F.forEach(k => { const el = $('#wf_' + k); if (el) v[k] = el.value; });
+  const f = (k, ph, ty = 'text') => `<input id="wf_${k}" type="${ty}" placeholder="${h(ph)}" value="${h(v[k])}">`;
+  const lbl = (x) => `<div class="text-xs font-bold text-slate-500 pt-1">${x}</div>`;
+  const draw = () => {
+    modal(`<div class="p-4 space-y-2"><div class="font-bold text-lg">${t('edit_title')}</div>
+      ${lbl(t('customer'))}<input id="wf_name" type="text" list="wfList" placeholder="${h(t('customer_ph2'))}" value="${h(v.name)}"><datalist id="wfList">${customers().map(c => `<option value="${h(c.name)}">`).join('')}</datalist>
+      ${f('phone', t('phone'), 'tel')}${f('email', t('email'), 'email')}${f('bike', t('bike'))}${f('frame', t('frame'))}
+      ${lbl(t('wheel_lbl') + ' · ' + t('ref') + ' ' + wheelRef(w))}<div class="grid grid-cols-2 gap-2">${['front', 'rear'].map(x => `<button data-wt="${x}" class="btn opt py-2.5 ${v.type === x ? 'on' : ''}">${t(x)}</button>`).join('')}</div>
+      <button id="wf_spoke" class="btn w-full card px-4 py-3 flex items-center justify-between text-left"><span><span class="font-bold">${h(SPOKE_TYPES[v.spokeType].label)}</span><span class="block text-sm text-slate-500">${h(SPOKE_TYPES[v.spokeType].sub)} mm</span></span><span class="text-slate-400 text-xl">▾</span></button>
+      ${lbl(t('centring'))}<div class="grid grid-cols-2 sm:grid-cols-4 gap-2">${DM.map(d => `<button data-wd="${d}" class="btn opt py-2.5 text-sm ${v.dish === d ? 'on' : ''}">${t('dm_' + d)}</button>`).join('')}</div>
+      ${f('label', t('desc_ph'))}
+      <div class="grid grid-cols-2 gap-2 pt-2"><button id="wf_c" class="btn py-3 rounded-lg border border-slate-300 font-semibold">${t('cancel')}</button><button id="wf_s" class="btn py-3 rounded-lg bg-slate-900 text-white font-semibold">${t('save')}</button></div></div>`);
+    $$('[data-wt]').forEach(b => b.onclick = () => { read(); if (v.dish === dmDefault(v.type)) v.dish = dmDefault(b.dataset.wt); v.type = b.dataset.wt; draw(); });
+    $$('[data-wd]').forEach(b => b.onclick = () => { read(); v.dish = b.dataset.wd; draw(); });
+    $('#wf_spoke').onclick = () => { read(); spokePicker(v.spokeType, id => { v.spokeType = id; draw(); }); };
+    $('#wf_c').onclick = closeModal;
+    $('#wf_s').onclick = () => {
+      read(); const name = v.name.trim(), vals = { phone: v.phone.trim(), email: v.email.trim(), bike: v.bike.trim(), frame: v.frame.trim() };
+      if (!name) w.customerId = null;
+      else {
+        let tg = customers().find(x => x.name.toLowerCase() === name.toLowerCase());
+        if (tg && (!c0 || tg.id !== c0.id)) { for (const k in vals) if (vals[k] !== v0[k]) tg[k] = vals[k]; tg.name = name; }
+        else {
+          if (!tg) { const shared = c0 && wheels().some(x => x.id !== w.id && x.customerId === c0.id && (!c0 || name.toLowerCase() !== c0.name.toLowerCase())); tg = c0 && !shared ? c0 : { id: uid('c'), createdAt: now() }; }
+          Object.assign(tg, { name }, vals);
+        }
+        upsert(DB.customers, tg); w.customerId = tg.id;
+      }
+      w.type = v.type; w.spokeType = v.spokeType; w.label = v.label.trim();
+      if (v.dish === dmDefault(v.type)) delete w.dish; else w.dish = v.dish;
+      upsert(DB.wheels, w); save(true); closeModal(); toast(t('saved')); done && done();
+    };
+  };
+  draw();
+}
 function spokePicker(curId, done) {
   let q = '';
   const list = () => {
@@ -584,7 +636,7 @@ ROUTES.measure = (wid) => {
   };
   keyHandler = (e) => { if (/input/i.test(e.target.tagName)) return; if (/^[0-9]$/.test(e.key)) key(e.key); else if (e.key === 'Enter') key('ok'); else if (e.key === 'Backspace') key('del'); else if (e.key === ',' || e.key === '.') key('half'); else if (e.key === 'ArrowLeft') $('#mPrev').click(); else return; e.preventDefault(); };
   paint();
-  return { title: phaseLbl(m.phase), sub: (c ? c.name + ' · ' : '') + wheelLabel(w), back: 'wheels', focus: true, right: `<a href="#/result/${wid}" class="btn text-sm font-semibold px-3 py-2">${t('stop')}</a>` };
+  return { title: phaseLbl(m.phase), sub: wName(w) + ' · ' + wheelLabel(w), back: 'wheels', focus: true, right: `<a href="#/result/${wid}" class="btn text-sm font-semibold px-3 py-2">${t('stop')}</a>` };
 };
 document.addEventListener('keydown', e => { if (cur.name === 'measure' && keyHandler) keyHandler(e); });
 
@@ -601,9 +653,10 @@ ROUTES.result = (wid, mid) => {
   const hist = w.measurements.filter(x => x.done);
   $('#view').innerHTML = `<div class="lg:grid lg:grid-cols-5 lg:gap-5"><div class="lg:col-span-3 space-y-3">
       ${hist.length > 1 ? `<div class="flex gap-2 overflow-x-auto">${hist.map((x, k) => `<a href="#/result/${wid}/${x.id}" class="shrink-0 rounded-lg px-3 py-1.5 text-xs font-semibold border ${x.id === m.id ? 'bg-slate-900 text-white border-slate-900' : 'bg-white border-slate-200'}">${k + 1}. ${phaseLbl(x.phase)} ${analyze(x, w).score}</a>`).join('')}</div>` : ''}
+      <div class="card p-3 flex items-center gap-3"><div class="flex-1 min-w-0"><div class="font-bold truncate">${h(wName(w))}</div><div class="text-sm text-slate-500 truncate">${h([c && c.bike, c ? t('ref') + ' ' + wheelRef(w) : '', t('centring') + ': ' + t('dm_' + dishMode(w))].filter(Boolean).join(' · '))}</div></div><button id="wEdit" class="btn shrink-0 rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold">${t('edit')}</button></div>
       <div class="card p-3 flex items-center gap-4">${ring(an.score, 84, 9)}<div class="flex-1"><div class="text-xs font-bold text-slate-500">${phaseLbl(m.phase).toUpperCase()} · ${fmtDate(m.updatedAt)}</div><div class="text-xl font-extrabold ${inf.cls}">${inf.label}</div><div class="text-sm text-slate-600">${t('within', { a: an.within, n: an.n, t: TOL_OK })}${nulScore != null ? ' · ' + t('zero_to', { a: nulScore, b: an.score }) : ''}</div><div class="mt-1.5 h-2 rounded-full bg-slate-200 overflow-hidden"><div class="scorebar h-full" style="width:${an.score}%"></div></div></div></div>
       ${!an.complete ? `<a href="#/measure/${wid}" class="block rounded-lg bg-amber-100 p-3 text-sm font-semibold">${t('not_all')}</a>` : ''}
-      ${an.dish ? `<div class="rounded-lg bg-rose-50 border border-rose-200 p-3 text-sm font-semibold text-rose-800">${t('dish_' + an.dish, { p: Math.round(Math.abs(an.sides.R.avg - an.sides.L.avg) / Math.max(an.sides.R.avg, an.sides.L.avg) * 100) })}</div>` : ''}
+      ${an.dish ? `<div class="rounded-lg bg-rose-50 border border-rose-200 p-3 text-sm font-semibold text-rose-800">${t('dish_' + an.dish, { p: Math.round(Math.abs(an.sides.R.avg - an.sides.L.avg) / Math.max(an.sides.R.avg, an.sides.L.avg) * 100) })}<button id="dishOk" class="btn mt-2 w-full rounded-lg bg-white border border-rose-300 py-2 text-sm font-bold text-rose-800">${t('dish_ok_btn')}</button></div>` : ''}
       ${sideBlock('R')}${sideBlock('L')}
       <div class="card p-3"><div class="flex items-center justify-between"><span class="font-bold">${t('wobble_title')}</span><button id="wbAdd" class="btn bg-slate-900 text-white rounded-lg px-3 py-1.5 text-sm font-bold">${t('add_wobble')}</button></div>
         ${(m.wobbles || []).length ? `<div class="flex flex-wrap gap-1.5 mt-2">${m.wobbles.map((x, k) => `<span class="inline-flex items-center gap-1 rounded-full bg-slate-100 pl-3 pr-1 py-1 text-sm font-semibold">${t('wb_' + x.kind)} ${t('at')} ${x.pos % 2 ? 'L' : 'R'}${Math.floor(x.pos / 2) + 1}${x.size === 2 ? ' (' + t('big') + ')' : ''}<button data-wbdel="${k}" class="btn w-6 h-6 rounded-full hover:bg-slate-200 text-slate-500">✕</button></span>`).join('')}</div>` : `<div class="text-sm text-slate-500 mt-1">${t('no_wobble')}</div>`}</div></div>
@@ -623,8 +676,10 @@ ROUTES.result = (wid, mid) => {
   $('#del').onclick = async () => { if (await confirmM(t('confirm_del_wheel'), t('del'), true)) { remove(DB.wheels, wid); nav('wheels'); } };
   $$('[data-e]').forEach(b => b.onclick = () => editSpoke(w, m, b.dataset.e[0], +b.dataset.e.slice(1)));
   $('#wbAdd').onclick = () => wobbleForm(w, m);
+  $('#wEdit').onclick = () => wheelForm(w, render);
+  if ($('#dishOk')) $('#dishOk').onclick = () => { w.dish = 'free'; upsert(DB.wheels, w); save(true); render(); };
   $$('[data-wbdel]').forEach(b => b.onclick = () => { m.wobbles.splice(+b.dataset.wbdel, 1); m.updatedAt = now(); upsert(DB.wheels, w); render(); });
-  return { title: t('result'), sub: (c ? c.name + ' · ' : '') + wheelLabel(w), back: 'wheels', tall: true, right: `<a href="#/report/${wid}" class="btn text-sm font-semibold px-3 py-2">${t('cert')}</a><button id="delM" class="btn lg:hidden text-sm font-semibold px-2 py-2 text-rose-600">✕</button>` };
+  return { title: t('result'), sub: wName(w) + ' · ' + wheelLabel(w), back: 'wheels', tall: true, right: `<a href="#/report/${wid}" class="btn text-sm font-semibold px-3 py-2">${t('cert')}</a><button id="delM" class="btn lg:hidden text-sm font-semibold px-2 py-2 text-rose-600">✕</button>` };
 };
 document.addEventListener('click', async e => { if (e.target.id === 'delM') { const wid = cur.params[0]; if (await confirmM(t('confirm_del_wheel'), t('del'), true)) { remove(DB.wheels, wid); nav('wheels'); } } });
 function editSpoke(w, m, s, i) {
@@ -659,10 +714,10 @@ function wobbleForm(w, m) {
 const explText = (ctx, rl, k) => {
   const r = (key, v) => t(key, v, rl);
   if (k !== 'd') return r('r_expl_' + k);
-  return [r('r_expl_d1'), r('r_expl_d2', { avgR: ctx.avgR, avgL: ctx.avgL, within: ctx.within, n: ctx.n, tol: TOL_OK, maxdev: ctx.maxdev, tolw: TOL_WARN }), ctx.before ? r('r_expl_d_before', { within0: ctx.before.within, n: ctx.n, maxdev0: ctx.before.maxdev }) : '', ctx.rear ? r('r_expl_d_rear') : '', r(ctx.ok === false ? 'r_expl_d3_warn' : 'r_expl_d3')].filter(Boolean).join(' ');
+  return [r('r_expl_d1'), r('r_expl_d2', { avgR: ctx.avgR, avgL: ctx.avgL, within: ctx.within, n: ctx.n, tol: TOL_OK, maxdev: ctx.maxdev, tolw: TOL_WARN }), ctx.before ? r('r_expl_d_before', { within0: ctx.before.within, n: ctx.n, maxdev0: ctx.before.maxdev }) : '', ctx.side ? r(ctx.side) : '', r(ctx.ok === false ? 'r_expl_d3_warn' : 'r_expl_d3')].filter(Boolean).join(' ');
 };
-const explCtx = (an, anN, w) => ({ avgR: Math.round(an.sides.R.avg), avgL: Math.round(an.sides.L.avg), within: an.within, n: an.n, maxdev: Math.round(an.maxDev), before: anN ? { within: anN.within, maxdev: Math.round(anN.maxDev) } : null, rear: w.type === 'rear', ok: an.score >= 75 && an.maxDev <= TOL_WARN });
-const EXPL_SAMPLE = { avgR: 118, avgL: 64, within: 31, n: 32, maxdev: 4, before: { within: 19, maxdev: 16 }, rear: true };
+const explCtx = (an, anN, w) => ({ avgR: Math.round(an.sides.R.avg), avgL: Math.round(an.sides.L.avg), within: an.within, n: an.n, maxdev: Math.round(an.maxDev), before: anN ? { within: anN.within, maxdev: Math.round(anN.maxDev) } : null, side: ({ R: w.type === 'rear' ? 'r_expl_d_rear' : 'r_expl_d_free', L: 'r_expl_d_L', free: 'r_expl_d_free' })[dishMode(w)] || null, ok: an.score >= 75 && an.maxDev <= TOL_WARN });
+const EXPL_SAMPLE = { avgR: 118, avgL: 64, within: 31, n: 32, maxdev: 4, before: { within: 19, maxdev: 16 }, side: 'r_expl_d_rear' };
 /* Printen: past het certificaat zo nodig op één A4 (alleen in printweergave, via --pz) */
 const PRINT_H_MM = 268, MM = 96 / 25.4;
 const fitPrint = () => {
@@ -696,7 +751,7 @@ ROUTES.report = (wid) => {
       <div class="text-right"><div class="text-[10px] font-bold tracking-[.2em] text-slate-500">${r('r_title')}</div><div class="text-sm font-semibold">${r('r_no')} ${repNo}</div><div class="text-[11px] text-slate-500">${fmtDateLong(m.updatedAt, rl)}</div></div></div>
     ${sec(1, r('r_s1'))}
     <div class="grid grid-cols-2 gap-6 text-sm">
-      <table class="w-full self-start"><tbody>${row(r('r_customer'), h(c ? c.name : '–'))}${row(r('r_phone'), h(c && c.phone))}${row(r('r_email'), h(c && c.email))}</tbody></table>
+      <table class="w-full self-start"><tbody>${row(r('r_customer'), h(c && c.name))}${row(r('r_ref'), wheelRef(w))}${row(r('r_phone'), h(c && c.phone))}${row(r('r_email'), h(c && c.email))}</tbody></table>
       <table class="w-full self-start"><tbody>${row(r('r_bike'), h(c && c.bike))}${row(r('r_frame'), h(c && c.frame))}${row(r('r_wheel'), r(w.type === 'rear' ? 'rear_wheel' : 'front_wheel') + ', ' + w.spokes + ' ' + r('spokes_word') + (w.label ? ', ' + h(w.label) : ''))}${row(r('r_spokes'), h(SPOKE_TYPES[w.spokeType].label) + ' (' + h(SPOKE_TYPES[w.spokeType].sub.replace(/ recht$/, '')) + ' mm)')}${row(r('r_instrument'), r('r_meter') + ' ' + h(S().meter))}</tbody></table></div>
     ${sec(2, r('r_s2'))}
     <div class="avoid-break flex items-center gap-4">
@@ -723,11 +778,12 @@ ROUTES.report = (wid) => {
       <div><div class="border-b border-slate-800 h-8"></div><div class="mt-1 text-slate-500">${r('r_signature')}</div></div>
       <div><div class="border-b border-slate-800 h-8 flex items-end pb-0.5 text-slate-800">${fmtDateLong(m.updatedAt, rl)}</div><div class="mt-1 text-slate-500">${r('r_date')}</div></div></div>
     <div class="flex justify-between gap-4 text-[8px] text-slate-400 mt-3 pt-1.5 border-t border-slate-200"><span>${an.cal ? r('r_foot_table') + (calSource(w.spokeType) === 'eigen' ? r('r_foot_adj') : '') + '.' : r('r_foot_est')} ${r('r_tol', { a: TOL_OK, b: TOL_WARN })}</span><span class="shrink-0">${h(S().shop || '')} · ${repNo} · ${r('r_page')}</span></div>`;
-  $('#view').innerHTML = `<div class="max-w-3xl mx-auto"><div class="no-print flex gap-2 mb-3"><select id="rlSel" class="sel sel-sm">${Object.entries(LANGS).map(([l, n]) => `<option value="${l}" ${l === rl ? 'selected' : ''}>${n}</option>`).join('')}</select><button id="pr" class="btn flex-1 bg-slate-900 text-white rounded-lg py-3 font-bold">${r('r_print')}</button></div><div id="sheetWrap"><div id="sheet" class="bg-white border border-slate-200 rounded-sm">${sheet}</div></div></div>`;
+  $('#view').innerHTML = `<div class="max-w-3xl mx-auto"><div class="no-print flex gap-2 mb-3"><select id="rlSel" class="sel sel-sm">${Object.entries(LANGS).map(([l, n]) => `<option value="${l}" ${l === rl ? 'selected' : ''}>${n}</option>`).join('')}</select><button id="wEditR" class="btn shrink-0 rounded-lg border border-slate-300 bg-white px-3 text-sm font-semibold">${t('edit')}</button><button id="pr" class="btn flex-1 bg-slate-900 text-white rounded-lg py-3 font-bold">${r('r_print')}</button></div><div id="sheetWrap"><div id="sheet" class="bg-white border border-slate-200 rounded-sm">${sheet}</div></div></div>`;
   fitScreen();
   $('#pr').onclick = () => window.print();
+  $('#wEditR').onclick = () => wheelForm(w, render);
   $('#rlSel').onchange = (e) => { S().reportLang = e.target.value; save(); render(); };
-  return { title: t('cert'), sub: (c ? c.name + ' · ' : '') + wheelLabel(w), back: 'result/' + wid };
+  return { title: t('cert'), sub: wName(w) + ' · ' + wheelLabel(w), back: 'result/' + wid };
 };
 
 /* ================= KLANTEN ================= */
