@@ -59,54 +59,80 @@
 <script>
 'use strict';
 /* ================= CONFIG ================= */
-/* Spaken: kop / midden / draad in mm. De meter zit op het middenstuk, dus 'mid' bepaalt de omrekening.
-   mid = ronde diameter, of 'a' + dikte x breedte voor platte spaken. Indicatieve curve; exact via Kalibratie per dikte. */
+/* Unior 1752/2 omrekentabel (v2, geldig voor batch 15-18 / 2015 en nieuwer). Meterstand → kgf.
+   Kolommen rond: kop/midden/draad. Kolommen plat: dikte × breedte. */
+const T = (from, vals) => vals.map((v, i) => [from + i, v]);
+const UNIOR = {
+  '1.40':  { label: 'rond 1.8 / 1.40 / 1.8', pts: T(33, [50,55,60,65,70,75,80,90,95,100,110,115,120,130,140,150,165,185,200]) },
+  '1.50':  { label: 'rond 2.0 / 1.50 / 2.0', pts: T(36, [50,55,60,65,70,75,80,90,95,100,110,120,130,140,150,165,185,200]) },
+  '1.65':  { label: 'rond 2.0 / 1.65 / 2.0', pts: T(40, [50,55,60,65,70,75,80,90,95,100,110,120,130,140,155,175,195]) },
+  '1.70':  { label: 'rond 2.0 / 1.70 / 2.0', pts: T(42, [50,55,60,65,70,80,90,95,100,110,120,130,140,155,175,195]) },
+  '1.80h': { label: 'rond 2.2 / 1.80 / 2.0', pts: T(44, [50,55,60,65,70,75,85,100,110,120,130,145,160,170,190,195]) },
+  '1.80':  { label: 'rond 2.0 / 1.80 / 2.0', pts: T(43, [50,55,60,65,70,75,80,85,90,100,110,120,135,155,170,180,195]) },
+  '2.00':  { label: 'rond 2.0 / 2.00 / 2.0', pts: T(50, [50,55,60,70,80,90,100,110,120,130,145,165,190]) },
+  '2.00h': { label: 'rond 2.3 / 2.00 / 2.0', pts: T(51, [50,55,60,70,80,90,100,110,120,130,145,165,185,200]) },
+  '2.30':  { label: 'rond 2.3 / 2.30 / 2.3', pts: T(57, [50,60,70,80,90,100,110,120,130,145,170,195]) },
+  '0.9x1.8': { label: 'plat 0.9 × 1.8', pts: T(24, [50,55,60,65,70,80,90,100,110,120,135,155,175,195]) },
+  '0.9x2.2': { label: 'plat 0.9 × 2.2', pts: T(25, [50,55,60,65,70,75,80,85,90,100,105,110,120,130,140,155,175,195]) },
+  '0.9x3.5': { label: 'plat 0.9 × 3.5', pts: T(27, [50,55,60,65,70,75,80,85,90,100,110,120,130,140,150,160,175,195]) },
+  '1.2x2.6': { label: 'plat 1.2 × 2.6', pts: T(30, [50,55,60,65,70,75,80,85,90,100,110,120,130,140,150,165,180,195,200]) },
+  '1.2x2.2': { label: 'plat 1.2 × 2.2', pts: T(31, [50,55,60,65,70,75,80,90,95,100,110,120,130,140,155,175,190]) },
+  '1.3x2.3': { label: 'plat 1.3 × 2.3', pts: T(35, [50,55,60,65,70,80,90,95,100,110,120,130,140,150,160,175,195]) },
+  '1.3x2.8': { label: 'plat 1.3 × 2.8', pts: T(35, [50,55,60,65,70,80,85,90,100,110,120,130,145,165,180,195]) },
+};
+/* Spaken: merk, type, kop / midden / draad, middenmaat (omrekening), tabelkolom. */
 const SPOKES = [
-  ['sapim',  'Sapim', 'Leader 2.0',       '2.0 recht',             2.0],
-  ['sapim',  'Sapim', 'Leader 1.8',       '1.8 recht',             1.8],
-  ['sapim',  'Sapim', 'Strong',           '2.3 / 2.0',             2.0],
-  ['sapim',  'Sapim', 'Race',             '2.0 / 1.8 / 2.0',       1.8],
-  ['sapim',  'Sapim', 'Force',            '2.18 / 1.8 / 2.0',      1.8],
-  ['sapim',  'Sapim', 'D-Light',          '2.0 / 1.65 / 2.0',      1.65],
-  ['sapim',  'Sapim', 'Laser',            '2.0 / 1.5 / 2.0',       1.5],
-  ['sapim',  'Sapim', 'CX-Ray',           '2.0 / 0.9×2.2 / 2.0',   'a0.9x2.2'],
-  ['sapim',  'Sapim', 'CX-Sprint',        '2.0 / 1.25×2.3 / 2.0',  'a1.25x2.3'],
-  ['dt',     'DT Swiss', 'Champion 2.0',  '2.0 recht',             2.0],
-  ['dt',     'DT Swiss', 'Champion 1.8',  '1.8 recht',             1.8],
-  ['dt',     'DT Swiss', 'Alpine III',    '2.34 / 1.8 / 2.0',      1.8],
-  ['dt',     'DT Swiss', 'Competition',   '2.0 / 1.8 / 2.0',       1.8],
-  ['dt',     'DT Swiss', 'Competition Race', '2.0 / 1.6 / 2.0',    1.6],
-  ['dt',     'DT Swiss', 'Super Comp',    '2.0 / 1.7 / 1.8',       1.7],
-  ['dt',     'DT Swiss', 'Revolution',    '2.0 / 1.5 / 2.0',       1.5],
-  ['dt',     'DT Swiss', 'Aero Comp',     '2.0 / 1.2×2.3 / 2.0',   'a1.2x2.3'],
-  ['dt',     'DT Swiss', 'Aerolite',      '2.0 / 0.9×2.3 / 2.0',   'a0.9x2.3'],
-  ['alpina', 'Alpina', 'Spark',           '2.3 / 2.0',             2.0],
-  ['alpina', 'Alpina', 'Basiclite',       '2.0 / 1.8 / 2.0',       1.8],
-  ['alpina', 'Alpina', 'Extralite',       '2.0 / 1.7 / 2.0',       1.7],
-  ['alpina', 'Alpina', 'Superlite',       '2.0 / 1.6 / 2.0',       1.6],
-  ['alpina', 'Alpina', 'Ultralite',       '2.0 / 1.5 / 2.0',       1.5],
-  ['alpina', 'Alpina', 'Hyperlite',       '2.0 / 1.3 / 2.0',       1.3],
-  ['alpina', 'Alpina', 'Ultralite Aero',  '2.0 / 0.9×2.2 / 2.0',   'a0.9x2.2'],
-  ['x',      'Anders', '2.3 rond',        'midden 2.3',            2.3],
-  ['x',      'Anders', '2.0 rond',        'midden 2.0',            2.0],
-  ['x',      'Anders', '1.8 rond',        'midden 1.8',            1.8],
-  ['x',      'Anders', '1.7 rond',        'midden 1.7',            1.7],
-  ['x',      'Anders', '1.6 rond',        'midden 1.6',            1.6],
-  ['x',      'Anders', '1.5 rond',        'midden 1.5',            1.5],
-  ['x',      'Anders', 'plat / aero',     'ca. 0.9×2.2',           'a0.9x2.2'],
+  ['sapim',  'Sapim', 'Leader 2.0',       '2.0 recht',             2.0, '2.00'],
+  ['sapim',  'Sapim', 'Leader 1.8',       '1.8 recht',             1.8, '1.80'],
+  ['sapim',  'Sapim', 'Strong',           '2.3 / 2.0',             2.0, '2.00h'],
+  ['sapim',  'Sapim', 'Race',             '2.0 / 1.8 / 2.0',       1.8, '1.80'],
+  ['sapim',  'Sapim', 'Force',            '2.18 / 1.8 / 2.0',      1.8, '1.80h'],
+  ['sapim',  'Sapim', 'D-Light',          '2.0 / 1.65 / 2.0',      1.65, '1.65'],
+  ['sapim',  'Sapim', 'Laser',            '2.0 / 1.5 / 2.0',       1.5, '1.50'],
+  ['sapim',  'Sapim', 'CX-Ray',           '2.0 / 0.9×2.2 / 2.0',   'a0.9x2.2', '0.9x2.2'],
+  ['sapim',  'Sapim', 'CX-Sprint',        '2.0 / 1.25×2.3 / 2.0',  'a1.25x2.3', '1.3x2.3'],
+  ['dt',     'DT Swiss', 'Champion 2.0',  '2.0 recht',             2.0, '2.00'],
+  ['dt',     'DT Swiss', 'Champion 1.8',  '1.8 recht',             1.8, '1.80'],
+  ['dt',     'DT Swiss', 'Alpine III',    '2.34 / 1.8 / 2.0',      1.8, '1.80h'],
+  ['dt',     'DT Swiss', 'Competition',   '2.0 / 1.8 / 2.0',       1.8, '1.80'],
+  ['dt',     'DT Swiss', 'Competition Race', '2.0 / 1.6 / 2.0',    1.6, '1.65'],
+  ['dt',     'DT Swiss', 'Super Comp',    '2.0 / 1.7 / 1.8',       1.7, '1.70'],
+  ['dt',     'DT Swiss', 'Revolution',    '2.0 / 1.5 / 2.0',       1.5, '1.50'],
+  ['dt',     'DT Swiss', 'Aero Comp',     '2.0 / 1.2×2.3 / 2.0',   'a1.2x2.3', '1.2x2.2'],
+  ['dt',     'DT Swiss', 'Aerolite',      '2.0 / 0.9×2.3 / 2.0',   'a0.9x2.3', '0.9x2.2'],
+  ['alpina', 'Alpina', 'Spark',           '2.3 / 2.0',             2.0, '2.00h'],
+  ['alpina', 'Alpina', 'Basiclite',       '2.0 / 1.8 / 2.0',       1.8, '1.80'],
+  ['alpina', 'Alpina', 'Extralite',       '2.0 / 1.7 / 2.0',       1.7, '1.70'],
+  ['alpina', 'Alpina', 'Superlite',       '2.0 / 1.6 / 2.0',       1.6, '1.65'],
+  ['alpina', 'Alpina', 'Ultralite',       '2.0 / 1.5 / 2.0',       1.5, '1.50'],
+  ['alpina', 'Alpina', 'Hyperlite',       '2.0 / 1.3 / 2.0',       1.3, '1.40'],
+  ['alpina', 'Alpina', 'Ultralite Aero',  '2.0 / 0.9×2.2 / 2.0',   'a0.9x2.2', '0.9x2.2'],
+  ['x',      'Anders', '2.3 rond',        'midden 2.3',            2.3, '2.30'],
+  ['x',      'Anders', '2.0 rond',        'midden 2.0',            2.0, '2.00'],
+  ['x',      'Anders', '1.8 rond',        'midden 1.8',            1.8, '1.80'],
+  ['x',      'Anders', '1.7 rond',        'midden 1.7',            1.7, '1.70'],
+  ['x',      'Anders', '1.65 rond',       'midden 1.65',           1.65, '1.65'],
+  ['x',      'Anders', '1.5 rond',        'midden 1.5',            1.5, '1.50'],
+  ['x',      'Anders', '1.4 rond',        'midden 1.4',            1.4, '1.40'],
+  ['x',      'Anders', 'plat 0.9×1.8',    '0.9 × 1.8',             'a0.9x1.8', '0.9x1.8'],
+  ['x',      'Anders', 'plat 0.9×2.2',    '0.9 × 2.2',             'a0.9x2.2', '0.9x2.2'],
+  ['x',      'Anders', 'plat 0.9×3.5',    '0.9 × 3.5',             'a0.9x3.5', '0.9x3.5'],
+  ['x',      'Anders', 'plat 1.2×2.2',    '1.2 × 2.2',             'a1.2x2.2', '1.2x2.2'],
+  ['x',      'Anders', 'plat 1.2×2.6',    '1.2 × 2.6',             'a1.2x2.6', '1.2x2.6'],
+  ['x',      'Anders', 'plat 1.3×2.3',    '1.3 × 2.3',             'a1.3x2.3', '1.3x2.3'],
+  ['x',      'Anders', 'plat 1.3×2.8',    '1.3 × 2.8',             'a1.3x2.8', '1.3x2.8'],
 ];
-/* Indicatieve curve per middenmaat: meterstand bij 100 kgf (R100) en kgf per hele slag (perTurn). */
+/* kgf per hele slag nippel (richtwaarde, schaalt met de doorsnede van het middenstuk) */
 function midProps(mid) {
   let d = typeof mid === 'number' ? mid : null, area;
-  if (d == null) { const [a, b] = mid.slice(1).split('x').map(Number); area = a * b; d = Math.sqrt(area * 4 / Math.PI); }
-  else area = Math.PI * d * d / 4;
-  return { R100: Math.round((42 + (d - 1.4) * 30) * 10) / 10, p: 1.3, perTurn: Math.round(40 * area / (Math.PI)) , cal: typeof mid === 'number' ? String(mid) : mid };
+  if (d == null) { const [a, b] = mid.slice(1).split('x').map(Number); area = a * b; d = Math.sqrt(area * 4 / Math.PI); } else area = Math.PI * d * d / 4;
+  return { R100: Math.round((42 + (d - 1.4) * 30) * 10) / 10, p: 1.3, perTurn: Math.round(40 * area / Math.PI) };
 }
 const SPOKE_TYPES = {};
-for (const [brandId, brand, model, sub, mid] of SPOKES) { const id = brandId + '_' + model.toLowerCase().replace(/[^a-z0-9]+/g, ''); SPOKE_TYPES[id] = Object.assign({ id, brand, model, label: brand === 'Anders' ? model : brand + ' ' + model, sub, mid }, midProps(mid)); }
-for (const [old, nw] of [['r20', 'x_20rond'], ['r18', 'x_18rond'], ['r15', 'x_15rond'], ['aero', 'x_plataero'], ['race', 'sapim_race'], ['leader', 'sapim_leader20'], ['strong', 'sapim_strong'], ['force', 'sapim_force'], ['dlight', 'sapim_dlight'], ['laser', 'sapim_laser'], ['cxray', 'sapim_cxray'], ['cxsprint', 'sapim_cxsprint']]) SPOKE_TYPES[old] = SPOKE_TYPES[nw];
-const CAL_CLASSES = [...new Set(SPOKES.map(x => midProps(x[4]).cal))].sort((a, b) => (a[0] === 'a') - (b[0] === 'a') || parseFloat(a.replace('a', '')) - parseFloat(b.replace('a', '')));
-const calLabel = (c) => c[0] === 'a' ? 'plat ' + c.slice(1).replace('x', '×') : 'rond ' + c;
+for (const [brandId, brand, model, sub, mid, col] of SPOKES) { const id = brandId + '_' + model.toLowerCase().replace(/[^a-z0-9]+/g, ''); SPOKE_TYPES[id] = Object.assign({ id, brand, model, label: brand === 'Anders' ? model : brand + ' ' + model, sub, mid, cal: col }, midProps(mid)); }
+for (const [old, nw] of [['r20', 'x_20rond'], ['r18', 'x_18rond'], ['r15', 'x_15rond'], ['aero', 'x_plat09x22'], ['race', 'sapim_race'], ['leader', 'sapim_leader20'], ['strong', 'sapim_strong'], ['force', 'sapim_force'], ['dlight', 'sapim_dlight'], ['laser', 'sapim_laser'], ['cxray', 'sapim_cxray'], ['cxsprint', 'sapim_cxsprint']]) SPOKE_TYPES[old] = SPOKE_TYPES[nw];
+const CAL_CLASSES = Object.keys(UNIOR);
+const calLabel = (c) => UNIOR[c].label;
 const TOL_OK = 5, TOL_WARN = 10, MIN_READ = 1, MAX_READ = 90;
 const COL = { R: '#2563eb', L: '#ea580c' };
 const LS_KEY = 'spaakspanning_v3', DRIVE_FILE = 'spaakspanning-data.json', DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
@@ -151,11 +177,18 @@ const wheelScore = (w) => { const m = eindM(w) || complete(w).slice(-1)[0]; retu
 
 /* ================= ENGINE ================= */
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
-const calibPts = (t) => ((S().calib || {})[SPOKE_TYPES[t] ? SPOKE_TYPES[t].cal : t] || []).filter(p => p && isFinite(p[0]) && isFinite(p[1])).slice().sort((a, b) => a[0] - b[0]);
-const isCal = (t) => calibPts(t).length >= 2;
+const calCol = (t) => SPOKE_TYPES[t] ? SPOKE_TYPES[t].cal : t;
+const calibPts = (t) => ((S().calib || {})[calCol(t)] || []).filter(p => p && isFinite(p[0]) && isFinite(p[1])).slice().sort((a, b) => a[0] - b[0]);
+const calSource = (t) => calibPts(t).length >= 2 ? 'eigen' : UNIOR[calCol(t)] ? 'tabel' : 'schatting'; // eigen punten > Unior-tabel > schatting
+const isCal = (t) => calSource(t) !== 'schatting';
+function interp(pts, r) { // lineair tussen tabelpunten, buiten de tabel doorgetrokken
+  if (r <= pts[0][0]) { const [a, b] = pts; return Math.max(0, a[1] + (r - a[0]) * (b[1] - a[1]) / (b[0] - a[0])); }
+  for (let i = 0; i < pts.length - 1; i++) if (r <= pts[i + 1][0]) { const a = pts[i], b = pts[i + 1]; return a[1] + (r - a[0]) * (b[1] - a[1]) / ((b[0] - a[0]) || 1); }
+  const a = pts[pts.length - 2], b = pts[pts.length - 1]; return b[1] + (r - b[0]) * (b[1] - a[1]) / ((b[0] - a[0]) || 1);
+}
 function toKgf(r, t) {
-  const p = calibPts(t);
-  if (p.length >= 2) { let a = p[0], b = p[1]; for (let i = 0; i < p.length - 1; i++) if (r >= p[i][0]) { a = p[i]; b = p[i + 1]; } return Math.max(0, a[1] + (r - a[0]) * (b[1] - a[1]) / ((b[0] - a[0]) || 1)); }
+  const own = calibPts(t); if (own.length >= 2) return interp(own, r);
+  const tbl = UNIOR[calCol(t)]; if (tbl) return interp(tbl.pts, r);
   const st = SPOKE_TYPES[t]; return 100 * Math.pow(r / st.R100, st.p);
 }
 const turnLbl = (q) => ({ 0.125: '1/8', 0.25: '1/4', 0.375: '3/8', 0.5: '1/2', 0.625: '5/8', 0.75: '3/4', 0.875: '7/8', 1: '1' })[q] || q;
@@ -357,23 +390,23 @@ ROUTES.measure = (wid) => {
     let ref = null; for (let k = i - 1; k >= 0; k--) if (vals[k] != null) { ref = vals[k]; break; }
     if (ref == null) for (let k = vals.length - 1; k >= 0; k--) if (vals[k] != null) { ref = vals[k]; break; }
     if (ref == null) { const o = m[s === 'R' ? 'L' : 'R']; for (let k = o.length - 1; k >= 0; k--) if (o[k] != null) { ref = o[k]; break; } }
-    const quick = ref == null ? [] : [ref - 2, ref - 1, ref, ref + 1, ref + 2].filter(v => v >= MIN_READ && v <= MAX_READ);
+    const quick = ref == null ? [] : [ref - 1, ref - 0.5, ref, ref + 0.5, ref + 1].filter(v => v >= MIN_READ && v <= MAX_READ);
     const prog = (side) => `${half - m.todo[side].length}/${half}`;
     $('#mp').innerHTML = `
       <div class="grid grid-cols-2 gap-2 mb-3">${['R', 'L'].map(side => `<button data-side="${side}" class="btn rounded-lg py-3 font-bold text-white ${side === s ? '' : 'opacity-40'}" style="background:${COL[side]}">${side === 'R' ? 'Rechts' : 'Links'} <span class="font-normal text-sm">${prog(side)}</span></button>`).join('')}</div>
       <div class="rounded-xl p-4 text-white mb-3 flex items-center justify-between" style="background:${COL[s]}">
         <div class="text-5xl font-extrabold">${s}${i + 1}</div>
         <div class="text-right text-sm opacity-90">${curV != null ? `nu ${curV}` : ''}${m.partial ? '<div>nameten</div>' : ''}</div></div>
-      <div class="grid grid-cols-8 gap-1 mb-3">${vals.map((v, k) => `<button data-i="${k}" class="btn rounded-md py-1.5 text-center ${k === i ? 'ring-2 ring-slate-900' : ''} ${v == null ? 'bg-white border border-slate-200 text-slate-300' : m.todo[s].includes(k) ? 'bg-amber-100' : 'bg-white border border-slate-200'}"><div class="text-[9px] text-slate-400">${k + 1}</div><div class="font-bold text-sm">${v ?? '·'}</div></button>`).join('')}</div>
+      <div class="grid grid-cols-8 gap-1 mb-3">${vals.map((v, k) => `<button data-i="${k}" class="btn rounded-md py-1.5 text-center ${k === i ? 'ring-2 ring-slate-900' : ''} ${v == null ? 'bg-white border border-slate-200 text-slate-300' : m.todo[s].includes(k) ? 'bg-amber-100' : 'bg-white border border-slate-200'}"><div class="text-[9px] text-slate-400">${k + 1}</div><div class="font-bold text-sm">${v == null ? '·' : String(v).replace('.', ',')}</div></button>`).join('')}</div>
       ${quick.length ? `<div class="grid grid-cols-5 gap-2 mb-3">${quick.map(v => `<button data-q="${v}" class="btn rounded-lg py-3.5 text-2xl font-extrabold border ${v === ref ? 'bg-slate-900 text-white border-slate-900' : 'bg-white border-slate-200'}">${v}</button>`).join('')}</div>` : ''}
       <div class="card p-2.5 mb-3"><div class="text-right text-4xl font-extrabold tabular-nums px-2 mb-2 min-h-[2.5rem]" id="padD">${pad || '–'}</div>
-        <div class="grid grid-cols-3 gap-2">${[1, 2, 3, 4, 5, 6, 7, 8, 9].map(k => `<button data-key="${k}" class="btn key">${k}</button>`).join('')}<button data-key="del" class="btn key !bg-slate-200">⌫</button><button data-key="0" class="btn key">0</button><button data-key="ok" class="btn key !bg-emerald-600 !text-white">OK</button></div></div>
+        <div class="grid grid-cols-4 gap-2">${[1, 2, 3, 'del', 4, 5, 6, 'half', 7, 8, 9, 'ok', '', 0, '', ''].map(k => k === '' ? '<span></span>' : k === 'del' ? '<button data-key="del" class="btn key !bg-slate-200">⌫</button>' : k === 'half' ? '<button data-key="half" class="btn key !bg-slate-200">,5</button>' : k === 'ok' ? '<button data-key="ok" class="btn key !bg-emerald-600 !text-white row-span-2">OK</button>' : `<button data-key="${k}" class="btn key">${k}</button>`).join('')}</div></div>
       <div class="grid grid-cols-2 gap-2"><button id="mPrev" class="btn bg-white border border-slate-200 rounded-lg py-3 font-bold">‹ Vorige</button><button id="mDone" class="btn bg-slate-900 text-white rounded-lg py-3 font-bold">Resultaat</button></div>`;
     $('#lp').innerHTML = `<div class="card p-3 sticky top-16">${radialChart(an, w, 320)}<div class="grid grid-cols-2 gap-2 mt-2 text-sm">${['R', 'L'].map(side => `<div class="rounded-lg p-2 text-white" style="background:${COL[side]}">${side === 'R' ? 'Rechts' : 'Links'} <b>${an.sides[side].avgR != null ? an.sides[side].avgR.toFixed(1) : '–'}</b></div>`).join('')}</div></div>`;
     $$('[data-side]').forEach(b => b.onclick = () => { a.side = b.dataset.side; a.idx = m.todo[a.side].length ? m.todo[a.side][0] : 0; pad = ''; save(); paint(); });
     $$('[data-i]').forEach(b => b.onclick = () => { a.idx = +b.dataset.i; pad = ''; save(); paint(); });
     $$('[data-q]').forEach(b => b.onclick = () => commit(+b.dataset.q));
-    $$('[data-key]').forEach(b => b.onclick = () => key(b.dataset.key));
+    $$('#mp [data-key]').forEach(b => b.onclick = () => key(b.dataset.key));
     $('#mPrev').onclick = () => { a.idx = (i - 1 + half) % half; pad = ''; feedback('key'); save(); paint(); };
     $('#mDone').onclick = async () => { const left = m.todo.R.length + m.todo.L.length; if (left && !(await confirmM(`Nog ${left} spaken open. Toch resultaat?`, 'Ja'))) return; m.updatedAt = now(); upsert(DB.wheels, w); nav('result/' + wid); };
   };
@@ -385,13 +418,16 @@ ROUTES.measure = (wid) => {
     if (nx === -1) { m.done = true; upsert(DB.wheels, w); save(true); feedback('done'); if (S().autoSync && Drive.hasToken()) Drive.sync(true); setTimeout(() => nav('result/' + wid, true), 200); return; }
     a.idx = nx; upsert(DB.wheels, w); feedback('ok'); $('#padD').textContent = v; setTimeout(paint, 100);
   };
+  let padTimer = null;
   const key = (k) => {
+    clearTimeout(padTimer);
     if (k === 'del') { pad = pad.slice(0, -1); $('#padD').textContent = pad || '–'; return; }
-    if (k === 'ok') { if (pad) commit(+pad); return; }
+    if (k === 'ok') { if (pad) commit(parseFloat(pad)); return; }
+    if (k === 'half') { if (pad && !pad.includes('.5')) { pad = pad + '.5'; $('#padD').textContent = pad.replace('.', ','); commit(parseFloat(pad)); } return; }
     if (pad.length >= 2) pad = ''; pad += k; $('#padD').textContent = pad;
-    if (pad.length === 2) { const v = +pad; if (v >= MIN_READ) setTimeout(() => commit(v), 100); else { pad = ''; $('#padD').textContent = '–'; } } else feedback('key');
+    if (pad.length === 2) { const v = +pad; if (v >= MIN_READ) padTimer = setTimeout(() => commit(v), 450); else { pad = ''; $('#padD').textContent = '–'; } } else feedback('key');
   };
-  keyHandler = (e) => { if (/input/i.test(e.target.tagName)) return; if (/^[0-9]$/.test(e.key)) key(e.key); else if (e.key === 'Enter') key('ok'); else if (e.key === 'Backspace') key('del'); else if (e.key === 'ArrowLeft') $('#mPrev').click(); else return; e.preventDefault(); };
+  keyHandler = (e) => { if (/input/i.test(e.target.tagName)) return; if (/^[0-9]$/.test(e.key)) key(e.key); else if (e.key === 'Enter') key('ok'); else if (e.key === 'Backspace') key('del'); else if (e.key === ',' || e.key === '.') key('half'); else if (e.key === 'ArrowLeft') $('#mPrev').click(); else return; e.preventDefault(); };
   paint();
   return { title: PHASE[m.phase], sub: (c ? c.name + ' · ' : '') + wheelLabel(w), back: 'wheels', focus: true, right: `<a href="#/result/${wid}" class="btn text-sm font-semibold px-3 py-2">Stop</a>` };
 };
@@ -406,7 +442,7 @@ ROUTES.result = (wid, mid) => {
   const sideBlock = (s) => { const sd = an.sides[s]; return `<div class="card overflow-hidden">
     <div class="px-3 py-2 text-white flex items-center justify-between" style="background:${COL[s]}"><b>${s === 'R' ? 'Rechts' : 'Links'}</b><span class="text-sm">${sd.avg != null ? `${Math.round(sd.avg)} kgf${an.cal ? '' : '*'} · stand ${sd.avgR.toFixed(1)} · ±${Math.round(sd.maxDev)} %` : '–'}</span></div>
     <div class="p-2 space-y-1">${sd.actions.length ? sd.actions.map(x => `<button data-e="${s}${x.i}" class="btn w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-left ${x.urgent ? 'bg-rose-50' : x.comp ? 'bg-slate-50' : 'bg-amber-50'}"><span class="w-12 font-extrabold text-lg">${s}${x.no}</span><span class="flex-1 font-bold">${x.turn} slag ${x.dir.toUpperCase()}</span><span class="text-xs text-slate-500">${x.comp ? 'compensatie' : (x.dev > 0 ? '+' : '') + Math.round(x.dev) + ' %'}</span></button>`).join('') : '<div class="px-3 py-2 text-sm text-emerald-700 font-semibold">Niets verstellen</div>'}</div>
-    <div class="px-2 pb-2 grid grid-cols-8 gap-1">${sd.spokes.map(x => `<button data-e="${s}${x.i}" class="btn rounded-md py-1 ${devCls(x.dev)}"><div class="text-[9px] text-slate-500">${x.no}</div><div class="font-bold text-sm">${x.r ?? '·'}</div></button>`).join('')}</div></div>`; };
+    <div class="px-2 pb-2 grid grid-cols-8 gap-1">${sd.spokes.map(x => `<button data-e="${s}${x.i}" class="btn rounded-md py-1 ${devCls(x.dev)}"><div class="text-[9px] text-slate-500">${x.no}</div><div class="font-bold text-sm">${x.r == null ? '·' : String(x.r).replace('.', ',')}</div></button>`).join('')}</div></div>`; };
   const hist = w.measurements.filter(x => x.done);
   $('#view').innerHTML = `<div class="lg:grid lg:grid-cols-5 lg:gap-5"><div class="lg:col-span-3 space-y-3">
       ${hist.length > 1 ? `<div class="flex gap-2 overflow-x-auto">${hist.map((x, k) => `<a href="#/result/${wid}/${x.id}" class="shrink-0 rounded-lg px-3 py-1.5 text-xs font-semibold border ${x.id === m.id ? 'bg-slate-900 text-white border-slate-900' : 'bg-white border-slate-200'}">${k + 1}. ${PHASE[x.phase]} ${analyze(x, w).score}</a>`).join('')}</div>` : ''}
@@ -438,9 +474,10 @@ document.addEventListener('click', async e => { if (e.target.id === 'delM') { co
 function editSpoke(w, m, s, i) {
   let p = '';
   modal(`<div class="p-4"><div class="flex items-center justify-between mb-2"><div class="text-2xl font-extrabold" style="color:${COL[s]}">${s}${i + 1} <span class="text-sm text-slate-500 font-semibold">nu ${m[s][i] ?? '–'}</span></div><div id="eD" class="text-4xl font-extrabold tabular-nums">–</div></div>
-    <div class="grid grid-cols-3 gap-2">${[1, 2, 3, 4, 5, 6, 7, 8, 9].map(k => `<button data-k="${k}" class="btn key">${k}</button>`).join('')}<button data-k="del" class="btn key !bg-slate-200">⌫</button><button data-k="0" class="btn key">0</button><button data-k="ok" class="btn key !bg-emerald-600 !text-white">OK</button></div></div>`);
+    <div class="grid grid-cols-4 gap-2">${[1, 2, 3, 'del', 4, 5, 6, 'half', 7, 8, 9, 'ok', '', 0, '', ''].map(k => k === '' ? '<span></span>' : k === 'del' ? '<button data-k="del" class="btn key !bg-slate-200">⌫</button>' : k === 'half' ? '<button data-k="half" class="btn key !bg-slate-200">,5</button>' : k === 'ok' ? '<button data-k="ok" class="btn key !bg-emerald-600 !text-white row-span-2">OK</button>' : `<button data-k="${k}" class="btn key">${k}</button>`).join('')}</div></div>`);
   const commit = (v) => { if (!(v >= MIN_READ && v <= MAX_READ)) { p = ''; $('#eD').textContent = '–'; return; } m[s][i] = v; m.todo[s] = m.todo[s].filter(x => x !== i); if (!m.todo.R.length && !m.todo.L.length) m.done = true; m.updatedAt = now(); upsert(DB.wheels, w); feedback('ok'); closeModal(); render(); };
-  $$('#modalHost [data-k]').forEach(b => b.onclick = () => { const k = b.dataset.k; if (k === 'del') p = p.slice(0, -1); else if (k === 'ok') { if (p) commit(+p); return; } else { if (p.length >= 2) p = ''; p += k; if (p.length === 2) setTimeout(() => commit(+p), 100); } $('#eD').textContent = p || '–'; });
+  let tm = null;
+  $$('#modalHost [data-k]').forEach(b => b.onclick = () => { clearTimeout(tm); const k = b.dataset.k; if (k === 'del') p = p.slice(0, -1); else if (k === 'ok') { if (p) commit(parseFloat(p)); return; } else if (k === 'half') { if (p && !p.includes('.5')) { p += '.5'; commit(parseFloat(p)); } return; } else { if (p.length >= 2) p = ''; p += k; if (p.length === 2) tm = setTimeout(() => commit(+p), 450); } $('#eD').textContent = (p || '–').replace('.', ','); });
 }
 
 function wobbleForm(w, m) {
@@ -496,7 +533,7 @@ ROUTES.report = (wid) => {
       <div><div class="border-b border-slate-800 h-8"></div><div class="mt-1 text-slate-500">Monteur${S().mechanic ? ' · <span class="text-slate-800 font-semibold">' + h(S().mechanic) + '</span>' : ''}</div></div>
       <div><div class="border-b border-slate-800 h-8"></div><div class="mt-1 text-slate-500">Handtekening</div></div>
       <div><div class="border-b border-slate-800 h-8 flex items-end pb-0.5 text-slate-800">${fmtDateLong(m.updatedAt)}</div><div class="mt-1 text-slate-500">Datum</div></div></div>
-    <div class="flex justify-between text-[8px] text-slate-400 mt-4 pt-2 border-t border-slate-200"><span>${an.cal ? 'Spanning in kgf volgens de omrekentabel van het meetinstrument.' : '* kgf indicatief, omgerekend uit de meterstand; de gelijkmatigheid is bepaald uit de onderlinge verhouding van de metingen.'} Tolerantie ±${TOL_OK} % ideaal, ±${TOL_WARN} % acceptabel.</span><span>${h(S().shop || '')} · ${repNo}</span></div>`;
+    <div class="flex justify-between text-[8px] text-slate-400 mt-4 pt-2 border-t border-slate-200"><span>${an.cal ? 'Spanning in kgf volgens de Unior 1752/2 omrekentabel (v2)' + (calSource(w.spokeType) === 'eigen' ? ', aangepast voor dit instrument' : '') + '.' : '* kgf indicatief, omgerekend uit de meterstand; de gelijkmatigheid is bepaald uit de onderlinge verhouding van de metingen.'} Tolerantie ±${TOL_OK} % ideaal, ±${TOL_WARN} % acceptabel.</span><span>${h(S().shop || '')} · ${repNo}</span></div>`;
   $('#view').innerHTML = `<div class="max-w-3xl mx-auto"><button id="pr" class="no-print btn w-full bg-slate-900 text-white rounded-lg py-3.5 font-bold mb-3">Print / PDF</button><div id="sheet" class="bg-white border border-slate-200 rounded-xl p-5 sm:p-8">${sheet}</div></div>`;
   $('#pr').onclick = () => window.print();
   return { title: 'Certificaat', sub: (c ? c.name + ' · ' : '') + wheelLabel(w), back: 'result/' + wid };
@@ -535,7 +572,7 @@ ROUTES.customer = (id) => {
 };
 
 /* ================= INSTELLINGEN ================= */
-let calT = '1.8';
+let calT = '1.80';
 ROUTES.settings = () => {
   const s = S(), pts = ((s.calib || {})[calT] || []).filter(p => p && isFinite(p[0]) && isFinite(p[1])).slice().sort((a, b) => a[0] - b[0]);
   const tgl = (k, l) => `<button data-t="${k}" class="btn w-full flex items-center justify-between py-2.5"><span class="font-semibold">${l}</span><span class="w-11 h-6 rounded-full relative ${s[k] ? 'bg-emerald-500' : 'bg-slate-300'}"><span class="absolute top-0.5 ${s[k] ? 'right-0.5' : 'left-0.5'} w-5 h-5 bg-white rounded-full"></span></span></button>`;
@@ -550,9 +587,9 @@ ROUTES.settings = () => {
       <div class="divide-y divide-slate-100">${tgl('autoSync', 'Automatisch synchroniseren')}</div>
       <details class="text-sm text-slate-600"><summary class="font-semibold cursor-pointer">Client ID aanmaken</summary><ol class="list-decimal pl-5 mt-1 space-y-0.5"><li>console.cloud.google.com → project → Google Drive API aan.</li><li>OAuth consent screen: External, jezelf als testgebruiker.</li><li>Credentials → OAuth client ID → Web application → JavaScript origin: <code>${h(location.origin)}</code>.</li><li>Client ID hierboven plakken → Verbinden.</li></ol></details>
       <div class="grid grid-cols-2 gap-2 pt-2"><button id="exp" class="btn bg-white border border-slate-300 rounded-lg py-2.5 text-sm font-semibold">Export JSON</button><button id="imp" class="btn bg-white border border-slate-300 rounded-lg py-2.5 text-sm font-semibold">Import JSON</button><input id="impF" type="file" accept=".json,application/json" class="hidden"></div></div>
-    <div class="card p-4 space-y-2"><div class="font-bold">Kalibratie</div><div class="text-sm text-slate-600">Per spaakdikte (middenstuk), zoals de kolommen van de Unior-tabel: stand → kgf, minimaal 2 regels.</div>
+    <div class="card p-4 space-y-2"><div class="font-bold">Omrekentabel</div><div class="text-sm text-slate-600">De Unior 1752/2-tabel (v2) is ingebouwd. Wijkt jouw meter af, voer dan per kolom eigen regels in (stand → kgf, minimaal 2); die gaan vóór de tabel.</div>
       <div class="grid grid-cols-3 gap-1.5">${CAL_CLASSES.map(c => `<button data-c="${c}" class="btn opt py-1.5 text-xs ${calT === c ? 'on' : ''}">${calLabel(c)}${((s.calib || {})[c] || []).length >= 2 ? ' ✓' : ''}</button>`).join('')}</div>
-      <div class="space-y-1">${pts.map((p, i) => `<div class="flex items-center gap-2 bg-slate-50 rounded-lg px-3 py-1.5 text-sm"><span class="flex-1">${p[0]} → ${p[1]} kgf</span><button data-cd="${i}" class="btn text-rose-600 font-bold px-2">✕</button></div>`).join('') || '<div class="text-sm text-slate-400">Geen punten (indicatief)</div>'}</div>
+      <div class="space-y-1">${pts.map((p, i) => `<div class="flex items-center gap-2 bg-slate-50 rounded-lg px-3 py-1.5 text-sm"><span class="flex-1">${p[0]} → ${p[1]} kgf</span><button data-cd="${i}" class="btn text-rose-600 font-bold px-2">✕</button></div>`).join('') || `<div class="text-xs text-slate-500">Unior-tabel: ${UNIOR[calT].pts.filter((x, i) => i % 3 === 0).map(x => x[0] + '→' + x[1]).join(' · ')}</div>`}</div>
       <div class="grid grid-cols-5 gap-2"><input id="cR" type="number" inputmode="numeric" placeholder="stand" class="col-span-2"><input id="cK" type="number" inputmode="numeric" placeholder="kgf" class="col-span-2"><button id="cA" class="btn bg-slate-900 text-white rounded-lg font-bold">+</button></div></div>
     <div class="card p-4"><button id="wipe" class="btn w-full py-2.5 rounded-lg border border-rose-300 text-rose-700 font-bold">Alles wissen</button></div></div>`;
   $('#sShop').oninput = e => { s.shop = e.target.value; save(); }; $('#sMech').oninput = e => { s.mechanic = e.target.value; save(); };
