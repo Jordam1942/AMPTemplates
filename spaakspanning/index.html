@@ -28,6 +28,8 @@
   select.sel-sm { width: auto; flex: 0 0 auto; padding-top: .55rem; padding-bottom: .55rem; font-size: .9rem; }
   .safe-b { padding-bottom: max(.75rem, env(safe-area-inset-bottom)); }
   .scorebar { background: linear-gradient(90deg, #f43f5e, #f59e0b 45%, #10b981); }
+  #sheetWrap { overflow: hidden; }
+  #sheet { width: 210mm; padding: 10mm 12mm; font-size: 9.5pt; box-shadow: 0 1px 3px rgba(15,23,42,.12); }
   .toast { animation: tin .25s; } @keyframes tin { from { opacity: 0; transform: translateY(8px); } }
   @page { size: A4 portrait; margin: 10mm 12mm; }
   @media print {
@@ -35,7 +37,8 @@
     .min-h-screen { min-height: 0 !important; }
     header, aside, nav, #toastHost, #modalHost, .no-print { display: none !important; }
     #view, #view > * { padding: 0 !important; margin: 0 !important; max-width: none !important; width: 100% !important; }
-    #sheet { width: 100%; max-width: none; margin: 0; padding: 0; border: 0 !important; border-radius: 0 !important; font-size: 9.5pt; zoom: var(--pz, 1); }
+    #sheet { width: 100%; max-width: none; margin: 0; padding: 0; border: 0 !important; border-radius: 0 !important; font-size: 9.5pt; zoom: var(--pz, 1) !important; box-shadow: none !important; }
+    #sheetWrap { overflow: visible !important; }
     .avoid-break { break-inside: avoid; }
   }
 </style>
@@ -143,7 +146,7 @@ const calLabel = (c) => UNIOR[c].label;
 const TOL_OK = 5, TOL_WARN = 10, MIN_READ = 1, MAX_READ = 90;
 const COL = { R: '#2563eb', L: '#ea580c' };
 const LS_KEY = 'spaakspanning_v3', DRIVE_FILE = 'spaakspanning-data.json', DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
-const APP_VERSION = '2026-10-29.16';
+const APP_VERSION = '2026-10-29.17';
 /* ================= TALEN =================
    Nieuwe taal toevoegen: kopieer het blok 'nl', vertaal de waarden en voeg de code toe aan LANGS. Ontbrekende sleutels vallen terug op 'nl'. */
 const LANGS = { nl: 'Nederlands', en: 'English', uk: 'Українська', ru: 'Русский' };
@@ -669,6 +672,9 @@ const fitPrint = () => {
   if (h > PRINT_H_MM) document.documentElement.style.setProperty('--pz', (PRINT_H_MM / h).toFixed(3));
 };
 window.addEventListener('beforeprint', fitPrint);
+/* Scherm: A4-blad verkleind tot de beschikbare breedte */
+const fitScreen = () => { const sh = $('#sheet'), wr = $('#sheetWrap'); if (!sh || !wr) return; sh.style.zoom = ''; const z = Math.min(1, wr.clientWidth / sh.offsetWidth); sh.style.zoom = z < 1 ? z.toFixed(4) : ''; };
+window.addEventListener('resize', fitScreen);
 if (window.matchMedia) window.matchMedia('print').addEventListener('change', (e) => { if (e.matches) fitPrint(); });
 ROUTES.report = (wid) => {
   const w = getWheel(wid); if (!w) { nav('wheels', true); return null; }
@@ -691,7 +697,7 @@ ROUTES.report = (wid) => {
     ${sec(1, r('r_s1'))}
     <div class="grid grid-cols-2 gap-6 text-sm">
       <table class="w-full self-start"><tbody>${row(r('r_customer'), h(c ? c.name : '–'))}${row(r('r_phone'), h(c && c.phone))}${row(r('r_email'), h(c && c.email))}</tbody></table>
-      <table class="w-full self-start"><tbody>${row(r('r_bike'), h(c && c.bike))}${row(r('r_frame'), h(c && c.frame))}${row(r('r_wheel'), r(w.type === 'rear' ? 'rear_wheel' : 'front_wheel') + ', ' + w.spokes + ' ' + r('spokes_word') + (w.label ? ', ' + h(w.label) : ''))}${row(r('r_spokes'), h(SPOKE_TYPES[w.spokeType].label) + ' (' + h(SPOKE_TYPES[w.spokeType].sub) + ' mm)')}${row(r('r_instrument'), r('r_meter') + ' ' + h(S().meter))}</tbody></table></div>
+      <table class="w-full self-start"><tbody>${row(r('r_bike'), h(c && c.bike))}${row(r('r_frame'), h(c && c.frame))}${row(r('r_wheel'), r(w.type === 'rear' ? 'rear_wheel' : 'front_wheel') + ', ' + w.spokes + ' ' + r('spokes_word') + (w.label ? ', ' + h(w.label) : ''))}${row(r('r_spokes'), h(SPOKE_TYPES[w.spokeType].label) + ' (' + h(SPOKE_TYPES[w.spokeType].sub.replace(/ recht$/, '')) + ' mm)')}${row(r('r_instrument'), r('r_meter') + ' ' + h(S().meter))}</tbody></table></div>
     ${sec(2, r('r_s2'))}
     <div class="avoid-break flex items-center gap-4">
       <div class="shrink-0">${ring(an.score, 78, 8)}</div>
@@ -717,7 +723,8 @@ ROUTES.report = (wid) => {
       <div><div class="border-b border-slate-800 h-8"></div><div class="mt-1 text-slate-500">${r('r_signature')}</div></div>
       <div><div class="border-b border-slate-800 h-8 flex items-end pb-0.5 text-slate-800">${fmtDateLong(m.updatedAt, rl)}</div><div class="mt-1 text-slate-500">${r('r_date')}</div></div></div>
     <div class="flex justify-between gap-4 text-[8px] text-slate-400 mt-3 pt-1.5 border-t border-slate-200"><span>${an.cal ? r('r_foot_table') + (calSource(w.spokeType) === 'eigen' ? r('r_foot_adj') : '') + '.' : r('r_foot_est')} ${r('r_tol', { a: TOL_OK, b: TOL_WARN })}</span><span class="shrink-0">${h(S().shop || '')} · ${repNo} · ${r('r_page')}</span></div>`;
-  $('#view').innerHTML = `<div class="max-w-3xl mx-auto"><div class="no-print flex gap-2 mb-3"><select id="rlSel" class="sel sel-sm">${Object.entries(LANGS).map(([l, n]) => `<option value="${l}" ${l === rl ? 'selected' : ''}>${n}</option>`).join('')}</select><button id="pr" class="btn flex-1 bg-slate-900 text-white rounded-lg py-3 font-bold">${r('r_print')}</button></div><div id="sheet" class="bg-white border border-slate-200 rounded-xl p-5 sm:p-8">${sheet}</div></div>`;
+  $('#view').innerHTML = `<div class="max-w-3xl mx-auto"><div class="no-print flex gap-2 mb-3"><select id="rlSel" class="sel sel-sm">${Object.entries(LANGS).map(([l, n]) => `<option value="${l}" ${l === rl ? 'selected' : ''}>${n}</option>`).join('')}</select><button id="pr" class="btn flex-1 bg-slate-900 text-white rounded-lg py-3 font-bold">${r('r_print')}</button></div><div id="sheetWrap"><div id="sheet" class="bg-white border border-slate-200 rounded-sm">${sheet}</div></div></div>`;
+  fitScreen();
   $('#pr').onclick = () => window.print();
   $('#rlSel').onchange = (e) => { S().reportLang = e.target.value; save(); render(); };
   return { title: t('cert'), sub: (c ? c.name + ' · ' : '') + wheelLabel(w), back: 'result/' + wid };
