@@ -143,7 +143,7 @@ const calLabel = (c) => UNIOR[c].label;
 const TOL_OK = 5, TOL_WARN = 10, MIN_READ = 1, MAX_READ = 90;
 const COL = { R: '#2563eb', L: '#ea580c' };
 const LS_KEY = 'spaakspanning_v3', DRIVE_FILE = 'spaakspanning-data.json', DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
-const APP_VERSION = '2026-10-29.14';
+const APP_VERSION = '2026-10-29.15';
 /* ================= TALEN =================
    Nieuwe taal toevoegen: kopieer het blok 'nl', vertaal de waarden en voeg de code toe aan LANGS. Ontbrekende sleutels vallen terug op 'nl'. */
 const LANGS = { nl: 'Nederlands', en: 'English', uk: 'Українська', ru: 'Русский' };
@@ -160,7 +160,7 @@ nl: {
   right: 'Rechts', left: 'Links', drive_side: 'aandrijfzijde', now: 'nu', remeasure: 'nameten', prev: '‹ Vorige', result: 'Resultaat', open_left: 'Nog {n} spaken open. Toch resultaat?',
   within: '{a}/{n} binnen ±{t} %', zero_to: 'nul {a} → {b}', not_all: 'Nog niet alles gemeten · verder meten', nothing: 'Niets verstellen', turn: '{t} slag {d}', tighter: 'VASTER', looser: 'LOSSER', comp: 'compensatie', stand: 'stand',
   wobble_title: 'Slag in de richtbank', add_wobble: '+ Slag', at: 'bij', big: 'groot', no_wobble: 'Geen slag opgegeven; advies op basis van spanning alleen.',
-  remeasure_btn: 'Nameten ({n})', final: 'Eindmeting', cert: 'Certificaat', all_again: 'Alles opnieuw', del_wheel: 'Wiel verwijderen', confirm_final: '{n} spaken buiten tolerantie. Toch eindmeting?', confirm_del_wheel: 'Wiel verwijderen?',
+  remeasure_btn: 'Nameten ({n})', final: 'Eindmeting', cert: 'Certificaat', all_again: 'Alles opnieuw', del_wheel: 'Wiel verwijderen', confirm_final: '{n} spaken buiten tolerantie. Toch eindmeting?', confirm_del_wheel: 'Wiel verwijderen?', confirm_all_again: 'Alle spaken opnieuw meten? De huidige meting blijft bewaard in de historie.',
   wb_left: 'Velg naar links', wb_right: 'Velg naar rechts', wb_high: 'Hoog (bult)', wb_low: 'Laag (deuk)', at_spoke: 'BIJ WELKE SPAAK', wb_small: 'Klein (tot 0.5 mm)', wb_big: 'Groot (meer)',
   customers_title: 'Klanten', add_customer: '+ Klant', no_customers: 'Geen klanten', wheel_1: 'wiel', wheel_n: 'wielen', name: 'Naam', phone: 'Telefoon', email: 'E-mail', bike: 'Fiets', frame: 'Framenummer / order', name_missing: 'Naam ontbreekt', edit: 'Bewerk', del_customer: 'Klant verwijderen', confirm_del_customer: '{name} en de wielen verwijderen?',
   settings_title: 'Instellingen', workshop: 'Werkplaats', shop_ph: 'Naam werkplaats', mech_ph: 'Naam monteur', sound: 'Geluid', vibrate: 'Trillen', language: 'Taal app', report_language: 'Taal certificaat (standaard)',
@@ -191,7 +191,7 @@ en: {
   right: 'Right', left: 'Left', drive_side: 'drive side', now: 'now', remeasure: 're-measure', prev: '‹ Previous', result: 'Result', open_left: '{n} spokes still open. Show result anyway?',
   within: '{a}/{n} within ±{t} %', zero_to: 'initial {a} → {b}', not_all: 'Not everything measured yet · continue', nothing: 'Nothing to adjust', turn: '{t} turn {d}', tighter: 'TIGHTER', looser: 'LOOSER', comp: 'compensation', stand: 'reading',
   wobble_title: 'Runout in the truing stand', add_wobble: '+ Runout', at: 'at', big: 'large', no_wobble: 'No runout entered; advice based on tension only.',
-  remeasure_btn: 'Re-measure ({n})', final: 'Final measurement', cert: 'Certificate', all_again: 'Measure all again', del_wheel: 'Delete wheel', confirm_final: '{n} spokes outside tolerance. Mark as final anyway?', confirm_del_wheel: 'Delete wheel?',
+  remeasure_btn: 'Re-measure ({n})', final: 'Final measurement', cert: 'Certificate', all_again: 'Measure all again', del_wheel: 'Delete wheel', confirm_final: '{n} spokes outside tolerance. Mark as final anyway?', confirm_del_wheel: 'Delete wheel?', confirm_all_again: 'Measure all spokes again? The current measurement stays in the history.',
   wb_left: 'Rim to the left', wb_right: 'Rim to the right', wb_high: 'High spot', wb_low: 'Low spot', at_spoke: 'AT WHICH SPOKE', wb_small: 'Small (up to 0.5 mm)', wb_big: 'Large (more)',
   customers_title: 'Customers', add_customer: '+ Customer', no_customers: 'No customers', wheel_1: 'wheel', wheel_n: 'wheels', name: 'Name', phone: 'Phone', email: 'E-mail', bike: 'Bike', frame: 'Frame number / order', name_missing: 'Name is missing', edit: 'Edit', del_customer: 'Delete customer', confirm_del_customer: 'Delete {name} and their wheels?',
   settings_title: 'Settings', workshop: 'Workshop', shop_ph: 'Workshop name', mech_ph: 'Mechanic name', sound: 'Sound', vibrate: 'Vibration', language: 'App language', report_language: 'Certificate language (default)',
@@ -222,7 +222,7 @@ uk: {
   right: 'Права', left: 'Ліва', drive_side: 'сторона привода', now: 'зараз', remeasure: 'повторно', prev: '‹ Назад', result: 'Результат', open_left: 'Ще {n} спиць не виміряно. Показати результат?',
   within: '{a}/{n} у межах ±{t} %', zero_to: 'початк. {a} → {b}', not_all: 'Виміряно не все · продовжити', nothing: 'Нічого регулювати', turn: '{t} оберту {d}', tighter: 'ЗАТЯГНУТИ', looser: 'ПОСЛАБИТИ', comp: 'компенсація', stand: 'показ',
   wobble_title: 'Биття на верстаті', add_wobble: '+ Биття', at: 'біля', big: 'велике', no_wobble: 'Биття не вказано; порада лише за натягом.',
-  remeasure_btn: 'Переміряти ({n})', final: 'Фінальне вимірювання', cert: 'Сертифікат', all_again: 'Виміряти все заново', del_wheel: 'Видалити колесо', confirm_final: '{n} спиць поза допуском. Усе одно зробити фінальним?', confirm_del_wheel: 'Видалити колесо?',
+  remeasure_btn: 'Переміряти ({n})', final: 'Фінальне вимірювання', cert: 'Сертифікат', all_again: 'Виміряти все заново', del_wheel: 'Видалити колесо', confirm_final: '{n} спиць поза допуском. Усе одно зробити фінальним?', confirm_del_wheel: 'Видалити колесо?', confirm_all_again: 'Виміряти всі спиці заново? Поточне вимірювання залишиться в історії.',
   wb_left: 'Обід вліво', wb_right: 'Обід вправо', wb_high: 'Горб (вище)', wb_low: 'Западина (нижче)', at_spoke: 'БІЛЯ ЯКОЇ СПИЦІ', wb_small: 'Мале (до 0.5 мм)', wb_big: 'Велике (більше)',
   customers_title: 'Клієнти', add_customer: '+ Клієнт', no_customers: 'Немає клієнтів', wheel_1: 'колесо', wheel_n: 'коліс', name: 'Ім’я', phone: 'Телефон', email: 'E-mail', bike: 'Велосипед', frame: 'Номер рами / замовлення', name_missing: 'Не вказано ім’я', edit: 'Редагувати', del_customer: 'Видалити клієнта', confirm_del_customer: 'Видалити {name} та колеса?',
   settings_title: 'Налаштування', workshop: 'Майстерня', shop_ph: 'Назва майстерні', mech_ph: 'Ім’я механіка', sound: 'Звук', vibrate: 'Вібрація', language: 'Мова застосунку', report_language: 'Мова сертифіката (за замовчуванням)',
@@ -253,7 +253,7 @@ ru: {
   right: 'Правая', left: 'Левая', drive_side: 'сторона привода', now: 'сейчас', remeasure: 'повторно', prev: '‹ Назад', result: 'Результат', open_left: 'Ещё {n} спиц не измерено. Показать результат?',
   within: '{a}/{n} в пределах ±{t} %', zero_to: 'нач. {a} → {b}', not_all: 'Измерено не всё · продолжить', nothing: 'Ничего регулировать', turn: '{t} оборота {d}', tighter: 'ЗАТЯНУТЬ', looser: 'ОСЛАБИТЬ', comp: 'компенсация', stand: 'показ',
   wobble_title: 'Биение на станке', add_wobble: '+ Биение', at: 'у', big: 'большое', no_wobble: 'Биение не указано; совет только по натяжению.',
-  remeasure_btn: 'Перемерить ({n})', final: 'Финальное измерение', cert: 'Сертификат', all_again: 'Измерить всё заново', del_wheel: 'Удалить колесо', confirm_final: '{n} спиц вне допуска. Всё равно сделать финальным?', confirm_del_wheel: 'Удалить колесо?',
+  remeasure_btn: 'Перемерить ({n})', final: 'Финальное измерение', cert: 'Сертификат', all_again: 'Измерить всё заново', del_wheel: 'Удалить колесо', confirm_final: '{n} спиц вне допуска. Всё равно сделать финальным?', confirm_del_wheel: 'Удалить колесо?', confirm_all_again: 'Измерить все спицы заново? Текущее измерение останется в истории.',
   wb_left: 'Обод влево', wb_right: 'Обод вправо', wb_high: 'Горб (выше)', wb_low: 'Впадина (ниже)', at_spoke: 'У КАКОЙ СПИЦЫ', wb_small: 'Малое (до 0.5 мм)', wb_big: 'Большое (больше)',
   customers_title: 'Клиенты', add_customer: '+ Клиент', no_customers: 'Нет клиентов', wheel_1: 'колесо', wheel_n: 'колёс', name: 'Имя', phone: 'Телефон', email: 'E-mail', bike: 'Велосипед', frame: 'Номер рамы / заказ', name_missing: 'Не указано имя', edit: 'Изменить', del_customer: 'Удалить клиента', confirm_del_customer: 'Удалить {name} и колёса?',
   settings_title: 'Настройки', workshop: 'Мастерская', shop_ph: 'Название мастерской', mech_ph: 'Имя механика', sound: 'Звук', vibrate: 'Вибрация', language: 'Язык приложения', report_language: 'Язык сертификата (по умолчанию)',
@@ -601,18 +601,18 @@ ROUTES.result = (wid, mid) => {
       ${sideBlock('R')}${sideBlock('L')}
       <div class="card p-3"><div class="flex items-center justify-between"><span class="font-bold">${t('wobble_title')}</span><button id="wbAdd" class="btn bg-slate-900 text-white rounded-lg px-3 py-1.5 text-sm font-bold">${t('add_wobble')}</button></div>
         ${(m.wobbles || []).length ? `<div class="flex flex-wrap gap-1.5 mt-2">${m.wobbles.map((x, k) => `<span class="inline-flex items-center gap-1 rounded-full bg-slate-100 pl-3 pr-1 py-1 text-sm font-semibold">${t('wb_' + x.kind)} ${t('at')} ${x.pos % 2 ? 'L' : 'R'}${Math.floor(x.pos / 2) + 1}${x.size === 2 ? ' (' + t('big') + ')' : ''}<button data-wbdel="${k}" class="btn w-6 h-6 rounded-full hover:bg-slate-200 text-slate-500">✕</button></span>`).join('')}</div>` : `<div class="text-sm text-slate-500 mt-1">${t('no_wobble')}</div>`}</div></div>
-    <div class="lg:col-span-2 space-y-3 mt-3 lg:mt-0"><div class="card p-3 hidden lg:block" id="acts"></div><div class="card p-3">${radialChart(an, w, 360)}</div>
+    <div class="lg:col-span-2 space-y-3 mt-3 lg:mt-0"><div class="card p-3 hidden lg:block" id="acts"></div><div class="card p-3">${radialChart(an, w, 360)}</div><div class="lg:hidden pt-1"><button data-a="all" class="btn w-full py-2 text-sm font-semibold text-slate-400">${t('all_again')}</button></div>
       <button id="del" class="hidden lg:block w-full py-2 text-sm font-semibold text-rose-600">${t('del_wheel')}</button></div></div>
     <div id="bar" class="lg:hidden fixed inset-x-0 z-20 bg-white border-t border-slate-200 p-2" style="bottom:calc(3.5rem + env(safe-area-inset-bottom))"></div>`;
   const acts = (v) => `<div class="${v ? 'space-y-2' : 'grid grid-cols-2 gap-2'}">
     ${nAct ? `<button data-a="re" class="btn w-full bg-slate-900 text-white rounded-lg py-3 font-bold">${t('remeasure_btn', { n: nAct + an.affected.length })}</button>` : ''}
     ${an.complete && m.phase !== 'eind' ? `<button data-a="fin" class="btn w-full ${nAct ? 'bg-white border border-slate-300' : 'bg-emerald-600 text-white'} rounded-lg py-3 font-bold">${t('final')}</button>` : ''}
     <a href="#/report/${wid}" class="btn w-full flex items-center justify-center bg-white border border-slate-300 rounded-lg py-3 font-bold ${!nAct && m.phase === 'eind' ? 'col-span-2' : ''}">${t('cert')}</a>
-    <button data-a="all" class="btn w-full py-2 text-sm font-semibold text-slate-500 ${v ? '' : 'col-span-2'}">${t('all_again')}</button></div>`;
+    ${v ? `<button data-a="all" class="btn w-full py-2 text-sm font-semibold text-slate-500">${t('all_again')}</button>` : ''}</div>`;
   $('#acts').innerHTML = acts(true); $('#bar').innerHTML = acts(false);
   const start = (only) => { const nm = newMeasurement(w, m, only, 'tussen'); w.measurements.push(nm); DB.meta.active = { wheelId: wid, mId: nm.id, side: nm.todo.R.length ? 'R' : 'L', idx: 0 }; upsert(DB.wheels, w); pad = ''; nav('measure/' + wid); };
   $$('[data-a="re"]').forEach(b => b.onclick = () => { const only = { R: an.sides.R.actions.map(x => x.i), L: an.sides.L.actions.map(x => x.i) }; for (const k of an.affected) { const sd = k % 2 ? 'L' : 'R', i = Math.floor(k / 2); if (!only[sd].includes(i)) only[sd].push(i); } start(only); });
-  $$('[data-a="all"]').forEach(b => b.onclick = () => start(null));
+  $$('[data-a="all"]').forEach(b => b.onclick = async () => { if (await confirmM(t('confirm_all_again'))) start(null); });
   $$('[data-a="fin"]').forEach(b => b.onclick = async () => { if (nAct && !(await confirmM(t('confirm_final', { n: nAct })))) return; w.measurements.forEach(x => { if (x.phase === 'eind') x.phase = 'tussen'; }); m.phase = 'eind'; m.updatedAt = now(); upsert(DB.wheels, w); save(true); feedback('done'); if (S().autoSync && Drive.hasToken()) Drive.sync(true); render(); });
   $('#del').onclick = async () => { if (await confirmM(t('confirm_del_wheel'), t('del'), true)) { remove(DB.wheels, wid); nav('wheels'); } };
   $$('[data-e]').forEach(b => b.onclick = () => editSpoke(w, m, b.dataset.e[0], +b.dataset.e.slice(1)));
