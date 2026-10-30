@@ -3,7 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#0f172a">
+<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0b1120" media="(prefers-color-scheme: dark)">
 <title>Spaakspanning</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -31,6 +32,61 @@
   #sheetWrap { overflow: hidden; }
   #sheet { width: 210mm; padding: 10mm 12mm; font-size: 9.5pt; box-shadow: 0 1px 3px rgba(15,23,42,.12); }
   .toast { animation: tin .25s; } @keyframes tin { from { opacity: 0; transform: translateY(8px); } }
+
+  /* Donkere modus: volgt de instelling van telefoon/laptop. Certificaat (.light) en printen blijven licht. */
+  @media screen and (prefers-color-scheme: dark) {
+    html:not(.light) .ring-svg text { fill: #f1f5f9; }
+    html:not(.light) .ring-svg circle[stroke="#e2e8f0"] { stroke: #334155; }
+    html:not(.light) { color-scheme: dark; }
+    html:not(.light) body.bg-slate-100 { background-color: #0b1120 !important; color: #e2e8f0 !important; }
+    html:not(.light) .card { background: #151e2e; border-color: #263244; }
+    html:not(.light) .key { background: #1e293b; border-color: #334155; color: #e2e8f0; }
+    html:not(.light) .opt { background: #151e2e; border-color: #334155; color: #e2e8f0; }
+    html:not(.light) .opt.on { background: #e2e8f0; border-color: #e2e8f0; color: #0f172a; }
+    html:not(.light) input[type=text], html:not(.light) input[type=tel], html:not(.light) input[type=email], html:not(.light) input[type=number], html:not(.light) input[type=search], html:not(.light) select.sel { background-color: #0f172a; border-color: #334155; color: #e2e8f0; }
+    html:not(.light) input:focus, html:not(.light) select.sel:focus { border-color: #94a3b8; }
+    html:not(.light) input::placeholder { color: #64748b; }
+    html:not(.light) .bg-white { background-color: #151e2e !important; }
+    html:not(.light) .bg-slate-50 { background-color: #131c2b !important; }
+    html:not(.light) .bg-slate-100 { background-color: #1e293b !important; }
+    html:not(.light) .bg-slate-200 { background-color: #273449 !important; }
+    html:not(.light) main .bg-slate-900, html:not(.light) #modalHost .bg-slate-900, html:not(.light) #toastHost .bg-slate-900 { background-color: #e2e8f0 !important; color: #0f172a !important; }
+    html:not(.light) main .bg-slate-900 *, html:not(.light) #modalHost .bg-slate-900 *, html:not(.light) #toastHost .bg-slate-900 * { color: inherit; }
+    html:not(.light) #toastHost .bg-slate-900 .text-yellow-300 { color: #b45309 !important; }
+    html:not(.light) .text-slate-900 { color: #f1f5f9 !important; }
+    html:not(.light) .text-slate-800 { color: #e2e8f0 !important; }
+    html:not(.light) .text-slate-700 { color: #cbd5e1 !important; }
+    html:not(.light) .text-slate-600 { color: #a3b1c6 !important; }
+    html:not(.light) .text-slate-500 { color: #8b9bb4 !important; }
+    html:not(.light) .text-slate-400 { color: #6b7a90 !important; }
+    html:not(.light) .text-slate-300 { color: #4b5a70 !important; }
+    html:not(.light) .border-slate-100, html:not(.light) .divide-slate-100 > * + * { border-color: #1e293b !important; }
+    html:not(.light) .border-slate-200 { border-color: #263244 !important; }
+    html:not(.light) .border-slate-300 { border-color: #334155 !important; }
+    html:not(.light) .border-slate-900 { border-color: #e2e8f0 !important; }
+    html:not(.light) .ring-slate-900 { --tw-ring-color: #e2e8f0 !important; }
+    html:not(.light) .bg-emerald-50 { background-color: rgba(16,185,129,.12) !important; }
+    html:not(.light) .bg-emerald-100 { background-color: rgba(16,185,129,.22) !important; }
+    html:not(.light) .bg-amber-50 { background-color: rgba(245,158,11,.12) !important; }
+    html:not(.light) .bg-amber-100 { background-color: rgba(245,158,11,.22) !important; }
+    html:not(.light) .bg-rose-50 { background-color: rgba(244,63,94,.12) !important; }
+    html:not(.light) .bg-rose-100 { background-color: rgba(244,63,94,.2) !important; }
+    html:not(.light) .bg-rose-200 { background-color: rgba(244,63,94,.3) !important; }
+    html:not(.light) .bg-sky-50 { background-color: rgba(14,165,233,.12) !important; }
+    html:not(.light) .bg-violet-100 { background-color: rgba(139,92,246,.22) !important; }
+    html:not(.light) .text-emerald-700, html:not(.light) .text-emerald-800 { color: #6ee7b7 !important; }
+    html:not(.light) .text-amber-700, html:not(.light) .text-amber-800, html:not(.light) .text-amber-900 { color: #fcd34d !important; }
+    html:not(.light) .text-rose-600, html:not(.light) .text-rose-700, html:not(.light) .text-rose-800 { color: #fda4af !important; }
+    html:not(.light) .text-sky-900 { color: #7dd3fc !important; }
+    html:not(.light) .text-blue-700 { color: #93c5fd !important; }
+    html:not(.light) .text-violet-800 { color: #c4b5fd !important; }
+    html:not(.light) .border-amber-200, html:not(.light) .border-amber-300 { border-color: rgba(245,158,11,.5) !important; }
+    html:not(.light) .border-rose-200, html:not(.light) .border-rose-300 { border-color: rgba(244,63,94,.5) !important; }
+    html:not(.light) .border-sky-200, html:not(.light) .border-sky-300 { border-color: rgba(14,165,233,.5) !important; }
+    html:not(.light) .border-emerald-200 { border-color: rgba(16,185,129,.45) !important; }
+    html:not(.light) #view svg circle[fill="#fff"] { fill: #e8edf3; }
+    html:not(.light) #mb { background-color: rgba(0,0,0,.6) !important; }
+  }
   @page { size: A4 portrait; margin: 10mm 12mm; }
   @media print {
     html, body { height: auto !important; min-height: 0 !important; margin: 0 !important; padding: 0 !important; background: #fff !important; overflow: visible !important; }
@@ -152,7 +208,7 @@ const LS_KEY = 'spaakspanning_v3', DRIVE_FILE = 'spaakspanning-data.json', DRIVE
 // Vaste Google OAuth Client ID voor deze site (eenmalig door de beheerder aangemaakt). Leeg = alleen eigen Client ID via Geavanceerd.
 const DRIVE_CLIENT_ID = '';
 const driveCid = () => (S().driveClientId || DRIVE_CLIENT_ID || '').trim();
-const APP_VERSION = '2026-10-30.20';
+const APP_VERSION = '2026-10-30.21';
 /* ================= TALEN =================
    Nieuwe taal toevoegen: kopieer het blok 'nl', vertaal de waarden en voeg de code toe aan LANGS. Ontbrekende sleutels vallen terug op 'nl'. */
 const LANGS = { nl: 'Nederlands', en: 'English', uk: 'Українська', ru: 'Русский' };
@@ -632,7 +688,7 @@ function wheelCompass(w, m, s, i) {
 radialChart.n = 0;
 function ring(score, size, st) {
   const r = (size - st) / 2, C = 2 * Math.PI * r, i = scoreInfo(score);
-  return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}"><circle cx="${size / 2}" cy="${size / 2}" r="${r}" fill="none" stroke="#e2e8f0" stroke-width="${st}"/><circle cx="${size / 2}" cy="${size / 2}" r="${r}" fill="none" stroke="${i.hex}" stroke-width="${st}" stroke-linecap="round" transform="rotate(-90 ${size / 2} ${size / 2})" stroke-dasharray="${C}" stroke-dashoffset="${C * (1 - score / 100)}"/><text x="50%" y="50%" text-anchor="middle" dominant-baseline="central" font-size="${size * .32}" font-weight="800" fill="#0f172a">${score}</text></svg>`;
+  return `<svg class="ring-svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}"><circle cx="${size / 2}" cy="${size / 2}" r="${r}" fill="none" stroke="#e2e8f0" stroke-width="${st}"/><circle cx="${size / 2}" cy="${size / 2}" r="${r}" fill="none" stroke="${i.hex}" stroke-width="${st}" stroke-linecap="round" transform="rotate(-90 ${size / 2} ${size / 2})" stroke-dasharray="${C}" stroke-dashoffset="${C * (1 - score / 100)}"/><text x="50%" y="50%" text-anchor="middle" dominant-baseline="central" font-size="${size * .32}" font-weight="800" fill="#0f172a">${score}</text></svg>`;
 }
 
 /* ================= UI basis ================= */
@@ -671,6 +727,7 @@ function render() {
   $('#hdrRight').innerHTML = (ctx.right || '') + (hp ? `<button id="hdrHelp" aria-label="${h(t('help_title'))}" class="btn shrink-0 w-8 h-8 ml-1 rounded-full border-2 border-slate-300 text-slate-600 font-extrabold text-sm flex items-center justify-center">?</button>` : '');
   if (hp) $('#hdrHelp').onclick = () => helpModal(hp, ctx.title);
   $('#tabBar').style.display = ctx.focus ? 'none' : '';
+  document.documentElement.classList.toggle('light', cur.name === 'report'); // certificaat is een document: altijd licht
   $('#view').classList.remove('pb-24', 'pb-4', 'pb-52'); $('#view').classList.add(ctx.focus ? 'pb-4' : ctx.tall ? 'pb-52' : 'pb-24');
   const NAV = [['wheels', t('nav_wheels')], ['customers', t('nav_customers')], ['calc', t('nav_calc')], ['settings', t('nav_settings')]];
   const act = (n) => cur.name === n || (n === 'calc' && ['saved', 'catalog'].includes(cur.name)) || (n === 'wheels' && ['new', 'measure', 'round', 'result', 'report'].includes(cur.name)) || (n === 'customers' && cur.name === 'customer');
