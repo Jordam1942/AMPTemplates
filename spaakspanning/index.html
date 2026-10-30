@@ -146,7 +146,7 @@ const calLabel = (c) => UNIOR[c].label;
 const TOL_OK = 5, TOL_WARN = 10, MIN_READ = 1, MAX_READ = 90;
 const COL = { R: '#2563eb', L: '#ea580c' };
 const LS_KEY = 'spaakspanning_v3', DRIVE_FILE = 'spaakspanning-data.json', DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
-const APP_VERSION = '2026-10-30.2';
+const APP_VERSION = '2026-10-30.3';
 /* ================= TALEN =================
    Nieuwe taal toevoegen: kopieer het blok 'nl', vertaal de waarden en voeg de code toe aan LANGS. Ontbrekende sleutels vallen terug op 'nl'. */
 const LANGS = { nl: 'Nederlands', en: 'English', uk: 'Українська', ru: 'Русский' };
@@ -494,10 +494,13 @@ const scoreChip = (s) => s == null ? chip('–', 'bg-slate-100 text-slate-500') 
 const ROUTES = {}; let cur = { name: 'wheels', params: [] };
 const nav = (p, rep) => { if (rep) location.replace('#/' + p); else location.hash = '/' + p; };
 window.addEventListener('hashchange', render);
+let lastRouteKey = null; // scroll alleen naar boven bij een andere pagina, niet bij bediening op dezelfde pagina
 function render() {
+  const routeKey = location.hash || '#/wheels', samePage = routeKey === lastRouteKey, keepY = window.scrollY; lastRouteKey = routeKey;
+  if (samePage) document.body.style.minHeight = document.body.scrollHeight + 'px'; // voorkomt dat de pagina tijdelijk inkrimpt en de browser de scroll afkapt
   closeModal();
   const p = (location.hash || '#/wheels').replace(/^#\/?/, '').split('/').filter(Boolean); cur = { name: p[0] || 'wheels', params: p.slice(1) };
-  const ctx = (ROUTES[cur.name] || ROUTES.wheels)(...cur.params); if (!ctx) return;
+  const ctx = (ROUTES[cur.name] || ROUTES.wheels)(...cur.params); if (!ctx) { document.body.style.minHeight = ''; return; }
   $('#hdrTitle').textContent = ctx.title; $('#hdrSub').textContent = ctx.sub || '';
   const b = $('#hdrBack'); b.style.visibility = ctx.back ? 'visible' : 'hidden'; b.onclick = () => nav(ctx.back);
   $('#hdrRight').innerHTML = ctx.right || '';
@@ -508,7 +511,8 @@ function render() {
   $('#tabBar').innerHTML = NAV.map(([n, l]) => `<a href="#/${n}" class="h-14 flex items-center justify-center text-center leading-tight px-0.5 text-[12px] font-semibold ${act(n) ? 'text-slate-900' : 'text-slate-400'}">${l}</a>`).join('');
   $('#sideNav').innerHTML = NAV.map(([n, l]) => `<a href="#/${n}" class="block px-3 py-2 rounded-lg text-sm font-semibold ${act(n) ? 'bg-slate-800 text-white' : 'text-slate-300'}">${l}</a>`).join('');
   $('#sideFoot').innerHTML = h(S().shop || '') + (S().lastSync ? `<div>Drive ${fmtDate(S().lastSync)} ${fmtTime(S().lastSync)}</div>` : '');
-  window.scrollTo(0, 0);
+  if (samePage) { window.scrollTo(0, keepY); requestAnimationFrame(() => { window.scrollTo(0, keepY); document.body.style.minHeight = ''; }); }
+  else { document.body.style.minHeight = ''; window.scrollTo(0, 0); }
 }
 
 /* ================= WIELEN ================= */
