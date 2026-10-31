@@ -226,7 +226,7 @@ const tolOf = (w) => { const v = +((w && w.tol) || S().tol || 5); return v >= 1 
 const setTol = (w) => { TOL_OK = tolOf(w); TOL_WARN = TOL_OK * 2; };
 const COL = { R: '#2563eb', L: '#ea580c' };
 const LS_KEY = 'spaakspanning_v3', BK_FILE = 'spaakspanning_auto_backup.json';
-const APP_VERSION = '2026-10-31.15';
+const APP_VERSION = '2026-10-31.16';
 /* ================= TALEN =================
    Nieuwe taal toevoegen: kopieer het blok 'nl', vertaal de waarden en voeg de code toe aan LANGS. Ontbrekende sleutels vallen terug op 'nl'. */
 const LANGS = { nl: 'Nederlands', en: 'English', uk: 'Українська', ru: 'Русский' };
@@ -1541,7 +1541,21 @@ const CAT_HUBS = [
   { id: 'b_nexus8', brand: 'Shimano', model: 'Nexus 8 · SG-C6001-8 (V / roller)', kind: 'rear', old: 132, L: [92.6, 30.4], R: [92.6, 25.0] },
   { id: 'b_alfine8', brand: 'Shimano', model: 'Alfine 8 · SG-S7001-8', kind: 'reardisc', old: 135, L: [92.6, 30.3], R: [92.6, 24.0] },
   { id: 'b_alfine11', brand: 'Shimano', model: 'Alfine 11 · SG-S7001-11', kind: 'reardisc', old: 135, L: [92.6, 30.3], R: [92.6, 24.0] },
+  // Rohloff (handboek technische gegevens): steekcirkel 100, flensafstand 58 symmetrisch; fat: 93
   { id: 'b_rohloff', brand: 'Rohloff', model: 'Speedhub 500/14 · 135/142/148', kind: 'reardisc', old: 135, L: [100, 29], R: [100, 29] },
+  { id: 'b_rohloff_fat', brand: 'Rohloff', model: 'Speedhub 500/14 Fat · 170/177/190', kind: 'reardisc', old: 170, L: [100, 46.5], R: [100, 46.5] },
+  // Hope Pro 5 (Hope PCD-tabel J-bend 2025): steekcirkel en flens tot midden per kant
+  { id: 'b_hope5_f100', brand: 'Hope', model: 'Pro 5 voor 100 · 6-bolt', kind: 'frontdisc', old: 100, L: [58, 20], R: [52, 34] },
+  { id: 'b_hope5_f110', brand: 'Hope', model: 'Pro 5 voor 110 Boost · 6-bolt', kind: 'frontdisc', old: 110, L: [58, 25], R: [52, 34] },
+  { id: 'b_hope5_f100cl', brand: 'Hope', model: 'Pro 5 voor 100 · Centerlock', kind: 'frontdisc', old: 100, L: [43, 22], R: [43, 33] },
+  { id: 'b_hope5_f110cl', brand: 'Hope', model: 'Pro 5 voor 110 Boost · Centerlock', kind: 'frontdisc', old: 110, L: [43, 27], R: [43, 35.6] },
+  { id: 'b_hope5_r135', brand: 'Hope', model: 'Pro 5 achter 135/142 · 6-bolt', kind: 'reardisc', old: 135, L: [57, 32], R: [59, 19.6] },
+  { id: 'b_hope5_r148', brand: 'Hope', model: 'Pro 5 achter 148 Boost · 6-bolt', kind: 'reardisc', old: 148, L: [57, 35], R: [59, 22.6] },
+  { id: 'b_hope5_r150', brand: 'Hope', model: 'Pro 5 achter 150 · 6-bolt', kind: 'reardisc', old: 150, L: [57, 28], R: [59, 26.8] },
+  { id: 'b_hope5_r157', brand: 'Hope', model: 'Pro 5 achter 157 Superboost · 6-bolt', kind: 'reardisc', old: 157, L: [57, 39.6], R: [59, 27] },
+  { id: 'b_hope5_r148dh', brand: 'Hope', model: 'Pro 5 DH achter 148 · 6-bolt', kind: 'reardisc', old: 148, L: [60, 28.5], R: [64, 28.5] },
+  { id: 'b_hope5_r135cl', brand: 'Hope', model: 'Pro 5 achter 135/142 · Centerlock', kind: 'reardisc', old: 135, L: [51, 32], R: [59, 19.6] },
+  { id: 'b_hope5_r148cl', brand: 'Hope', model: 'Pro 5 achter 148 Boost · Centerlock', kind: 'reardisc', old: 148, L: [51, 35], R: [59, 22.6] },
   // Enviolo-tabel: K = inbouwbreedte, Ka/Kb = einddop tot flens (niet-aandrijf / aandrijf) → flens tot midden = K/2 − Ka resp. K/2 − Kb; steekcirkel 125
   { id: 'b_env_city', brand: 'Enviolo', model: 'City · 135', kind: 'rear', old: 135, L: [125, 27.8], R: [125, 24.2] },
   { id: 'b_env_trek', brand: 'Enviolo', model: 'Trekking · 135', kind: 'reardisc', old: 135, L: [125, 27.8], R: [125, 24.2] },
