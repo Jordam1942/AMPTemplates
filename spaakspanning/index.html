@@ -226,7 +226,7 @@ const tolOf = (w) => { const v = +((w && w.tol) || S().tol || 5); return v >= 1 
 const setTol = (w) => { TOL_OK = tolOf(w); TOL_WARN = TOL_OK * 2; };
 const COL = { R: '#2563eb', L: '#ea580c' };
 const LS_KEY = 'spaakspanning_v3', BK_FILE = 'spaakspanning_auto_backup.json';
-const APP_VERSION = '2026-10-31.6';
+const APP_VERSION = '2026-10-31.7';
 /* ================= TALEN =================
    Nieuwe taal toevoegen: kopieer het blok 'nl', vertaal de waarden en voeg de code toe aan LANGS. Ontbrekende sleutels vallen terug op 'nl'. */
 const LANGS = { nl: 'Nederlands', en: 'English', uk: 'Українська', ru: 'Русский' };
@@ -1956,7 +1956,7 @@ ROUTES.lace = (wid) => {
   const topLbl = A.top === 'R' ? t('lc_top_r', { side: rs }) : t('lc_top_l', { side: ls });
   const pill = `<span class="rounded-full px-3 py-1 text-sm font-extrabold text-white" style="background:${COL[A.top]}">↑ ${h(topLbl)}</span>`;
   $('#view').innerHTML = `<div class="max-w-md mx-auto space-y-3 lg:max-w-none lg:grid lg:grid-cols-2 lg:gap-6 lg:space-y-0 lg:items-start">
-    <div class="hidden lg:block lg:sticky lg:top-16"><div class="card p-5">${M.ok ? laceSvg(M, A, A.top === 'L', 'lg') : ''}<div class="text-xs text-slate-500 text-center mt-2">${t(STP.t)}</div></div></div>
+    <div class="hidden lg:block lg:sticky lg:top-16"><div class="card p-5">${M.ok ? laceSvg(M, A, A.top === 'L', 'lg') : ''}<div class="text-xs font-semibold text-center mt-2"><span style="color:${COL.R}">● ${t('right')}</span><span class="text-slate-400 mx-2">·</span><span style="color:${COL.L}">● ${t('left')}</span></div></div></div>
     <div class="space-y-3">
     <div class="grid grid-cols-4 gap-1.5">${STEPS.map((x, k) => `<button data-ls="${k}" class="btn rounded-lg py-2 text-center ${k === si ? 'bg-slate-900 text-white' : k < si ? 'bg-emerald-100 text-emerald-800' : 'bg-white border border-slate-200 text-slate-500'}"><div class="text-lg font-extrabold leading-none">${k < si ? '✓' : k + 1}</div><div class="text-[10px] font-bold mt-0.5 leading-tight">${t(x.t + '_s')}</div></button>`).join('')}</div>
     <div class="flex items-center justify-between"><div class="text-sm font-extrabold">${t(STP.t)}</div><div class="flex gap-1">${STP.acts.map((x, k) => `<span class="w-2 h-2 rounded-full ${k < ai ? 'bg-emerald-500' : k === ai ? 'bg-slate-900' : 'bg-slate-300'}"></span>`).join('')}</div></div>
@@ -1970,7 +1970,7 @@ ROUTES.lace = (wid) => {
     <div class="flex items-center justify-between"><button id="lcPrev" class="btn px-3 py-2 text-sm font-semibold text-slate-500" ${si || ai ? '' : 'disabled'}>${t('prev')}</button>
       <button id="lcCfg" class="btn px-3 py-2 text-sm font-semibold text-slate-500">⚙ ${t('lc_cfg', { n: cfg.n, x: cfg.xR === cfg.xL ? cfg.xR + '×' : cfg.xR + '×/' + cfg.xL + '×' })}</button></div>
     ${st.cfgOpen ? `<div class="card p-3 space-y-2"><div class="text-xs font-bold text-slate-500">${t('spokes_n')}</div><div class="grid grid-cols-5 gap-1">${[20, 24, 28, 32, 36].map(v => `<button data-ln="${v}" class="btn opt py-1.5 text-sm ${cfg.n === v ? 'on' : ''}">${v}</button>`).join('')}</div>
-      ${lenBox()}
+      ${si === 0 && ai === 0 ? '' : lenBox()}
       ${['R', 'L'].map(sd => `<div class="flex items-center gap-2"><span class="w-14 text-sm font-bold" style="color:${COL[sd]}">${t(sd === 'R' ? 'right' : 'left')}</span><div class="flex-1 grid grid-cols-5 gap-1">${[0, 1, 2, 3, 4].map(x => `<button data-lx="${sd}${x}" class="btn opt py-1.5 text-sm ${cfg['x' + sd] === x ? 'on' : ''}">${x}×</button>`).join('')}</div></div>`).join('')}</div>` : ''}</div></div>`;
   $('#lcNext').onclick = () => { if (!last) return next(); DB.meta.lace = null; save(true); toast(t('lc_ready'));
     if (w) { if (!lastM(w) || lastM(w).done) { w.measurements.push(newMeasurement(w, null, null, 'nul')); upsert(DB.wheels, w); } DB.meta.active = null; nav('measure/' + w.id); return; }
