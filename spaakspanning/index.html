@@ -226,7 +226,7 @@ const tolOf = (w) => { const v = +((w && w.tol) || S().tol || 5); return v >= 1 
 const setTol = (w) => { TOL_OK = tolOf(w); TOL_WARN = TOL_OK * 2; };
 const COL = { R: '#2563eb', L: '#ea580c' };
 const LS_KEY = 'spaakspanning_v3', BK_FILE = 'spaakspanning_auto_backup.json';
-const APP_VERSION = '2026-10-31.21';
+const APP_VERSION = '2026-11-02.1';
 /* ================= TALEN =================
    Nieuwe taal toevoegen: kopieer het blok 'nl', vertaal de waarden en voeg de code toe aan LANGS. Ontbrekende sleutels vallen terug op 'nl'. */
 const LANGS = { nl: 'Nederlands', en: 'English', uk: 'Українська', ru: 'Русский' };
@@ -564,7 +564,8 @@ function analyze(m, w) {
   // (cosinusprofiel over ±3 posities, bij een lange slag ±5), zodat de velg als boog terugkomt en niet knikt.
   // Per kant is het totaal gelijk aan 2 × de piekcorrectie; meerdere slagen tellen gewoon op (één gecombineerd plan).
   for (const wb of (m.wobbles || [])) {
-    const d = (wb.size === 2 ? 0.2 : 0.1) * perTurn * (js.has(wb.pos) ? 0.5 : 1), W = wb.wd === 2 ? 5 : 3, // bij de lasnaad: half, de rest zit in de velg zelf wt = (k) => { const dd = Math.min(Math.abs(k - wb.pos), n - Math.abs(k - wb.pos)); return dd <= W ? 0.5 * (1 + Math.cos(Math.PI * dd / (W + 1))) : 0; };
+    // slag bij de lasnaad: halve correctie, de rest zit in de velg zelf
+    const d = (wb.size === 2 ? 0.2 : 0.1) * perTurn * (js.has(wb.pos) ? 0.5 : 1), W = wb.wd === 2 ? 5 : 3, wt = (k) => { const dd = Math.min(Math.abs(k - wb.pos), n - Math.abs(k - wb.pos)); return dd <= W ? 0.5 * (1 + Math.cos(Math.PI * dd / (W + 1))) : 0; };
     const add = (k, v) => { if (!v) return; target[k] += v; has[k] = true; wobT[k] = true; };
     const side = { R: [], L: [] }; for (let k = 0; k < n; k++) if (wt(k)) side[sideAt(w, k)].push(k);
     for (const s of ['R', 'L']) { const sum = side[s].reduce((a, k) => a + wt(k), 0); if (!sum) continue;
