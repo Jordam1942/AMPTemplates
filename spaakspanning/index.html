@@ -35,6 +35,38 @@
   #sheet { width: 210mm; padding: 10mm 12mm; font-size: 9.5pt; box-shadow: 0 1px 3px rgba(15,23,42,.12); }
   .toast { animation: tin .25s; } @keyframes tin { from { opacity: 0; transform: translateY(8px); } }
   :focus-visible { outline: 2px solid #2563eb; outline-offset: 2px; }
+  /* Meetscherm op telefoon/tablet: alles in één scherm, het toetsenblok neemt de resterende hoogte */
+  @media (max-width: 1023.98px) {
+    body.fitm #view { padding-top: .5rem !important; padding-bottom: .5rem !important; }
+    body.fitm #mp { display: flex; flex-direction: column; height: calc(100dvh - 3.5rem - 1rem - 2px); min-height: 30rem; }
+    body.fitm #mp > * { flex-shrink: 0; margin-bottom: .45rem !important; }
+    body.fitm #mp > *:last-child { margin-bottom: 0 !important; }
+    body.fitm .mside button { padding-top: .45rem; padding-bottom: .45rem; }
+    body.fitm .mcard { padding-top: .35rem; padding-bottom: .35rem; }
+    body.fitm .mnum { font-size: 2.6rem; }
+    body.fitm .mcard svg { width: 4.6rem; }
+    body.fitm .mgrid > button { padding-top: .15rem; padding-bottom: .15rem; }
+    body.fitm .mgrid > button .font-bold { font-size: .8rem; line-height: 1.1rem; }
+    body.fitm [data-q] { padding-top: .5rem; padding-bottom: .5rem; font-size: 1.3rem; }
+    body.fitm #mpPad { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; padding: .4rem; }
+    body.fitm #padD { font-size: 1.8rem; min-height: 0; margin-bottom: .3rem; line-height: 2rem; }
+    body.fitm .mkeys { flex: 1 1 auto; min-height: 0; grid-template-rows: repeat(4, minmax(0, 1fr)); gap: .35rem; }
+    body.fitm #mpPad { overflow: hidden; }
+    body.fitm .mkeys .key { min-height: 0; height: 100%; font-size: 1.6rem; }
+    body.fitm #mPrev, body.fitm #mDone { padding-top: .6rem; padding-bottom: .6rem; }
+  }
+  /* Korte telefoons: extra compact zodat het toetsenblok groot genoeg blijft */
+  @media (max-width: 1023.98px) and (max-height: 720px) {
+    body.fitm .mcard .text-sm { display: none; }
+    body.fitm .mnum { font-size: 2.1rem; }
+    body.fitm .mcard svg { width: 3.4rem; }
+    body.fitm .mcard .rounded-full.bg-yellow-300 { display: inline-block !important; margin-top: .2rem; }
+    body.fitm .mgrid > button .text-\[9px\] { font-size: 8px; line-height: 9px; }
+    body.fitm [data-q] { padding-top: .3rem; padding-bottom: .3rem; font-size: 1.15rem; }
+    body.fitm .mside button { padding-top: .3rem; padding-bottom: .3rem; }
+    body.fitm #padD { font-size: 1.4rem; line-height: 1.6rem; }
+    body.fitm #mPrev, body.fitm #mDone { padding-top: .45rem; padding-bottom: .45rem; }
+  }
   /* Tablet staand (zijbalk, geen tabbalk): vaste balken onderaan beginnen naast de zijbalk */
   @media (min-width: 768px) and (max-width: 1023.98px) { #bar, #cBar { bottom: 0 !important; left: 12rem; } }
   /* Desktop: compactere knoppen en velden voor muis en toetsenbord */
@@ -226,7 +258,7 @@ const tolOf = (w) => { const v = +((w && w.tol) || S().tol || 5); return v >= 1 
 const setTol = (w) => { TOL_OK = tolOf(w); TOL_WARN = TOL_OK * 2; };
 const COL = { R: '#2563eb', L: '#ea580c' };
 const LS_KEY = 'spaakspanning_v3', BK_FILE = 'spaakspanning_auto_backup.json';
-const APP_VERSION = '2026-11-02.5';
+const APP_VERSION = '2026-11-03.1';
 /* ================= TALEN =================
    Nieuwe taal toevoegen: kopieer het blok 'nl', vertaal de waarden en voeg de code toe aan LANGS. Ontbrekende sleutels vallen terug op 'nl'. */
 const LANGS = { nl: 'Nederlands', en: 'English', uk: 'Українська', ru: 'Русский' };
@@ -758,7 +790,7 @@ function render() {
   $('#hdrRight').innerHTML = (ctx.right || '') + (hp ? `<button id="hdrHelp" aria-label="${h(t('help_title'))}" class="btn shrink-0 w-8 h-8 ml-1 rounded-full border-2 border-slate-300 text-slate-600 font-extrabold text-sm flex items-center justify-center">?</button>` : '');
   if (hp) $('#hdrHelp').onclick = () => helpModal(hp, ctx.title);
   $('#tabBar').style.display = ctx.focus ? 'none' : '';
-  document.documentElement.classList.toggle('light', cur.name === 'report'); // certificaat is een document: altijd licht
+  document.documentElement.classList.toggle('light', cur.name === 'report'); document.body.classList.toggle('fitm', cur.name === 'measure'); // certificaat is een document: altijd licht
   $('#view').classList.remove('pb-24', 'pb-4', 'pb-52'); $('#view').classList.add(ctx.focus ? 'pb-4' : ctx.tall ? 'pb-52' : 'pb-24');
   const NAV = [['wheels', t('nav_wheels')], ['lace', t('nav_lace')], ['customers', t('nav_customers')], ['calc', t('nav_calc')], ['settings', t('nav_settings')]];
   const act = (n) => cur.name === n || (n === 'home' && cur.name === 'home') || (n === 'calc' && ['saved', 'catalog'].includes(cur.name)) || (n === 'wheels' && ['new', 'measure', 'round', 'result', 'report'].includes(cur.name)) || (n === 'wheels' && cur.name === 'lace' && cur.params[0]) || (n === 'customers' && cur.name === 'customer');
@@ -956,18 +988,18 @@ ROUTES.measure = (wid) => {
     const quick = ref == null ? [] : [ref - 1, ref - 0.5, ref, ref + 0.5, ref + 1].filter(v => v >= MIN_READ && v <= MAX_READ);
     const prog = (side) => `${half - m.todo[side].length}/${half}`;
     $('#mp').innerHTML = `
-      <div class="grid grid-cols-2 gap-2 mb-3">${['R', 'L'].map(side => `<button data-side="${side}" class="btn rounded-lg py-3 lg:py-2 font-bold text-white ${side === s ? '' : 'opacity-40'}" style="background:${COL[side]}">${t(side === 'R' ? 'right' : 'left')} <span class="font-normal text-sm">${prog(side)}</span></button>`).join('')}</div>
-      <div class="rounded-xl px-4 py-2 text-white mb-3 flex items-center gap-3" style="background:${COL[s]}">
-        <div class="flex-1 min-w-0"><div class="text-5xl font-extrabold leading-none">${s}${i + 1}</div><div class="text-sm font-bold mt-1.5">${t('view_' + s)}</div>${i === 0 ? `<div class="inline-block mt-1 rounded-full bg-yellow-300 text-slate-900 px-2 py-0.5 text-xs font-bold">${t('first_here')}</div>` : ''}
+      <div class="mside grid grid-cols-2 gap-2 mb-3">${['R', 'L'].map(side => `<button data-side="${side}" class="btn rounded-lg py-3 lg:py-2 font-bold text-white ${side === s ? '' : 'opacity-40'}" style="background:${COL[side]}">${t(side === 'R' ? 'right' : 'left')} <span class="font-normal text-sm">${prog(side)}</span></button>`).join('')}</div>
+      <div class="mcard rounded-xl px-4 py-2 text-white mb-3 flex items-center gap-3" style="background:${COL[s]}">
+        <div class="flex-1 min-w-0"><div class="mnum text-5xl font-extrabold leading-none">${s}${i + 1}</div><div class="text-sm font-bold mt-1.5">${t('view_' + s)}</div>${i === 0 ? `<div class="inline-block mt-1 rounded-full bg-yellow-300 text-slate-900 px-2 py-0.5 text-xs font-bold">${t('first_here')}</div>` : ''}
           <div class="text-sm opacity-90 mt-1">${curV != null ? `${t('now')} ${String(curV).replace('.', ',')}` : ''}${m.partial ? ` · ${t('remeasure')}` : ''}</div>
           ${(() => { const l = effLimit(w); if (!l || !l.max || curV == null) return ''; const kg = toKgf(curV, w.spokeType); if (kg > l.max) return `<div class="mt-1.5 rounded-lg bg-rose-600 text-white px-2.5 py-1 text-sm font-extrabold">! ${t('lim_meas_over', { v: fmtF(kg), m: fmtF(l.max) })}</div>`; if (kg >= l.max * NEAR_LIM) return `<div class="mt-1.5 rounded-lg bg-amber-400 text-slate-900 px-2.5 py-1 text-sm font-extrabold">! ${t('lim_meas_near', { v: fmtF(kg), m: fmtF(l.max) })}</div>`; return ''; })()}
           ${m.goals && m.goals[s] && m.goals[s][i] && m.goals[s][i].exp ? `<div class="inline-flex items-center gap-1.5 mt-1.5 rounded-lg bg-white text-slate-900 px-2.5 py-1 font-extrabold"><span class="text-xs font-bold uppercase text-slate-500">${t('exp_lbl')}</span><span class="text-xl">${m.goals[s][i].v}</span></div>` : m.goals && m.goals[s] && m.goals[s][i] ? `<div class="inline-flex items-center gap-1.5 mt-1.5 rounded-lg bg-white text-slate-900 px-2.5 py-1 font-extrabold"><span>${m.goals[s][i].up ? '▲' : '▼'}</span><span class="text-xs font-bold uppercase text-slate-500">${t('act_goal')}</span><span class="text-xl">${m.goals[s][i].v}</span></div>` : ''}</div>
         ${wheelCompass(w, m, s, i)}</div>
       ${STU() ? `<div class="rounded-lg bg-sky-50 border border-sky-200 px-3 py-2 mb-3 text-sm font-semibold text-sky-900">${t('stu_measure')}</div>` : ''}
-      <div class="grid grid-cols-8 gap-1 mb-3">${vals.map((v, k) => `<button data-i="${k}" class="btn rounded-md py-1.5 text-center ${k === i ? 'ring-2 ring-slate-900' : ''} ${v == null ? 'bg-white border border-slate-200 text-slate-300' : m.todo[s].includes(k) ? 'bg-amber-100' : 'bg-white border border-slate-200'}"><div class="text-[9px] text-slate-400">${k + 1}</div><div class="font-bold text-sm">${v == null ? '·' : String(v).replace('.', ',')}</div></button>`).join('')}</div>
+      <div class="mgrid grid grid-cols-8 gap-1 mb-3">${vals.map((v, k) => `<button data-i="${k}" class="btn rounded-md py-1.5 text-center ${k === i ? 'ring-2 ring-slate-900' : ''} ${v == null ? 'bg-white border border-slate-200 text-slate-300' : m.todo[s].includes(k) ? 'bg-amber-100' : 'bg-white border border-slate-200'}"><div class="text-[9px] text-slate-400">${k + 1}</div><div class="font-bold text-sm">${v == null ? '·' : String(v).replace('.', ',')}</div></button>`).join('')}</div>
       ${quick.length ? `<div class="grid grid-cols-5 gap-2 mb-3">${quick.map(v => `<button data-q="${v}" class="btn rounded-lg py-3.5 lg:py-2.5 text-2xl lg:text-xl font-extrabold border ${v === ref ? 'bg-slate-900 text-white border-slate-900' : 'bg-white border-slate-200'}">${String(v).replace('.', ',')}</button>`).join('')}</div>` : ''}
-      <div class="card p-2.5 mb-3"><div class="text-right text-4xl lg:text-3xl font-extrabold tabular-nums px-2 mb-2 min-h-[2.5rem] lg:min-h-[2.2rem]" id="padD">${pad || '–'}</div>
-        <div class="grid grid-cols-4 gap-2">${[1, 2, 3, 'del', 4, 5, 6, 'half', 7, 8, 9, 'ok', '', 0, '', ''].map(k => k === '' ? '<span></span>' : k === 'del' ? '<button data-key="del" class="btn key !bg-slate-200">⌫</button>' : k === 'half' ? '<button data-key="half" class="btn key !bg-slate-200">,5</button>' : k === 'ok' ? '<button data-key="ok" class="btn key !bg-emerald-600 !text-white row-span-2">OK</button>' : `<button data-key="${k}" class="btn key">${k}</button>`).join('')}</div><div class="hidden lg:block text-[11px] text-slate-500 text-center mt-2">${t('kbd_hint')}</div></div>
+      <div id="mpPad" class="card p-2.5 mb-3"><div class="text-right text-4xl lg:text-3xl font-extrabold tabular-nums px-2 mb-2 min-h-[2.5rem] lg:min-h-[2.2rem]" id="padD">${pad || '–'}</div>
+        <div class="mkeys grid grid-cols-4 gap-2">${[1, 2, 3, 'del', 4, 5, 6, 'half', 7, 8, 9, 'ok', '', 0, '', ''].map(k => k === '' ? '<span></span>' : k === 'del' ? '<button data-key="del" class="btn key !bg-slate-200">⌫</button>' : k === 'half' ? '<button data-key="half" class="btn key !bg-slate-200">,5</button>' : k === 'ok' ? '<button data-key="ok" class="btn key !bg-emerald-600 !text-white row-span-2">OK</button>' : `<button data-key="${k}" class="btn key">${k}</button>`).join('')}</div><div class="hidden lg:block text-[11px] text-slate-500 text-center mt-2">${t('kbd_hint')}</div></div>
       <div class="grid grid-cols-2 gap-2"><button id="mPrev" class="btn bg-white border border-slate-200 rounded-lg py-3 lg:py-2.5 font-bold">${t('prev')}</button><button id="mDone" class="btn bg-slate-900 text-white rounded-lg py-3 lg:py-2.5 font-bold">${t('result')}</button></div>`;
     const ck = m.check, wbs = m.wobbles || [];
     $('#lp').innerHTML = `<div class="sticky top-16 space-y-3"><div class="card p-3">${radialChart(an, w, 400)}<div class="text-xs text-slate-500 text-center mt-1">${t('chart_lanes')}<br>${t('chart_valve')}</div><div class="grid grid-cols-2 gap-2 mt-2 text-sm">${['R', 'L'].map(side => `<div class="rounded-lg p-2 text-white" style="background:${COL[side]}">${t(side === 'R' ? 'right' : 'left')} <b>${an.sides[side].avgR != null ? an.sides[side].avgR.toFixed(1) : '–'}</b></div>`).join('')}</div></div>
